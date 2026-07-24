@@ -49,6 +49,16 @@ export default async function SalesDashboardPage() {
             Angalia parts na quantity zilizopo kwenye kila branch
           </p>
         </Link>
+
+        <Link
+          href="/dashboard/sales/my-performance"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">My Performance</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Angalia mauzo yako, manual items, na voided
+          </p>
+        </Link>
       </div>
     </div>
   );

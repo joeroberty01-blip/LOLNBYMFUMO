@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getDashboardSummary } from "@/lib/data/parts";
+import { getAdminDashboardMetrics } from "@/lib/data/dashboard";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { DashboardSummaryCards } from "@/components/admin/DashboardSummaryCards";
 
@@ -11,7 +11,7 @@ export default async function AdminDashboardPage() {
     redirect("/login/admin");
   }
 
-  const summary = await getDashboardSummary();
+  const summary = await getAdminDashboardMetrics();
 
   return (
     <div className="mx-auto w-full max-w-2xl py-12 px-4">
@@ -65,6 +65,16 @@ export default async function AdminDashboardPage() {
           <p className="font-medium">Manage Sales Staff</p>
           <p className="text-sm text-black/60 dark:text-white/60">
             Idhinisha, kataa, au zima akaunti za sales staff
+          </p>
+        </Link>
+
+        <Link
+          href="/dashboard/admin/reports"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Reports</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Sales, Inventory, Staff, na Customer/Debt reports
           </p>
         </Link>
       </div>

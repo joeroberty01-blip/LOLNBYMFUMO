@@ -12,6 +12,10 @@ ERP system ya kitaalamu kwa ajili ya kampuni ya mauzo ya spare parts. Inashughul
 - **Auth:** NextAuth.js v5 (Credentials providers mbili: admin-login, sales-login)
 - **Validation:** Zod
 - **Forms:** React Hook Form
+- **Charts:** Recharts
+- **Dates:** date-fns (week starts Monday)
+- **PDF export:** @react-pdf/renderer
+- **Email:** Nodemailer (SMTP via `.env`)
 
 ## Muundo wa Folder
 
@@ -244,9 +248,55 @@ ni kazi ya Admin pekee (`/dashboard/admin/customers`).
 `convertManualItemToPart` zote zinathibitisha role ya session yenyewe (si proxy pekee). Query ya
 POS inventory (`lib/data/sales.ts`) haisomi hata `costPrice`.
 
+## Reports & Analytics (Phase 5)
+
+| Route | Nani | Maelezo |
+|---|---|---|
+| `/dashboard/admin/reports` | Admin | Reports hub (viungo vya ripoti 4) |
+| `/dashboard/admin/reports/sales` | Admin | Mwenendo wa mauzo (chart), payment breakdown, credit vs cash |
+| `/dashboard/admin/reports/inventory` | Admin | Top selling, slow-moving, low stock, stock adjustments, value by branch |
+| `/dashboard/admin/reports/staff` | Admin | Ranking ya sales staff kwa kipindi |
+| `/dashboard/admin/reports/customers` | Admin | Nani ana deni + historia ya credit sales (`/reports/customers/[id]`) |
+| `/dashboard/sales/my-performance` | Sales Staff | Ripoti yake binafsi pekee |
+
+**Date filtering:** Kila ripoti ina tabs **Daily / Weekly / Monthly / Annually / Custom**
+(`components/reports/ReportControls.tsx`) zinazobadilisha URL query params kupitia
+`router.replace` (si `<form method="GET">`) — hii inafanya data ibadilike papo hapo bila full
+page reload, ikiendana na ombi la "bila kureload". Wiki inaanza **Jumatatu**
+(`date-fns` `weekStartsOn: 1`, angalia [lib/dateRanges.ts](lib/dateRanges.ts)). Chart granularity
+inabadilika kiotomatiki: Daily → masaa 24, Weekly → siku 7, Monthly → siku za mwezi, Annually →
+miezi 12.
+
+**Export, Print & Share** (`components/reports/ReportActions.tsx`) zipo kwenye ripoti zote 5:
+- **Download PDF / Print / Share WhatsApp / Send Email** — zote zinatumia endpoint moja
+  (`/api/reports/pdf`) na function moja ya kujenga PDF (`lib/reports/build.ts`) ili kuepuka
+  kurudia logic kati ya download na email attachment.
+- **Print** inatumia `window.print()` + CSS `@media print { .no-print { display: none } }`
+  (angalia [app/globals.css](app/globals.css)) kuficha controls/nav wakati wa kuchapisha —
+  nimehakikisha class hii ipo kwenye page zote za ripoti.
+- **Share WhatsApp**: inapakua PDF kwanza kiotomatiki kisha inafungua `wa.me` na ujumbe tayari,
+  na kuonyesha note "PDF imepakuliwa, WhatsApp imefunguliwa — ambatanisha faili hiyo."
+- **Send Email** inatumia Nodemailer na `.env` (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`,
+  `EMAIL_PASS`). Bila hizo kuwekwa, action inarudisha ujumbe wazi wa hitilafu badala ya
+  kushindwa kimya kimya — nimejaribu hili moja kwa moja (SMTP haijawekwa kwenye mradi huu bado).
+- **Export CSV** (Sales Report pekee, kama ilivyoombwa) — `/api/reports/sales-csv`.
+
+**Usalama:** `/dashboard/admin/reports/*` ni Admin pekee; `/dashboard/sales/my-performance` ni
+sales staff mwenyewe pekee. `/api/reports/pdf` inathibitisha role kwa kila `report` type
+(nimejaribu: admin akijaribu `report=my-performance` anapata 403).
+
+> **Kumbuka ya utendaji (performance):** Local Prisma Postgres dev server (ile ile
+> iliyotajwa kwenye sehemu ya migration hapo juu) mara kwa mara ilikatika chini ya
+> concurrent connections nyingi (`Promise.all` na queries 4-5 kwa wakati mmoja) — niligundua
+> hili wakati wa kujaribu Inventory Report. Nimebadilisha maeneo yaliyoathirika
+> (`lib/data/dashboard.ts`, sehemu ya inventory ndani ya `lib/reports/build.ts`, na
+> `app/dashboard/admin/reports/inventory/page.tsx`) kutumia `await` za mfululizo badala ya
+> `Promise.all`. Kwenye PostgreSQL ya kawaida (production) hili si tatizo — ni upungufu wa
+> hii local dev proxy pekee.
+
 ## Hatua Zinazofuata
 
 1. "Add Admin" kutoka dashboard ya admin (badala ya kutegemea `/signup/admin` pekee)
 2. Branch management (kuongeza/kuhariri matawi kwenye UI — kwa sasa ni seed data pekee)
-3. Purchases (manunuzi kutoka kwa suppliers) workflow — Phase 5
-4. Reports/analytics (mauzo kwa siku/wiki/mwezi, top-selling parts, n.k.)
+3. Purchases (manunuzi kutoka kwa suppliers) workflow
+4. SMTP halisi kwenye `.env` ili "Send Email" ifanye kazi kikamilifu
