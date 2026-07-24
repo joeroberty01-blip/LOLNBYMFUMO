@@ -18,7 +18,10 @@ ERP system ya kitaalamu kwa ajili ya kampuni ya mauzo ya spare parts. Inashughul
 ```
 app/            Next.js App Router — routes na pages
 components/     Reusable UI components
-lib/            Helpers, Prisma client (lib/db.ts), auth config, validators
+lib/            Prisma client (db.ts), auth config, validators, actions, data (DAL)
+  lib/actions/    Server Actions (mutations) — kila moja inathibitisha role yenyewe
+  lib/data/       Read queries (DTO pattern) — costPrice haifiki hapa kwa sales-staff queries
+  lib/validators/ Zod schemas
 prisma/         schema.prisma, migrations, seed.ts
 generated/      Prisma Client iliyozalishwa (gitignored, usiihariri)
 types/          TypeScript types/interfaces za pamoja
@@ -143,8 +146,52 @@ yake tofauti.
 
 Nenda [lib/auth.ts](lib/auth.ts), [proxy.ts](proxy.ts), na [lib/actions/](lib/actions) kwa undani wa code.
 
+## Parts & Inventory (Phase 3)
+
+| Route | Nani | Maelezo |
+|---|---|---|
+| `/dashboard/admin/parts` | Admin | List ya parts (search + filter kwa category), row moja kwa kila (part, branch) |
+| `/dashboard/admin/parts/new` | Admin | Ongeza part mpya |
+| `/dashboard/admin/parts/[id]/edit` | Admin | Hariri part |
+| `/dashboard/sales/inventory` | Sales Staff | View-only, **hakuna Buying Price wala vitufe vya Edit/Delete** |
+
+**Jinsi ya kuongeza part mpya:** `/dashboard/admin/parts` → "+ Ongeza Part" → jaza fomu (part
+number, jina, category, buying/selling price, low stock threshold, description ya hiari) →
+"Ongeza Part". Part mpya haina stock bado, hivyo inaonekana kwenye table na branch "—" na
+quantity 0 (imewekwa alama "Low Stock" moja kwa moja).
+
+**Jinsi Edit/Delete zinavyofanya kazi:**
+- **Edit** inafungua fomu ile ile yenye data iliyojazwa tayari; kuhifadhi kunasasisha part hiyo
+  (na kuzuia part number kugongana na part nyingine).
+- **Futa** inaonyesha "Una uhakika unataka kufuta part hii?" — ukikubali, part inawekwa
+  `isActive: false` (soft delete) badala ya kufutwa kabisa, ili historia ya mauzo/manunuzi
+  isivunjike. Haipotei kwenye database, inapotea tu kwenye orodha (admin na sales staff wote).
+
+**Jinsi table inavyotofautiana kati ya admin na sales staff:** Admin anaona columns 6 (ikiwemo
+Buying Price) + Actions (Edit/Rekebisha Stock/Futa). Sales staff anaona columns 5 tu (bila
+Buying Price, bila actions). Hii si suala la kuficha UI tu — query ya database
+([lib/data/parts.ts](lib/data/parts.ts), `getInventoryForSalesTable`) inatumia Prisma `select`
+inayoacha `costPrice` kabisa, hivyo haipo kwenye response inayotumwa kwa browser ya sales staff
+(imehakikiwa moja kwa moja kwa kuangalia raw HTML/response body — hakuna `costPrice` wala namba
+zake popote).
+
+**Jinsi Stock Adjustment inavyofanya kazi:** Bonyeza "Rekebisha Stock" kwenye row yoyote →
+modal inafungua ikiwa na branch (au dropdown ya kuchagua branch kama part haina stock bado),
+chagua "Ongeza"/"Punguza", weka kiasi, chagua sababu (New stock/Damaged/Correction/Other) →
+"Hifadhi". Hii inaunda rekodi kwenye `StockAdjustment` (audit trail: nani, lini, kiasi gani,
+kwa nini) na inasasisha `Inventory.quantity` — vyote viwili kwenye transaction moja. Quantity
+haiwezi kushuka chini ya 0 (server inazuia).
+
+**Low Stock indicator:** Row yoyote yenye `quantity < lowStockThreshold` ya part hiyo inapata
+badge nyekundu "(Low Stock)". Dashboard ya admin pia ina summary card ya "Low Stock" (idadi ya
+rows za namna hiyo) na "Thamani ya Inventory" (jumla ya `quantity × costPrice`).
+
+**Usalama:** Route zote za `/dashboard/admin/parts/*` zililindwa na `proxy.ts` (ADMIN pekee) na
+tena kila Server Action (`createPart`, `updatePart`, `deletePart`, `adjustStock`) inathibitisha
+`session.user.role === "ADMIN"` yenyewe. Hakuna hard-delete path popote kwenye app.
+
 ## Hatua Zinazofuata
 
 1. "Add Admin" kutoka dashboard ya admin (badala ya kutegemea `/signup/admin` pekee)
-2. Inventory & branch management
-3. Sales & Purchases workflows
+2. Branch management (kuongeza/kuhariri matawi)
+3. Sales & Purchases (POS) workflows — Phase 4
