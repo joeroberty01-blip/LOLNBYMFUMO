@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
@@ -20,8 +21,18 @@ export default async function SalesDashboardPage() {
         <SignOutButton />
       </div>
 
-      <p className="text-sm text-black/60 dark:text-white/60">
-        Mauzo na inventory zitaongezwa hapa katika hatua zijazo.
+      <Link
+        href="/dashboard/sales/inventory"
+        className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+      >
+        <p className="font-medium">Inventory</p>
+        <p className="text-sm text-black/60 dark:text-white/60">
+          Angalia parts na quantity zilizopo kwenye kila branch
+        </p>
+      </Link>
+
+      <p className="text-sm text-black/60 dark:text-white/60 mt-6">
+        Mauzo (POS) yataongezwa hapa katika hatua zijazo.
       </p>
     </div>
   );

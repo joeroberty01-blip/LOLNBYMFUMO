@@ -1,13 +1,17 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { getDashboardSummary } from "@/lib/data/parts";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { DashboardSummaryCards } from "@/components/admin/DashboardSummaryCards";
 
 export default async function AdminDashboardPage() {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
+
+  const summary = await getDashboardSummary();
 
   return (
     <div className="mx-auto w-full max-w-2xl py-12 px-4">
@@ -21,15 +25,29 @@ export default async function AdminDashboardPage() {
         <SignOutButton />
       </div>
 
-      <Link
-        href="/dashboard/admin/sales-staff"
-        className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
-      >
-        <p className="font-medium">Manage Sales Staff</p>
-        <p className="text-sm text-black/60 dark:text-white/60">
-          Idhinisha, kataa, au zima akaunti za sales staff
-        </p>
-      </Link>
+      <DashboardSummaryCards {...summary} />
+
+      <div className="flex flex-col gap-4">
+        <Link
+          href="/dashboard/admin/parts"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Parts</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Ongeza, hariri, futa parts na rekebisha stock
+          </p>
+        </Link>
+
+        <Link
+          href="/dashboard/admin/sales-staff"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Manage Sales Staff</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Idhinisha, kataa, au zima akaunti za sales staff
+          </p>
+        </Link>
+      </div>
     </div>
   );
 }
