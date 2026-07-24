@@ -39,6 +39,26 @@ export default async function AdminDashboardPage() {
         </Link>
 
         <Link
+          href="/dashboard/admin/sales"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Mauzo (Sales)</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Angalia mauzo yote, void, na badilisha manual items kuwa parts rasmi
+          </p>
+        </Link>
+
+        <Link
+          href="/dashboard/admin/customers"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Customers</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Simamia customers, credit limit, na balance
+          </p>
+        </Link>
+
+        <Link
           href="/dashboard/admin/sales-staff"
           className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
         >

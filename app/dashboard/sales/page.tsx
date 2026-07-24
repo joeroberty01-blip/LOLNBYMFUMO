@@ -21,19 +21,35 @@ export default async function SalesDashboardPage() {
         <SignOutButton />
       </div>
 
-      <Link
-        href="/dashboard/sales/inventory"
-        className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
-      >
-        <p className="font-medium">Inventory</p>
-        <p className="text-sm text-black/60 dark:text-white/60">
-          Angalia parts na quantity zilizopo kwenye kila branch
-        </p>
-      </Link>
+      <div className="flex flex-col gap-4">
+        <Link
+          href="/dashboard/sales/pos"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Point of Sale</p>
+          <p className="text-sm text-black/60 dark:text-white/60">Uza parts au manual items</p>
+        </Link>
 
-      <p className="text-sm text-black/60 dark:text-white/60 mt-6">
-        Mauzo (POS) yataongezwa hapa katika hatua zijazo.
-      </p>
+        <Link
+          href="/dashboard/sales/history"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Historia ya Mauzo Yangu</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Angalia na uchuje mauzo uliyofanya
+          </p>
+        </Link>
+
+        <Link
+          href="/dashboard/sales/inventory"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Inventory</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Angalia parts na quantity zilizopo kwenye kila branch
+          </p>
+        </Link>
+      </div>
     </div>
   );
 }

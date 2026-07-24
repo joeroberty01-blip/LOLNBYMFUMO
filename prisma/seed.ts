@@ -13,6 +13,26 @@ async function main() {
     },
   });
 
+  const woodland = await prisma.branch.upsert({
+    where: { id: "seed-branch-woodland" },
+    update: {},
+    create: {
+      id: "seed-branch-woodland",
+      name: "Woodland",
+      location: "Dar es Salaam",
+    },
+  });
+
+  const lolnby = await prisma.branch.upsert({
+    where: { id: "seed-branch-lolnby" },
+    update: {},
+    create: {
+      id: "seed-branch-lolnby",
+      name: "Lolnby",
+      location: "Dar es Salaam",
+    },
+  });
+
   const passwordHash = await bcrypt.hash("Admin@12345", 10);
   await prisma.user.upsert({
     where: { email: "admin@woodlanderp.com" },
@@ -133,10 +153,38 @@ async function main() {
     });
   }
 
+  // Give Woodland and Lolnby some starting stock too, so POS testing has
+  // real inventory to sell from in both branches.
+  const woodlandStock = [
+    { partId: "seed-part-1", quantity: 15 },
+    { partId: "seed-part-2", quantity: 30 },
+    { partId: "seed-part-5", quantity: 20 },
+  ];
+  for (const s of woodlandStock) {
+    await prisma.inventory.upsert({
+      where: { partId_branchId: { partId: s.partId, branchId: woodland.id } },
+      update: { quantity: s.quantity },
+      create: { partId: s.partId, branchId: woodland.id, quantity: s.quantity },
+    });
+  }
+
+  const lolnbyStock = [
+    { partId: "seed-part-3", quantity: 8 },
+    { partId: "seed-part-4", quantity: 5 },
+    { partId: "seed-part-2", quantity: 25 },
+  ];
+  for (const s of lolnbyStock) {
+    await prisma.inventory.upsert({
+      where: { partId_branchId: { partId: s.partId, branchId: lolnby.id } },
+      update: { quantity: s.quantity },
+      create: { partId: s.partId, branchId: lolnby.id, quantity: s.quantity },
+    });
+  }
+
   console.log("Seed data created:");
-  console.log(`  Branch:  ${branch.name}`);
-  console.log("  Admin:   admin@woodlanderp.com / Admin@12345");
-  console.log(`  Parts:   ${parts.length} sample parts with inventory`);
+  console.log(`  Branches: ${branch.name}, ${woodland.name}, ${lolnby.name}`);
+  console.log("  Admin:    admin@woodlanderp.com / Admin@12345");
+  console.log(`  Parts:    ${parts.length} sample parts with inventory`);
 }
 
 main()

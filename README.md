@@ -83,8 +83,10 @@ npm run db:generate
 npm run db:seed
 ```
 
-Hii itaunda: tawi moja (Main Branch), admin user (`admin@woodlanderp.com` / `Admin@12345`),
-supplier mmoja, customer mmoja, na spare parts 5 za sample zenye inventory.
+Hii itaunda: matawi matatu (Main Branch, Woodland, Lolnby), admin user
+(`admin@woodlanderp.com` / `Admin@12345`), supplier mmoja, customer mmoja, na spare parts 5 za
+sample zenye inventory (Main Branch ina zote 5; Woodland na Lolnby zina baadhi kwa ajili ya
+majaribio ya POS).
 
 ### 6. Endesha dev server
 
@@ -190,8 +192,61 @@ rows za namna hiyo) na "Thamani ya Inventory" (jumla ya `quantity × costPrice`)
 tena kila Server Action (`createPart`, `updatePart`, `deletePart`, `adjustStock`) inathibitisha
 `session.user.role === "ADMIN"` yenyewe. Hakuna hard-delete path popote kwenye app.
 
+## Sales / POS (Phase 4)
+
+| Route | Nani | Maelezo |
+|---|---|---|
+| `/dashboard/sales/pos` | Sales Staff | Point of Sale — lazima achague branch kwanza |
+| `/dashboard/sales/history` | Sales Staff | Mauzo yake mwenyewe, filter kwa tarehe/branch/payment |
+| `/dashboard/admin/sales` | Admin | Mauzo yote, filter pia kwa sales staff na "Manual Items Only" |
+| `/dashboard/admin/sales/manual-items` | Admin | Manual items zilizouzwa, grouped, na "Convert to Official Part" |
+| `/dashboard/admin/customers` | Admin | Add/Edit customers na credit limit |
+
+**Inventory ni source of truth pekee:** hakuna namba ya quantity inayohifadhiwa mahali pengine —
+kila mauzo, void, au stock adjustment inasoma na kubadilisha `Inventory.quantity` moja kwa moja
+ndani ya `prisma.$transaction`.
+
+**POS flow:** Chagua Branch (Woodland/Lolnby/Main Branch) → hakuna cart mpaka hapo. Tafuta part
+kwa jina/namba (inventory ya branch hiyo TU) na ubofye kuiongeza kwenye cart (ikiongezwa mara ya
+pili, quantity inaongezeka — imezuiwa isizidi iliyopo). Au bonyeza **"+ Manual Item"** kwa bidhaa
+isiyo Part rasmi (jina, part number ya hiari, quantity, bei — haihusiani na Inventory kabisa,
+inaonekana kwenye cart na risiti na badge ya njano **"Manual"**). Chagua Payment Method na, kama
+ni credit, washa **"Is Credit Sale"** na uchague/ongeze Customer — server inazuia kama kiasi
+kitazidisha `creditLimit` ya customer huyo (nimejaribu hili moja kwa moja: ujumbe "Kiasi
+kinazidi credit limit ya Juma Motors..."). **Complete Sale** inafanya kila kitu kwenye
+transaction moja: inasoma tena Inventory (kuzuia race condition), inapunguza stock kwa items za
+kawaida (si manual), inaunda Sale + SaleItem(s), na kama ni credit, inaongeza balance ya
+customer. Risiti inaonyeshwa mara moja (invoice number, tarehe, branch, muuzaji, items, badge ya
+Manual, jumla).
+
+**Void/Cancel Sale:** Sales staff anaweza ku-void mauzo yake mwenyewe ndani ya dakika 30 tangu
+kuuza; Admin anaweza wakati wowote. Void inarudisha stock kwenye Inventory (kwa items za kawaida
+tu — manual items haziguswi kabisa), inarudisha balance ya customer kama ilikuwa credit sale, na
+inaweka `status: VOIDED` (rekodi haifutwi — imehakikiwa: nimejaribu void kwa cash sale na credit
+sale, zote mbili zikarudisha stock/balance sahihi).
+
+**Manual Items → Convert to Official Part:** `/dashboard/admin/sales/manual-items` inaonyesha
+manual items zilizouzwa (kutoka mauzo ya `COMPLETED` pekee — voided hazihesabiwi), grouped kwa
+jina, na idadi ya mara zilizouzwa + bei ya mwisho. **"Convert to Official Part"** inafungua fomu
+ya Part ikiwa imejazwa kutoka manual item hiyo (jina, part number, bei) — admin anaweza kuhariri
+kabla ya kuthibitisha, kisha anachagua Branch na Initial Quantity. Hii inaunda Part + Inventory +
+rekodi ya `StockAdjustment` (reason: NEW_STOCK) kwa audit trail, sambamba na jinsi stock
+adjustments za kawaida zinavyofanya kazi. **Mauzo ya nyuma yaliyokuwa manual hayabadiliki** —
+bado yanaonekana na badge "Manual" kwenye history; ni mauzo yajayo tu yataona part hii kwenye
+POS search ya kawaida (nimethibitisha hili: baada ya conversion, part mpya ilionekana mara moja
+kwenye POS search ya Woodland).
+
+**Customers:** Sales staff wanaweza kuongeza customer mpya haraka wakati wa POS (button "+ Mpya"
+karibu na customer dropdown) — hii inaweka `creditLimit: 0` kiotomatiki. Kuhariri `creditLimit`
+ni kazi ya Admin pekee (`/dashboard/admin/customers`).
+
+**Usalama:** `completeSale`, `voidSale`, `createCustomer`/`updateCustomer`, na
+`convertManualItemToPart` zote zinathibitisha role ya session yenyewe (si proxy pekee). Query ya
+POS inventory (`lib/data/sales.ts`) haisomi hata `costPrice`.
+
 ## Hatua Zinazofuata
 
 1. "Add Admin" kutoka dashboard ya admin (badala ya kutegemea `/signup/admin` pekee)
-2. Branch management (kuongeza/kuhariri matawi)
-3. Sales & Purchases (POS) workflows — Phase 4
+2. Branch management (kuongeza/kuhariri matawi kwenye UI — kwa sasa ni seed data pekee)
+3. Purchases (manunuzi kutoka kwa suppliers) workflow — Phase 5
+4. Reports/analytics (mauzo kwa siku/wiki/mwezi, top-selling parts, n.k.)
