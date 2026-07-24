@@ -20,6 +20,7 @@ const manualItemSchema = z.object({
     .transform((v) => (v ? v : undefined)),
   quantity: z.coerce.number().int().positive(),
   unitPrice: z.coerce.number().positive(),
+  manualCostPrice: z.coerce.number().positive("Weka buying price zaidi ya 0"),
 });
 
 export const saleItemInputSchema = z.discriminatedUnion("isManualEntry", [
@@ -52,5 +53,6 @@ export const manualItemFormSchema = z.object({
     .transform((v) => (v ? v : undefined)),
   quantity: z.coerce.number().int().positive("Weka quantity zaidi ya 0"),
   unitPrice: z.coerce.number().positive("Weka bei zaidi ya 0"),
+  manualCostPrice: z.coerce.number().positive("Weka buying price zaidi ya 0"),
 });
 export type ManualItemFormInput = z.infer<typeof manualItemFormSchema>;

@@ -132,6 +132,7 @@ export type ManualItemGroup = {
   partNumber: string | null;
   timesSold: number;
   lastUnitPrice: number;
+  lastCostPrice: number;
   lastSoldAt: Date;
 };
 
@@ -142,6 +143,7 @@ export async function getManualItemGroups(): Promise<ManualItemGroup[]> {
       manualItemName: true,
       manualPartNumber: true,
       unitPrice: true,
+      manualCostPrice: true,
       sale: { select: { createdAt: true } },
     },
     orderBy: { sale: { createdAt: "desc" } },
@@ -157,6 +159,7 @@ export async function getManualItemGroups(): Promise<ManualItemGroup[]> {
         partNumber: r.manualPartNumber,
         timesSold: 1,
         lastUnitPrice: r.unitPrice.toNumber(),
+        lastCostPrice: r.manualCostPrice?.toNumber() ?? 0,
         lastSoldAt: r.sale.createdAt,
       });
     } else {

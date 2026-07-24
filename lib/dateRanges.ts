@@ -7,6 +7,9 @@ import {
   endOfMonth,
   startOfYear,
   endOfYear,
+  eachHourOfInterval,
+  eachDayOfInterval,
+  eachMonthOfInterval,
   format,
 } from "date-fns";
 
@@ -89,4 +92,32 @@ export function getDateRange(params: DateRangeParams): DateRange {
       };
     }
   }
+}
+
+export type Bucket = { key: string; label: string };
+
+/** Shared bucketing so every chart (Sales, Financial) slices the same range the same way. */
+export function getBuckets(range: DateRange): Bucket[] {
+  if (range.granularity === "hour") {
+    return eachHourOfInterval({ start: range.start, end: range.end }).map((d) => ({
+      key: format(d, "yyyy-MM-dd HH"),
+      label: format(d, "HH:00"),
+    }));
+  }
+  if (range.granularity === "month") {
+    return eachMonthOfInterval({ start: range.start, end: range.end }).map((d) => ({
+      key: format(d, "yyyy-MM"),
+      label: format(d, "MMM"),
+    }));
+  }
+  return eachDayOfInterval({ start: range.start, end: range.end }).map((d) => ({
+    key: format(d, "yyyy-MM-dd"),
+    label: format(d, "d MMM"),
+  }));
+}
+
+export function bucketKeyForDate(date: Date, granularity: DateRange["granularity"]): string {
+  if (granularity === "hour") return format(date, "yyyy-MM-dd HH");
+  if (granularity === "month") return format(date, "yyyy-MM");
+  return format(date, "yyyy-MM-dd");
 }

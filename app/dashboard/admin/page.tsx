@@ -59,6 +59,26 @@ export default async function AdminDashboardPage() {
         </Link>
 
         <Link
+          href="/dashboard/admin/suppliers"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Suppliers</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Simamia suppliers na Record Payment ya deni
+          </p>
+        </Link>
+
+        <Link
+          href="/dashboard/admin/expenses"
+          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+        >
+          <p className="font-medium">Expenses</p>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Ongeza na angalia matumizi (rent, salaries, n.k.)
+          </p>
+        </Link>
+
+        <Link
           href="/dashboard/admin/sales-staff"
           className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
         >

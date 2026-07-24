@@ -1,12 +1,6 @@
 import "server-only";
-import {
-  eachHourOfInterval,
-  eachDayOfInterval,
-  eachMonthOfInterval,
-  format,
-} from "date-fns";
 import { prisma } from "@/lib/db";
-import type { DateRange } from "@/lib/dateRanges";
+import { getBuckets, bucketKeyForDate, type DateRange } from "@/lib/dateRanges";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type SalesReportFilters = {
@@ -31,33 +25,11 @@ function buildWhere(range: DateRange, filters: SalesReportFilters): Prisma.SaleW
 type SaleRow = { total: Prisma.Decimal; paymentMethod: string; isCredit: boolean; createdAt: Date };
 
 function buildChartBuckets(range: DateRange, sales: SaleRow[]) {
-  let buckets: { key: string; label: string }[];
-
-  if (range.granularity === "hour") {
-    buckets = eachHourOfInterval({ start: range.start, end: range.end }).map((d) => ({
-      key: format(d, "yyyy-MM-dd HH"),
-      label: format(d, "HH:00"),
-    }));
-  } else if (range.granularity === "month") {
-    buckets = eachMonthOfInterval({ start: range.start, end: range.end }).map((d) => ({
-      key: format(d, "yyyy-MM"),
-      label: format(d, "MMM"),
-    }));
-  } else {
-    buckets = eachDayOfInterval({ start: range.start, end: range.end }).map((d) => ({
-      key: format(d, "yyyy-MM-dd"),
-      label: format(d, "d MMM"),
-    }));
-  }
-
+  const buckets = getBuckets(range);
   const totals = new Map(buckets.map((b) => [b.key, 0]));
+
   for (const s of sales) {
-    const key =
-      range.granularity === "hour"
-        ? format(s.createdAt, "yyyy-MM-dd HH")
-        : range.granularity === "month"
-          ? format(s.createdAt, "yyyy-MM")
-          : format(s.createdAt, "yyyy-MM-dd");
+    const key = bucketKeyForDate(s.createdAt, range.granularity);
     if (totals.has(key)) {
       totals.set(key, (totals.get(key) ?? 0) + s.total.toNumber());
     }

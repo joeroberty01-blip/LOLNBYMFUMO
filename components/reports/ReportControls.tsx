@@ -30,6 +30,7 @@ type Props = {
   staff?: { id: string; name: string }[];
   showPaymentMethod?: boolean;
   showManualOnly?: boolean;
+  categories?: { value: string; label: string }[];
 };
 
 export function ReportControls({
@@ -37,6 +38,7 @@ export function ReportControls({
   staff,
   showPaymentMethod,
   showManualOnly,
+  categories,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -222,6 +224,24 @@ export function ReportControls({
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {categories && (
+          <div>
+            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Category</label>
+            <select
+              defaultValue={searchParams.get("category") ?? ""}
+              onChange={(e) => updateParams({ category: e.target.value })}
+              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+            >
+              <option value="">Zote</option>
+              {categories.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
                 </option>
               ))}
             </select>

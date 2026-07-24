@@ -294,9 +294,82 @@ sales staff mwenyewe pekee. `/api/reports/pdf` inathibitisha role kwa kila `repo
 > `Promise.all`. Kwenye PostgreSQL ya kawaida (production) hili si tatizo — ni upungufu wa
 > hii local dev proxy pekee.
 
+## Expenses & Accounting (Phase 7)
+
+| Route | Nani | Maelezo |
+|---|---|---|
+| `/dashboard/admin/expenses` | Admin | List/Add/Edit/Futa expenses (filter: period, category, branch) |
+| `/dashboard/admin/suppliers` | Admin | Suppliers, balance (deni), Record Payment |
+| `/dashboard/admin/reports/sales` | Admin | Sasa ina "Financial Summary" + chart ya Revenue/Expenses/Net Profit |
+
+**Manual Item Cost Fix (Sehemu 1):** Fomu ya "Add Manual Item" kwenye POS sasa ina field
+inayohitajika **"Buying Price / Cost Price"** (`manualCostPrice` kwenye `SaleItem`, nullable kwa
+sababu manual items za zamani — kabla ya Phase 7 — hazina thamani hii, `?? 0` kwenye COGS).
+Kwenye "Convert Manual Item to Official Part", `manualCostPrice` ya mwisho iliyotumika inatolewa
+moja kwa moja kama pendekezo la `costPrice` (nimejaribu: item yenye Selling 500,000/Buying
+300,000 ilitoa pendekezo la costPrice=300,000 kwenye fomu ya Part).
+
+**Expenses (Sehemu 2):** `/dashboard/admin/expenses` ina `ReportControls` ile ile inayotumika
+kwenye Reports zote (period + branch + **category** — `ReportControls` sasa inakubali
+`categories` prop ya ziada), jumla ya expenses juu, na "+ Add Expense". Edit/Futa zinapatikana
+TU kwa expenses za manual (`relatedSupplierPaymentId === null`) — zilizotengenezwa moja kwa moja
+kutoka Supplier Payment zinaonyesha "Auto (Supplier Payment)" badala ya vitufe, na
+`updateExpense`/`deleteExpense` zinazikataa kabisa hata kama mtu akijaribu kupitia console
+(zimehakikiwa server-side, si UI tu).
+
+**Supplier Payment → Expense (Sehemu 3 — msingi haukuwepo, umejengwa upya):** Uliruka Purchases
+phase kabisa, kwa hivyo `Supplier.balance`, `SupplierPayment` model, na `/dashboard/admin/suppliers`
+havikuwepo — nimejenga toleo dogo (Supplier CRUD + balance editable moja kwa moja na admin, kwa
+kuwa hakuna Purchases-on-credit workflow bado ya kuongeza deni kiotomatiki). "Record Payment"
+inafanya kila kitu kwenye `prisma.$transaction` moja: inaunda `SupplierPayment`, inaunda `Expense`
+(category `SUPPLIER_PAYMENT`, `relatedSupplierPaymentId` ikielekeza kwenye malipo hayo), na
+inapunguza `Supplier.balance`. Nimejaribu: balance 200,000 → Record Payment 80,000 → balance
+120,000, na Expense ya 80,000 ikaonekana kwenye `/dashboard/admin/expenses` bila vitufe vya
+Edit/Futa.
+
+**Accounting engine — single source of truth (Sehemu 4):** `lib/accounting.ts`'s
+`getFinancialSummary(range, filters)` ndiyo pekee inayotumika kila mahali (Dashboard, Sales
+Report, PDF, CSV) — hakuna formula nyingine iliyoandikwa mahali pengine. Sales zenye
+`status: VOIDED` hazihesabiki kabisa (wala Revenue wala COGS).
+
+### Financial Summary — Test Case (imethibitishwa moja kwa moja)
+
+Niliunda mauzo ya kweli kwenye Main Branch (haikuwa na mauzo mengine leo, hivyo branch filter
+iliweza kutenganisha data safi kabisa kwa ajili ya uthibitisho):
+
+- Manual item: Selling 500,000, Buying/Cost 300,000, quantity 1 → Sale.total = **500,000**,
+  COGS ya item hiyo = **300,000**
+- Expense ya manual: 50,000 (category Other, branch Main Branch)
+
+Matokeo halisi kwenye Sales Report (`period=daily`, `branchId=Main Branch`) — sanjari kabisa na
+mfano wa mtumiaji (Sales 500,000, COGS 300,000, Expenses 50,000 → Gross Profit 200,000, Net
+Profit 150,000):
+
+```
+Total Sales Revenue:  +500,000
+Total Expenses:       −50,000
+Gross Profit:          200,000
+Net Profit:             150,000
+```
+
+Nilijaribu pia bila branch filter (Daily, branches zote) ili kuthibitisha VOIDED sales
+zinapuuzwa na Supplier Payment inahesabika kama Expense: jumla ya mauzo yasiyo-voided leo
+668,000 (invoice #3: 150,000 + #4: 18,000 + #5: 500,000 — invoice #1 na #2 ni VOIDED,
+hazikuhesabiwa), COGS 311,000 (300,000 + 11,000 ya Air Filter + 0 ya Fuel Pump Assembly ya
+zamani isiyokuwa na `manualCostPrice`), Gross Profit 357,000, Expenses 130,000 (50,000 manual +
+80,000 Supplier Payment), **Net Profit 227,000** — na Dashboard "Net Profit ya Leo"/"Net Profit
+ya Mwezi Huu" zote zilionyesha 227,000 sawasawa, zikithibitisha function moja ya kati
+inatumika kila mahali bila kutofautiana.
+
+**Usalama:** `/dashboard/admin/expenses` na `/dashboard/admin/suppliers` ni Admin pekee
+(nimejaribu: sales staff akijaribu anarudishwa `/dashboard/sales`). Sales staff hawaoni Expenses,
+COGS, Gross Profit, au Net Profit popote — `/dashboard/sales/my-performance` na
+`/dashboard/sales/history` havitumii `lib/accounting.ts` kabisa.
+
 ## Hatua Zinazofuata
 
 1. "Add Admin" kutoka dashboard ya admin (badala ya kutegemea `/signup/admin` pekee)
 2. Branch management (kuongeza/kuhariri matawi kwenye UI — kwa sasa ni seed data pekee)
-3. Purchases (manunuzi kutoka kwa suppliers) workflow
+3. Purchases kamili (order tracking, receiving stock, kuongeza Supplier.balance kiotomatiki
+   kutoka manunuzi ya credit — kwa sasa balance inawekwa na admin moja kwa moja)
 4. SMTP halisi kwenye `.env` ili "Send Email" ifanye kazi kikamilifu

@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/reports/inventory";
 import { getStaffPerformance, getMyPerformance } from "@/lib/data/reports/staff";
 import { getCustomersWithDebt } from "@/lib/data/reports/customers";
+import { getFinancialSummary } from "@/lib/accounting";
 import { renderReportPdf, type PdfTable } from "@/lib/reports/pdf";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -64,10 +65,10 @@ export async function buildReportPdfBuffer(
       userId: params.userId,
       paymentMethod: params.paymentMethod,
     };
-    const [summaryData, rows] = await Promise.all([
-      getSalesReport(range, filters),
-      getSalesReportRows(range, filters),
-    ]);
+    // Sequential (not Promise.all) — see note above.
+    const summaryData = await getSalesReport(range, filters);
+    const rows = await getSalesReportRows(range, filters);
+    const financial = await getFinancialSummary(range, { branchId: params.branchId });
 
     const table: PdfTable = {
       title: "Sales",
@@ -93,6 +94,11 @@ export async function buildReportPdfBuffer(
         { label: "Transactions", value: String(summaryData.transactionCount) },
         { label: "Cash/Instant", value: currency.format(summaryData.cashTotal) },
         { label: "Credit", value: currency.format(summaryData.creditTotal) },
+        { label: "Total Sales Revenue", value: `+${currency.format(financial.totalRevenue)}` },
+        { label: "COGS", value: currency.format(financial.cogs) },
+        { label: "Gross Profit", value: currency.format(financial.grossProfit) },
+        { label: "Total Expenses", value: `-${currency.format(financial.totalExpenses)}` },
+        { label: "Net Profit", value: currency.format(financial.netProfit) },
       ],
       tables: [table],
     });

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getSalesReportRows } from "@/lib/data/reports/sales";
+import { getFinancialSummary } from "@/lib/accounting";
 
 function csvEscape(value: string | number): string {
   const s = String(value);
@@ -28,11 +29,23 @@ export async function GET(request: NextRequest) {
     to: sp.get("to") ?? undefined,
   });
 
+  const branchId = sp.get("branchId") ?? undefined;
   const rows = await getSalesReportRows(range, {
-    branchId: sp.get("branchId") ?? undefined,
+    branchId,
     userId: sp.get("userId") ?? undefined,
     paymentMethod: sp.get("paymentMethod") ?? undefined,
   });
+  const financial = await getFinancialSummary(range, { branchId });
+
+  const summaryLines = [
+    "Financial Summary",
+    `Total Sales Revenue,${financial.totalRevenue}`,
+    `COGS,${financial.cogs}`,
+    `Gross Profit,${financial.grossProfit}`,
+    `Total Expenses,${financial.totalExpenses}`,
+    `Net Profit,${financial.netProfit}`,
+    "",
+  ];
 
   const header = [
     "Invoice",
@@ -46,7 +59,7 @@ export async function GET(request: NextRequest) {
     "Total",
   ];
 
-  const lines = [header.map(csvEscape).join(",")];
+  const lines = [...summaryLines, header.map(csvEscape).join(",")];
   for (const r of rows) {
     lines.push(
       [

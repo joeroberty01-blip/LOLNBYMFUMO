@@ -121,6 +121,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
                     isManualEntry: true,
                     manualItemName: item.manualItemName,
                     manualPartNumber: item.manualPartNumber ?? null,
+                    manualCostPrice: item.manualCostPrice,
                   }
                 : {
                     partId: item.partId,

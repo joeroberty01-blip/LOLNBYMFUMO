@@ -7,6 +7,8 @@ export function DashboardSummaryCards({
   inventoryValue,
   lowStockCount,
   totalCustomerDebt,
+  netProfitToday,
+  netProfitThisMonth,
 }: {
   salesToday: number;
   salesTodayCount: number;
@@ -14,11 +16,25 @@ export function DashboardSummaryCards({
   inventoryValue: number;
   lowStockCount: number;
   totalCustomerDebt: number;
+  netProfitToday: number;
+  netProfitThisMonth: number;
 }) {
   const cards = [
     { label: "Mauzo ya Leo", value: currency.format(salesToday) },
     { label: "Mauzo ya Mwezi Huu", value: currency.format(salesThisMonth) },
     { label: "Idadi ya Sales za Leo", value: String(salesTodayCount) },
+    {
+      label: "Net Profit ya Leo",
+      value: currency.format(netProfitToday),
+      good: netProfitToday >= 0,
+      warn: netProfitToday < 0,
+    },
+    {
+      label: "Net Profit ya Mwezi Huu",
+      value: currency.format(netProfitThisMonth),
+      good: netProfitThisMonth >= 0,
+      warn: netProfitThisMonth < 0,
+    },
     { label: "Thamani ya Inventory Yote", value: currency.format(inventoryValue) },
     {
       label: "Parts zenye Low Stock",
@@ -38,11 +54,21 @@ export function DashboardSummaryCards({
         <div
           key={c.label}
           className={`rounded-md border p-4 ${
-            c.warn ? "border-red-500/30 bg-red-500/5" : "border-black/10 dark:border-white/15"
+            c.warn
+              ? "border-red-500/30 bg-red-500/5"
+              : c.good
+                ? "border-green-500/30 bg-green-500/5"
+                : "border-black/10 dark:border-white/15"
           }`}
         >
           <p className="text-sm text-black/60 dark:text-white/60">{c.label}</p>
-          <p className="text-2xl font-semibold mt-1">{c.value}</p>
+          <p
+            className={`text-2xl font-semibold mt-1 ${
+              c.warn ? "text-red-600" : c.good ? "text-green-600" : ""
+            }`}
+          >
+            {c.value}
+          </p>
         </div>
       ))}
     </div>

@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { getDateRange } from "@/lib/dateRanges";
 import { getDashboardSummary } from "@/lib/data/parts";
+import { getFinancialSummary } from "@/lib/accounting";
 
 export async function getAdminDashboardMetrics() {
   const today = getDateRange({ period: "daily" });
@@ -20,6 +21,8 @@ export async function getAdminDashboardMetrics() {
     _sum: { total: true },
   });
   const customerDebt = await prisma.customer.aggregate({ _sum: { balance: true } });
+  const financialToday = await getFinancialSummary(today);
+  const financialThisMonth = await getFinancialSummary(thisMonth);
 
   return {
     ...partsSummary,
@@ -27,5 +30,7 @@ export async function getAdminDashboardMetrics() {
     salesTodayCount: salesToday._count._all,
     salesThisMonth: salesThisMonth._sum.total?.toNumber() ?? 0,
     totalCustomerDebt: customerDebt._sum.balance?.toNumber() ?? 0,
+    netProfitToday: financialToday.netProfit,
+    netProfitThisMonth: financialThisMonth.netProfit,
   };
 }

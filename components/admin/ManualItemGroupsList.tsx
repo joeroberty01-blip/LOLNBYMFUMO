@@ -35,7 +35,8 @@ export function ManualItemGroupsList({
               <p className="font-medium truncate">{g.name}</p>
               <p className="text-sm text-black/60 dark:text-white/60">
                 {g.partNumber ? `${g.partNumber} · ` : ""}
-                Imeuzwa mara {g.timesSold} · Bei ya mwisho: {currency.format(g.lastUnitPrice)}
+                Imeuzwa mara {g.timesSold} · Selling: {currency.format(g.lastUnitPrice)} · Buying:{" "}
+                {currency.format(g.lastCostPrice)}
               </p>
             </div>
             <button
@@ -54,6 +55,7 @@ export function ManualItemGroupsList({
           groupName={converting.name}
           suggestedPartNumber={converting.partNumber}
           suggestedUnitPrice={converting.lastUnitPrice}
+          suggestedCostPrice={converting.lastCostPrice}
           branches={branches}
           onClose={() => setConverting(null)}
         />

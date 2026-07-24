@@ -39,6 +39,7 @@ type CartLine =
       partNumber?: string;
       unitPrice: number;
       quantity: number;
+      costPrice: number;
     };
 
 export function POSTerminal({
@@ -122,6 +123,7 @@ export function POSTerminal({
     manualPartNumber?: string;
     quantity: number;
     unitPrice: number;
+    manualCostPrice: number;
   }) {
     setCart((prev) => [
       ...prev,
@@ -132,6 +134,7 @@ export function POSTerminal({
         partNumber: data.manualPartNumber,
         unitPrice: data.unitPrice,
         quantity: data.quantity,
+        costPrice: data.manualCostPrice,
       },
     ]);
     setManualModalOpen(false);
@@ -187,6 +190,7 @@ export function POSTerminal({
                 manualPartNumber: l.partNumber,
                 quantity: l.quantity,
                 unitPrice: l.unitPrice,
+                manualCostPrice: l.costPrice,
               }
         ),
       });

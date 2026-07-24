@@ -5,9 +5,12 @@ import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getSalesReport, getSalesReportRows } from "@/lib/data/reports/sales";
 import { getBranches } from "@/lib/data/branches";
 import { getSalesStaffUsers } from "@/lib/data/users";
+import { getFinancialSummary, getFinancialTrend } from "@/lib/accounting";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { ReportActions } from "@/components/reports/ReportActions";
 import { SalesChart } from "@/components/reports/SalesChart";
+import { FinancialSummarySection } from "@/components/reports/FinancialSummarySection";
+import { FinancialChart } from "@/components/reports/FinancialChart";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -45,12 +48,14 @@ export default async function SalesReportPage({
   const range = getDateRange({ period: sp.period || "daily", ...sp });
   const filters = { branchId: sp.branchId, userId: sp.userId, paymentMethod: sp.paymentMethod };
 
-  const [report, rows, branches, staff] = await Promise.all([
-    getSalesReport(range, filters),
-    getSalesReportRows(range, filters),
-    getBranches(),
-    getSalesStaffUsers(),
-  ]);
+  // Sequential (not Promise.all) — the local Prisma Postgres dev server has been unreliable
+  // under several concurrent connections in this environment (see README's migration note).
+  const report = await getSalesReport(range, filters);
+  const rows = await getSalesReportRows(range, filters);
+  const branches = await getBranches();
+  const staff = await getSalesStaffUsers();
+  const financialSummary = await getFinancialSummary(range, { branchId: sp.branchId });
+  const financialTrend = await getFinancialTrend(range, { branchId: sp.branchId });
 
   return (
     <div className="mx-auto w-full max-w-5xl py-12 px-4">
@@ -96,6 +101,11 @@ export default async function SalesReportPage({
           <p className="text-xl font-semibold mt-1">{currency.format(report.creditTotal)}</p>
         </div>
       </div>
+
+      <FinancialSummarySection summary={financialSummary} />
+
+      <h2 className="text-sm font-medium mb-2">Revenue vs Expenses vs Net Profit</h2>
+      <FinancialChart data={financialTrend} />
 
       <h2 className="text-sm font-medium mb-2">Mwenendo wa Mauzo</h2>
       <SalesChart data={report.chartData} />

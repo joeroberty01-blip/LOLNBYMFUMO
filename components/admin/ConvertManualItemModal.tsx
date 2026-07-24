@@ -14,12 +14,14 @@ export function ConvertManualItemModal({
   groupName,
   suggestedPartNumber,
   suggestedUnitPrice,
+  suggestedCostPrice,
   branches,
   onClose,
 }: {
   groupName: string;
   suggestedPartNumber: string | null;
   suggestedUnitPrice: number;
+  suggestedCostPrice: number;
   branches: Branch[];
   onClose: () => void;
 }) {
@@ -40,7 +42,7 @@ export function ConvertManualItemModal({
       partNumber: suggestedPartNumber ?? "",
       category: "",
       unitPrice: suggestedUnitPrice,
-      costPrice: suggestedUnitPrice,
+      costPrice: suggestedCostPrice,
       lowStockThreshold: 10,
       branchId: branches[0]?.id ?? "",
       initialQuantity: 0,

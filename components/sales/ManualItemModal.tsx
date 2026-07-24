@@ -89,6 +89,22 @@ export function ManualItemModal({
             </div>
           </div>
 
+          <div>
+            <label htmlFor="manualCostPrice" className="block text-sm font-medium mb-1">
+              Buying Price / Cost Price
+            </label>
+            <input
+              id="manualCostPrice"
+              type="number"
+              step="0.01"
+              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+              {...register("manualCostPrice")}
+            />
+            {errors.manualCostPrice && (
+              <p className="mt-1 text-sm text-red-600">{errors.manualCostPrice.message}</p>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2 mt-2">
             <button
               type="button"
