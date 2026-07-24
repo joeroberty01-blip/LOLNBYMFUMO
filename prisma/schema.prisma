@@ -12,8 +12,14 @@ datasource db {
 
 enum Role {
   ADMIN
-  MANAGER
-  CASHIER
+  SALES_STAFF
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DEACTIVATED
 }
 
 enum PaymentType {
@@ -24,19 +30,22 @@ enum PaymentType {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         Role     @default(CASHIER)
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  role         Role       @default(SALES_STAFF)
+  status       UserStatus @default(APPROVED)
   branchId     String?
-  branch       Branch?  @relation(fields: [branchId], references: [id])
-  createdAt    DateTime @default(now())
+  branch       Branch?    @relation(fields: [branchId], references: [id])
+  createdAt    DateTime   @default(now())
 
   sales     Sale[]
   purchases Purchase[]
 
   @@index([branchId])
+  @@index([role])
+  @@index([status])
 }
 
 model Branch {

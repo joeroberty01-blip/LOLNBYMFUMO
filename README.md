@@ -9,7 +9,7 @@ ERP system ya kitaalamu kwa ajili ya kampuni ya mauzo ya spare parts. Inashughul
 - **Styling:** Tailwind CSS v4
 - **Database:** PostgreSQL
 - **ORM:** Prisma 7 (driver adapter: `@prisma/adapter-pg`)
-- **Auth:** NextAuth.js (itaongezwa katika hatua inayofuata)
+- **Auth:** NextAuth.js v5 (Credentials providers mbili: admin-login, sales-login)
 - **Validation:** Zod
 - **Forms:** React Hook Form
 
@@ -100,8 +100,51 @@ Fungua [http://localhost:3000](http://localhost:3000).
 | `npm run lint` | Endesha ESLint |
 | `npm run build` | Jenga production build |
 
+## Authentication & Roles
+
+Mfumo una roles mbili tu: **ADMIN** na **SALES_STAFF**, kila mmoja na signup/login/dashboard
+yake tofauti.
+
+| Route | Maelezo |
+|---|---|
+| `/signup/admin` | Kuunda admin — **inafanya kazi mara moja tu** (bootstrap). Inahitaji `ADMIN_SIGNUP_SECRET` kutoka `.env`, na inajifunga yenyewe mara admin wa kwanza akishaundwa. |
+| `/signup/sales-staff` | Sales staff wanajisajili wenyewe. Akaunti mpya ina `status: PENDING` — haiwezi ku-login mpaka admin ai-approve. |
+| `/login/admin` | Login ya admin → inaelekeza `/dashboard/admin`. |
+| `/login/sales-staff` | Login ya sales staff → inaelekeza `/dashboard/sales`. Ikiwa `status` si `APPROVED`, inaonyesha ujumbe unaofaa (k.m. "Akaunti yako inasubiri uthibitisho wa admin") badala ya kuruhusu kuingia. |
+| `/dashboard/admin/sales-staff` | Admin anaona list ya sales staff wote na anaweza Idhinisha / Kataa (wale PENDING) au Zima Akaunti (wale APPROVED wanaosumbua). |
+
+**Jinsi admin wa kwanza anavyoundwa:**
+1. Fungua `/signup/admin` (au bonyeza "Unda admin wa kwanza" kwenye homepage).
+2. Jaza jina, barua pepe, nywila, na `ADMIN_SIGNUP_SECRET` (thamani iko kwenye `.env` yako — usiishiriki).
+3. Baada ya kuundwa, ukurasa huu unajifunga moja kwa moja (haufanyi kazi tena) — admin wapya
+   waongezwe na admin aliyepo kupitia `/dashboard/admin/sales-staff`... kwa sasa admin mmoja
+   pekee anaweza kuundwa kwa njia hii; "add admin from dashboard" bado haijajengwa (angalia
+   "Hatua Zinazofuata").
+
+**Jinsi sales staff anavyojisajili na kusubiri approval:**
+1. `/signup/sales-staff` → jaza fomu → akaunti inaundwa na `status: PENDING`.
+2. Akijaribu `/login/sales-staff` kabla ya approval, anapata ujumbe: *"Akaunti yako inasubiri
+   uthibitisho wa admin"* — hawezi kuingia.
+
+**Jinsi admin anavyo-approve:**
+1. Admin anaingia `/login/admin` → `/dashboard/admin` → "Manage Sales Staff".
+2. Kwa kila mtumiaji mwenye status "Inasubiri", bonyeza **Idhinisha** (au **Kataa**).
+3. Mara akiidhinishwa, sales staff huyo anaweza ku-login na kufika `/dashboard/sales`.
+4. Kwa mtumiaji aliyeidhinishwa lakini anasumbua, bonyeza **Zima Akaunti** — hataweza ku-login
+   tena (ujumbe: "Akaunti yako haijaidhinishwa kuingia").
+
+**Usalama uliowekwa:**
+- `proxy.ts` (Next.js 16 imebadilisha jina kutoka `middleware.ts`) inazuia `/dashboard/admin/*`
+  na `/dashboard/sales/*` kwa role isiyo sahihi, na inathibitisha upya `role`/`status` dhidi ya
+  database kwenye kila request ili deactivation ifanye kazi papo hapo (si kusubiri session
+  itakapoisha).
+- Kila Server Action inayobadilisha data (approve/reject/deactivate) inathibitisha `session.user.role === "ADMIN"` yenyewe pia — proxy haitegemewi kama ulinzi pekee.
+- `/signup/admin` inafungwa kiotomatiki mara admin wa kwanza akishaundwa (angalia server component ya ukurasa huo), tena inahitaji `ADMIN_SIGNUP_SECRET` sahihi.
+
+Nenda [lib/auth.ts](lib/auth.ts), [proxy.ts](proxy.ts), na [lib/actions/](lib/actions) kwa undani wa code.
+
 ## Hatua Zinazofuata
 
-1. Authentication (NextAuth.js — credentials provider + roles)
-2. UI za msingi: login, dashboard, branch/inventory management
+1. "Add Admin" kutoka dashboard ya admin (badala ya kutegemea `/signup/admin` pekee)
+2. Inventory & branch management
 3. Sales & Purchases workflows

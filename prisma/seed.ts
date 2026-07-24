@@ -23,6 +23,7 @@ async function main() {
       email: "admin@woodlanderp.com",
       passwordHash,
       role: "ADMIN",
+      status: "APPROVED",
       branchId: branch.id,
     },
   });
