@@ -8,8 +8,9 @@ export default auth(async (req) => {
 
   const isAdminArea = pathname.startsWith("/dashboard/admin");
   const isSalesArea = pathname.startsWith("/dashboard/sales");
+  const isSettingsArea = pathname.startsWith("/dashboard/settings");
 
-  if (!isAdminArea && !isSalesArea) {
+  if (!isAdminArea && !isSalesArea && !isSettingsArea) {
     return NextResponse.next();
   }
 
@@ -30,8 +31,36 @@ export default auth(async (req) => {
     return NextResponse.redirect(new URL("/login/admin", req.nextUrl));
   }
 
+  // Settings is shared by both roles — any admin, or any approved sales-staff
+  // account, may reach it.
+  if (isSettingsArea) {
+    const isApprovedSalesStaff = current.role === "SALES_STAFF" && current.status === "APPROVED";
+    if (current.role !== "ADMIN" && !isApprovedSalesStaff) {
+      return NextResponse.redirect(new URL("/login/sales-staff", req.nextUrl));
+    }
+    return NextResponse.next();
+  }
+
   if (isAdminArea && current.role !== "ADMIN") {
     return NextResponse.redirect(new URL("/dashboard/sales", req.nextUrl));
+  }
+
+  // POS, Sales History and Receipts are shared: admins can also sell directly (e.g. when
+  // no sales staff is on shift) and need to reprint any receipt, so these routes accept
+  // ADMIN in addition to an approved SALES_STAFF account. Every other /dashboard/sales/**
+  // route (home, inventory, suppliers, my-performance) stays SALES_STAFF-only.
+  // The receipt page itself further restricts sales staff to their own sales.
+  const isSharedSalesRoute =
+    pathname.startsWith("/dashboard/sales/pos") ||
+    pathname.startsWith("/dashboard/sales/history") ||
+    pathname.startsWith("/dashboard/sales/receipt");
+
+  if (isSalesArea && isSharedSalesRoute) {
+    const isApprovedSalesStaff = current.role === "SALES_STAFF" && current.status === "APPROVED";
+    if (current.role !== "ADMIN" && !isApprovedSalesStaff) {
+      return NextResponse.redirect(new URL("/login/sales-staff", req.nextUrl));
+    }
+    return NextResponse.next();
   }
 
   if (isSalesArea && (current.role !== "SALES_STAFF" || current.status !== "APPROVED")) {

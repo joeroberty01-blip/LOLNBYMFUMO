@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import {
@@ -11,6 +10,9 @@ import {
 } from "@/lib/data/reports/inventory";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { ReportActions } from "@/components/reports/ReportActions";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -34,6 +36,8 @@ export default async function InventoryReportPage({
     redirect("/login/admin");
   }
 
+  const { t } = await getServerDictionary();
+
   const sp = await searchParams;
   const range = getDateRange({ period: sp.period || "daily", ...sp });
 
@@ -46,180 +50,160 @@ export default async function InventoryReportPage({
   const lowStock = await getLowStockReport();
 
   return (
-    <div className="mx-auto w-full max-w-5xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline no-print">
-        &larr; Rudi Dashboard
-      </Link>
+    <div>
+      <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.inventory.title}</h1>
+      <p className="mb-6 text-sm text-secondary">{range.label}</p>
 
-      <h1 className="text-xl font-semibold mt-4 mb-1">Inventory Report</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">{range.label}</p>
-
-      <ReportActions reportType="inventory" title="Inventory Report" />
+      <ReportActions reportType="inventory" title={t.reports.inventory.title} />
 
       <div className="no-print">
         <ReportControls />
       </div>
 
-      <h2 className="text-sm font-medium mb-2">Top Selling Parts</h2>
-      <div className="overflow-x-auto mb-8">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Part</th>
-              <th className="py-2 pr-3 font-medium">Part Number</th>
-              <th className="py-2 pr-3 font-medium">Quantity Sold</th>
-              <th className="py-2 pr-3 font-medium">Value Sold</th>
-            </tr>
-          </thead>
-          <tbody>
-            {topSelling.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna mauzo kwa kipindi hiki.
-                </td>
-              </tr>
-            ) : (
-              topSelling.map((p) => (
-                <tr key={p.partId} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{p.name}</td>
-                  <td className="py-2 pr-3">{p.partNumber}</td>
-                  <td className="py-2 pr-3">{p.quantitySold}</td>
-                  <td className="py-2 pr-3">{currency.format(p.valueSold)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.inventory.topSelling}</h2>
+      <div className="mb-8">
+        {topSelling.length === 0 ? (
+          <EmptyState title={t.reports.inventory.noSalesForPeriod} />
+        ) : (
+          <Table>
+            <THead>
+              <THeadRow>
+                <Th>{t.reports.inventory.part}</Th>
+                <Th>{t.reports.inventory.partNumber}</Th>
+                <Th>{t.reports.inventory.quantitySold}</Th>
+                <Th className="text-right">{t.reports.inventory.valueSold}</Th>
+              </THeadRow>
+            </THead>
+            <TBody>
+              {topSelling.map((p, i) => (
+                <Tr key={p.partId} index={i}>
+                  <Td>{p.name}</Td>
+                  <Td className="text-secondary">{p.partNumber}</Td>
+                  <Td className="tabular-nums">{p.quantitySold}</Td>
+                  <Td className="text-right tabular-nums">{currency.format(p.valueSold)}</Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
       </div>
 
-      <h2 className="text-sm font-medium mb-2">Slow-Moving / Dead Stock (siku 30+)</h2>
-      <div className="overflow-x-auto mb-8">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Part</th>
-              <th className="py-2 pr-3 font-medium">Part Number</th>
-              <th className="py-2 pr-3 font-medium">Siku Tangu Kuuzwa</th>
-            </tr>
-          </thead>
-          <tbody>
-            {slowMoving.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna slow-moving parts.
-                </td>
-              </tr>
-            ) : (
-              slowMoving.map((p) => (
-                <tr key={p.partId} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{p.name}</td>
-                  <td className="py-2 pr-3">{p.partNumber}</td>
-                  <td className="py-2 pr-3">
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.inventory.slowMovingTitle}</h2>
+      <div className="mb-8">
+        {slowMoving.length === 0 ? (
+          <EmptyState title={t.reports.inventory.noSlowMoving} />
+        ) : (
+          <Table>
+            <THead>
+              <THeadRow>
+                <Th>{t.reports.inventory.part}</Th>
+                <Th>{t.reports.inventory.partNumber}</Th>
+                <Th>{t.reports.inventory.daysSinceLastSale}</Th>
+              </THeadRow>
+            </THead>
+            <TBody>
+              {slowMoving.map((p, i) => (
+                <Tr key={p.partId} index={i}>
+                  <Td>{p.name}</Td>
+                  <Td className="text-secondary">{p.partNumber}</Td>
+                  <Td>
                     {p.daysSinceLastSale === null
-                      ? "Hajawahi kuuzwa"
-                      : `${p.daysSinceLastSale} siku`}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                      ? t.reports.inventory.neverSold
+                      : `${p.daysSinceLastSale} ${t.reports.inventory.daysSuffix}`}
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
       </div>
 
-      <h2 className="text-sm font-medium mb-1">Thamani ya Inventory kwa Branch</h2>
-      <p className="text-xs text-black/50 dark:text-white/50 mb-2">
-        Hii ni current snapshot (si ya kipindi kilichochaguliwa).
-      </p>
-      <div className="overflow-x-auto mb-8">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Branch</th>
-              <th className="py-2 pr-3 font-medium">Thamani</th>
-            </tr>
-          </thead>
-          <tbody>
-            {valueByBranch.map((b) => (
-              <tr key={b.branchId} className="border-b border-black/5 dark:border-white/10">
-                <td className="py-2 pr-3">{b.branchName}</td>
-                <td className="py-2 pr-3">{currency.format(b.value)}</td>
-              </tr>
+      <h2 className="mb-1 text-sm font-semibold text-primary">
+        {t.reports.inventory.valueByBranchTitle}
+      </h2>
+      <p className="mb-2 text-xs text-secondary">{t.reports.inventory.valueByBranchNote}</p>
+      <div className="mb-8">
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.common.branch}</Th>
+              <Th className="text-right">{t.reports.inventory.value}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {valueByBranch.map((b, i) => (
+              <Tr key={b.branchId} index={i}>
+                <Td>{b.branchName}</Td>
+                <Td className="text-right tabular-nums">{currency.format(b.value)}</Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
-      <h2 className="text-sm font-medium mb-2">Low Stock Report</h2>
-      <div className="overflow-x-auto mb-8">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Part</th>
-              <th className="py-2 pr-3 font-medium">Part Number</th>
-              <th className="py-2 pr-3 font-medium">Branch</th>
-              <th className="py-2 pr-3 font-medium">Quantity</th>
-              <th className="py-2 pr-3 font-medium">Threshold</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lowStock.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna low stock kwa sasa.
-                </td>
-              </tr>
-            ) : (
-              lowStock.map((r, i) => (
-                <tr key={`${r.partId}-${i}`} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{r.name}</td>
-                  <td className="py-2 pr-3">{r.partNumber}</td>
-                  <td className="py-2 pr-3">{r.branchName}</td>
-                  <td className="py-2 pr-3 text-red-600 font-medium">{r.quantity}</td>
-                  <td className="py-2 pr-3">{r.lowStockThreshold}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.inventory.lowStockTitle}</h2>
+      <div className="mb-8">
+        {lowStock.length === 0 ? (
+          <EmptyState title={t.reports.inventory.noLowStock} />
+        ) : (
+          <Table>
+            <THead>
+              <THeadRow>
+                <Th>{t.reports.inventory.part}</Th>
+                <Th>{t.reports.inventory.partNumber}</Th>
+                <Th>{t.common.branch}</Th>
+                <Th>{t.reports.inventory.quantity}</Th>
+                <Th>{t.reports.inventory.threshold}</Th>
+              </THeadRow>
+            </THead>
+            <TBody>
+              {lowStock.map((r, i) => (
+                <Tr key={`${r.partId}-${i}`} index={i}>
+                  <Td>{r.name}</Td>
+                  <Td className="text-secondary">{r.partNumber}</Td>
+                  <Td>{r.branchName}</Td>
+                  <Td className="font-medium text-danger tabular-nums">{r.quantity}</Td>
+                  <Td className="tabular-nums">{r.lowStockThreshold}</Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
       </div>
 
-      <h2 className="text-sm font-medium mb-2">Stock Adjustments (Kipindi Kilichochaguliwa)</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Tarehe</th>
-              <th className="py-2 pr-3 font-medium">Part</th>
-              <th className="py-2 pr-3 font-medium">Branch</th>
-              <th className="py-2 pr-3 font-medium">Mabadiliko</th>
-              <th className="py-2 pr-3 font-medium">Sababu</th>
-              <th className="py-2 pr-3 font-medium">Nani</th>
-            </tr>
-          </thead>
-          <tbody>
-            {adjustments.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna stock adjustments kwa kipindi hiki.
-                </td>
-              </tr>
-            ) : (
-              adjustments.map((a) => (
-                <tr key={a.id} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{a.createdAt.toLocaleString("sw-TZ")}</td>
-                  <td className="py-2 pr-3">{a.partName}</td>
-                  <td className="py-2 pr-3">{a.branchName}</td>
-                  <td className="py-2 pr-3">
-                    {a.quantityChange > 0 ? `+${a.quantityChange}` : a.quantityChange}
-                  </td>
-                  <td className="py-2 pr-3">{a.reason}</td>
-                  <td className="py-2 pr-3">{a.userName}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <h2 className="mb-2 text-sm font-semibold text-primary">
+        {t.reports.inventory.stockAdjustmentsTitle}
+      </h2>
+      {adjustments.length === 0 ? (
+        <EmptyState title={t.reports.inventory.noAdjustments} />
+      ) : (
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.common.date}</Th>
+              <Th>{t.reports.inventory.part}</Th>
+              <Th>{t.common.branch}</Th>
+              <Th>{t.reports.inventory.change}</Th>
+              <Th>{t.reports.inventory.reason}</Th>
+              <Th>{t.reports.inventory.who}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {adjustments.map((a, i) => (
+              <Tr key={a.id} index={i}>
+                <Td className="text-secondary">{a.createdAt.toLocaleString("sw-TZ")}</Td>
+                <Td>{a.partName}</Td>
+                <Td>{a.branchName}</Td>
+                <Td className="tabular-nums">
+                  {a.quantityChange > 0 ? `+${a.quantityChange}` : a.quantityChange}
+                </Td>
+                <Td>{a.reason}</Td>
+                <Td>{a.userName}</Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      )}
     </div>
   );
 }

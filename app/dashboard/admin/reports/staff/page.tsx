@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getStaffPerformance } from "@/lib/data/reports/staff";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { ReportActions } from "@/components/reports/ReportActions";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -28,57 +31,55 @@ export default async function StaffReportPage({
     redirect("/login/admin");
   }
 
+  const { t } = await getServerDictionary();
+
   const sp = await searchParams;
   const range = getDateRange({ period: sp.period || "daily", ...sp });
   const staff = await getStaffPerformance(range);
 
   return (
-    <div className="mx-auto w-full max-w-3xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline no-print">
-        &larr; Rudi Dashboard
-      </Link>
+    <div>
+      <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.staff.title}</h1>
+      <p className="mb-6 text-sm text-secondary">{range.label}</p>
 
-      <h1 className="text-xl font-semibold mt-4 mb-1">Staff Performance Report</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">{range.label}</p>
-
-      <ReportActions reportType="staff" title="Staff Performance Report" />
+      <ReportActions reportType="staff" title={t.reports.staff.title} />
 
       <div className="no-print">
         <ReportControls />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">#</th>
-              <th className="py-2 pr-3 font-medium">Jina</th>
-              <th className="py-2 pr-3 font-medium">Transactions</th>
-              <th className="py-2 pr-3 font-medium">Jumla ya Mauzo</th>
-              <th className="py-2 pr-3 font-medium">Manual Items</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna mauzo kwa kipindi hiki.
-                </td>
-              </tr>
-            ) : (
-              staff.map((s, i) => (
-                <tr key={s.userId} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{i + 1}</td>
-                  <td className="py-2 pr-3">{s.name}</td>
-                  <td className="py-2 pr-3">{s.transactionCount}</td>
-                  <td className="py-2 pr-3">{currency.format(s.totalSales)}</td>
-                  <td className="py-2 pr-3">{s.manualItemCount}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {staff.length === 0 ? (
+        <EmptyState title={t.reports.staff.noSalesForPeriod} />
+      ) : (
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>#</Th>
+              <Th>{t.common.name}</Th>
+              <Th>{t.reports.staff.roleColumn}</Th>
+              <Th>{t.reports.staff.transactions}</Th>
+              <Th className="text-right">{t.reports.staff.totalSales}</Th>
+              <Th>{t.reports.staff.manualItems}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {staff.map((s, i) => (
+              <Tr key={s.userId} index={i}>
+                <Td>{i + 1}</Td>
+                <Td>{s.name}</Td>
+                <Td>
+                  <Badge status={s.role === "ADMIN" ? "warning" : "neutral"}>
+                    {s.role === "ADMIN" ? t.reports.staff.roleAdmin : t.reports.staff.roleStaff}
+                  </Badge>
+                </Td>
+                <Td>{s.transactionCount}</Td>
+                <Td className="text-right tabular-nums">{currency.format(s.totalSales)}</Td>
+                <Td>{s.manualItemCount}</Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import type { DateRange } from "@/lib/dateRanges";
 export type StaffPerformanceRow = {
   userId: string;
   name: string;
+  role: "ADMIN" | "SALES_STAFF";
   transactionCount: number;
   totalSales: number;
   manualItemCount: number;
@@ -16,7 +17,7 @@ export async function getStaffPerformance(range: DateRange): Promise<StaffPerfor
     select: {
       total: true,
       userId: true,
-      user: { select: { name: true } },
+      user: { select: { name: true, role: true } },
       items: { select: { isManualEntry: true } },
     },
   });
@@ -26,6 +27,7 @@ export async function getStaffPerformance(range: DateRange): Promise<StaffPerfor
     const existing = byUser.get(s.userId) ?? {
       userId: s.userId,
       name: s.user.name,
+      role: s.user.role,
       transactionCount: 0,
       totalSales: 0,
       manualItemCount: 0,

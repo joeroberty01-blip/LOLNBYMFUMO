@@ -10,6 +10,8 @@ async function main() {
       id: "seed-branch-main",
       name: "Main Branch",
       location: "Dar es Salaam",
+      // Not a POS selling point — kept only for its existing historical inventory/sales.
+      isSellingPoint: false,
     },
   });
 
@@ -32,6 +34,21 @@ async function main() {
       location: "Dar es Salaam",
     },
   });
+
+  // Warehouse-style stores: hold inventory (bulk upload, stock adjustments, reports) but are
+  // not offered as a POS checkout location, same convention as Main Branch above.
+  for (const n of [1, 2, 3]) {
+    await prisma.branch.upsert({
+      where: { id: `seed-branch-store${n}` },
+      update: {},
+      create: {
+        id: `seed-branch-store${n}`,
+        name: `Store ${n}`,
+        location: "Dar es Salaam",
+        isSellingPoint: false,
+      },
+    });
+  }
 
   const passwordHash = await bcrypt.hash("Admin@12345", 10);
   await prisma.user.upsert({

@@ -7,6 +7,7 @@ import {
   convertManualItemSchema,
   type ConvertManualItemInput,
 } from "@/lib/validators/manualItems";
+import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true; partId: string } | { success: false; error: string };
 
@@ -34,26 +35,39 @@ export async function convertManualItemToPart(
     return { success: false, error: "Branch haipo" };
   }
 
-  const part = await prisma.$transaction(async (tx) => {
-    const created = await tx.part.create({ data: partData });
+  let part;
+  try {
+    part = await prisma.$transaction(async (tx) => {
+      const created = await tx.part.create({ data: partData });
 
-    if (initialQuantity > 0) {
-      await tx.inventory.create({
-        data: { partId: created.id, branchId, quantity: initialQuantity },
-      });
-      await tx.stockAdjustment.create({
-        data: {
-          partId: created.id,
-          branchId,
-          quantityChange: initialQuantity,
-          reason: "NEW_STOCK",
-          userId: session.user.id,
-        },
-      });
-    }
+      if (initialQuantity > 0) {
+        await tx.inventory.create({
+          data: { partId: created.id, branchId, quantity: initialQuantity },
+        });
+        await tx.stockAdjustment.create({
+          data: {
+            partId: created.id,
+            branchId,
+            quantityChange: initialQuantity,
+            reason: "NEW_STOCK",
+            userId: session.user.id,
+          },
+        });
+      }
 
-    return created;
-  });
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "MANUAL_ITEM_CONVERTED",
+        entityType: "Part",
+        entityId: created.id,
+        metadata: { branchId, initialQuantity, partNumber: created.partNumber },
+      });
+
+      return created;
+    });
+  } catch {
+    return { success: false, error: "Part number hii tayari ipo (huenda imeundwa na mtumiaji mwingine)" };
+  }
 
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/admin/sales");

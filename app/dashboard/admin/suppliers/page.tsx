@@ -4,37 +4,50 @@ import { auth } from "@/lib/auth";
 import { getSuppliers } from "@/lib/data/suppliers";
 import { getBranches } from "@/lib/data/branches";
 import { SuppliersTable } from "@/components/admin/SuppliersTable";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Button } from "@/components/ui/Button";
+import { Pagination } from "@/components/ui/Pagination";
+import { parsePageParams } from "@/lib/pagination";
 
-export default async function SuppliersPage() {
+export default async function SuppliersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const [suppliers, branches] = await Promise.all([getSuppliers(), getBranches()]);
+  const { page: pageParam, pageSize } = await searchParams;
+  const pageArgs = parsePageParams({ page: pageParam, pageSize });
+  const [suppliers, branches] = await Promise.all([getSuppliers(pageArgs), getBranches()]);
+  const { t } = await getServerDictionary();
 
   return (
-    <div className="mx-auto w-full max-w-3xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-
-      <div className="flex items-center justify-between mt-4 mb-6">
+    <div>
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Suppliers</h1>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Simamia suppliers na malipo ya deni
-          </p>
+          <h1 className="text-xl font-semibold text-primary">{t.nav.suppliers}</h1>
+          <p className="text-sm text-secondary">{t.adminCatalog.suppliers.subtitle}</p>
         </div>
-        <Link
-          href="/dashboard/admin/suppliers/new"
-          className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium"
-        >
-          + Ongeza Supplier
+        <Link href="/dashboard/admin/suppliers/new">
+          <Button type="button" variant="primary">
+            {t.adminCatalog.suppliers.addNew}
+          </Button>
         </Link>
       </div>
 
-      <SuppliersTable suppliers={suppliers} branches={branches} />
+      <SuppliersTable suppliers={suppliers.rows} branches={branches} />
+
+      <Pagination
+        baseHref="/dashboard/admin/suppliers"
+        params={{ pageSize }}
+        page={suppliers.page}
+        pageSize={suppliers.pageSize}
+        total={suppliers.total}
+        totalPages={suppliers.totalPages}
+      />
     </div>
   );
 }

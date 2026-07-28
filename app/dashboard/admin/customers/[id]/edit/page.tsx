@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CustomerForm } from "@/components/admin/CustomerForm";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function EditCustomerPage({
   params,
@@ -20,12 +21,16 @@ export default async function EditCustomerPage({
     notFound();
   }
 
+  const { t } = await getServerDictionary();
+
   return (
-    <div className="mx-auto w-full max-w-md py-12 px-4">
-      <Link href="/dashboard/admin/customers" className="text-sm underline">
-        &larr; Rudi Customers
+    <div>
+      <Link href="/dashboard/admin/customers" className="text-sm text-accent hover:underline">
+        {t.adminCatalog.customers.backToCustomers}
       </Link>
-      <h1 className="text-xl font-semibold mt-4 mb-6">Hariri Customer</h1>
+      <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
+        {t.adminCatalog.customers.editTitle}
+      </h1>
       <CustomerForm
         mode="edit"
         customerId={customer.id}

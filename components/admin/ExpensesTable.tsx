@@ -7,18 +7,19 @@ import type { manualExpenseCategories } from "@/lib/validators/expenses";
 import type { paymentMethods } from "@/lib/validators/sales";
 import { ExpenseFormModal } from "@/components/admin/ExpenseFormModal";
 import { deleteExpense } from "@/lib/actions/expenses";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import {
+  EXPENSE_CATEGORY_COLORS,
+  EXPENSE_CATEGORY_LABELS,
+} from "@/lib/constants/expenseCategoryColors";
+import type { ExpenseCategory } from "@/generated/prisma/client";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type ManualCategory = (typeof manualExpenseCategories)[number];
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
-const CATEGORY_LABEL: Record<string, string> = {
-  SUPPLIER_PAYMENT: "Supplier Payment",
-  RENT: "Rent",
-  SALARIES: "Salaries",
-  UTILITIES: "Utilities",
-  TRANSPORT: "Transport",
-  OTHER: "Other",
-};
 const PAYMENT_LABEL: Record<string, string> = {
   CASH: "Cash",
   BANK_NMB: "NMB",
@@ -34,6 +35,7 @@ export function ExpensesTable({
   rows: ExpenseRow[];
   branches: { id: string; name: string }[];
 }) {
+  const t = useTranslations();
   const router = useRouter();
   const [editing, setEditing] = useState<ExpenseRow | null>(null);
   const [adding, setAdding] = useState(false);
@@ -42,7 +44,7 @@ export function ExpensesTable({
   const [error, setError] = useState<string | null>(null);
 
   function handleDelete(id: string) {
-    const confirmed = window.confirm("Una uhakika unataka kufuta expense hii?");
+    const confirmed = window.confirm(t.adminOps.expenses.confirmDelete);
     if (!confirmed) return;
 
     setError(null);
@@ -60,75 +62,77 @@ export function ExpensesTable({
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium"
-        >
-          + Add Expense
-        </button>
+      <div className="mb-4 flex justify-end">
+        <Button type="button" variant="primary" onClick={() => setAdding(true)}>
+          + {t.adminOps.expenses.addExpense}
+        </Button>
       </div>
 
-      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+      {error && <p className="mb-3 text-sm text-danger">{error}</p>}
 
       {rows.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60">Hakuna expenses kwa kipindi hiki.</p>
+        <EmptyState title={t.adminOps.expenses.noExpenses} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-black/10 dark:border-white/15 text-left">
-                <th className="py-2 pr-3 font-medium">Tarehe</th>
-                <th className="py-2 pr-3 font-medium">Category</th>
-                <th className="py-2 pr-3 font-medium">Description</th>
-                <th className="py-2 pr-3 font-medium">Branch</th>
-                <th className="py-2 pr-3 font-medium">Payment</th>
-                <th className="py-2 pr-3 font-medium">Amount</th>
-                <th className="py-2 pr-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{r.createdAt.toLocaleString("sw-TZ")}</td>
-                  <td className="py-2 pr-3">{CATEGORY_LABEL[r.category] ?? r.category}</td>
-                  <td className="py-2 pr-3">
-                    {r.description ?? (r.supplierName ? `Malipo kwa ${r.supplierName}` : "—")}
-                  </td>
-                  <td className="py-2 pr-3">{r.branchName ?? "—"}</td>
-                  <td className="py-2 pr-3">{PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}</td>
-                  <td className="py-2 pr-3">{currency.format(r.amount)}</td>
-                  <td className="py-2 pr-3">
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.common.date}</Th>
+              <Th>{t.common.category}</Th>
+              <Th>{t.common.description}</Th>
+              <Th>{t.common.branch}</Th>
+              <Th>{t.common.paymentMethod}</Th>
+              <Th className="text-right">{t.common.amount}</Th>
+              <Th>{t.common.actions}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {rows.map((r, i) => {
+              const category = r.category as ExpenseCategory;
+              return (
+                <Tr key={r.id} index={i}>
+                  <Td className="text-secondary">{r.createdAt.toLocaleString("sw-TZ")}</Td>
+                  <Td>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: EXPENSE_CATEGORY_COLORS[category] ?? "#8B8D98" }}
+                      />
+                      {EXPENSE_CATEGORY_LABELS[category] ?? r.category}
+                    </span>
+                  </Td>
+                  <Td>
+                    {r.description ??
+                      (r.supplierName ? `${t.adminOps.expenses.paymentTo} ${r.supplierName}` : "—")}
+                  </Td>
+                  <Td>{r.branchName ?? "—"}</Td>
+                  <Td>{PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}</Td>
+                  <Td className="text-right tabular-nums">{currency.format(r.amount)}</Td>
+                  <Td>
                     {r.isEditable ? (
                       <div className="flex gap-2">
-                        <button
+                        <Button type="button" variant="secondary" onClick={() => setEditing(r)}>
+                          {t.common.edit}
+                        </Button>
+                        <Button
                           type="button"
-                          onClick={() => setEditing(r)}
-                          className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
+                          variant="danger"
                           disabled={isPending && pendingId === r.id}
                           onClick={() => handleDelete(r.id)}
-                          className="rounded-md border border-red-600/40 text-red-600 px-3 py-1.5 text-sm disabled:opacity-50"
                         >
-                          Futa
-                        </button>
+                          {t.common.delete}
+                        </Button>
                       </div>
                     ) : (
-                      <span className="text-xs text-black/40 dark:text-white/40">
-                        Auto (Supplier Payment)
+                      <span className="text-xs text-secondary">
+                        {t.adminOps.expenses.autoSupplierPayment}
                       </span>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </Td>
+                </Tr>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
 
       {adding && (

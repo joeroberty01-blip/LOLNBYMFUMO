@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { Wallet } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
-import { getExpenses } from "@/lib/data/expenses";
+import { getExpenses, getExpensesTotal } from "@/lib/data/expenses";
 import { getBranches } from "@/lib/data/branches";
 import { expenseCategories } from "@/lib/validators/expenses";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { ExpensesTable } from "@/components/admin/ExpensesTable";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { StatCard } from "@/components/ui/StatCard";
+import { Pagination } from "@/components/ui/Pagination";
+import { parsePageParams } from "@/lib/pagination";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -29,6 +33,8 @@ type SearchParams = {
   to?: string;
   category?: string;
   branchId?: string;
+  page?: string;
+  pageSize?: string;
 };
 
 export default async function ExpensesPage({
@@ -43,34 +49,45 @@ export default async function ExpensesPage({
 
   const sp = await searchParams;
   const range = getDateRange({ period: sp.period || "daily", ...sp });
+  const { t } = await getServerDictionary();
+  const pageArgs = parsePageParams({ page: sp.page, pageSize: sp.pageSize });
+  const filters = { category: sp.category, branchId: sp.branchId };
 
-  const [rows, branches] = await Promise.all([
-    getExpenses(range, { category: sp.category, branchId: sp.branchId }),
+  const [expenses, total, branches] = await Promise.all([
+    getExpenses(range, filters, pageArgs),
+    getExpensesTotal(range, filters),
     getBranches(),
   ]);
 
-  const total = rows.reduce((sum, r) => sum + r.amount, 0);
-
   return (
-    <div className="mx-auto w-full max-w-4xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-
-      <h1 className="text-xl font-semibold mt-4 mb-1">Expenses</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">{range.label}</p>
+    <div>
+      <h1 className="mb-1 text-xl font-semibold text-primary">{t.nav.expenses}</h1>
+      <p className="mb-6 text-sm text-secondary">{range.label}</p>
 
       <ReportControls
         branches={branches}
         categories={expenseCategories.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))}
       />
 
-      <div className="rounded-md border border-black/10 dark:border-white/15 p-4 mb-6 w-fit">
-        <p className="text-sm text-black/60 dark:text-white/60">Jumla ya Expenses (Kipindi Hiki)</p>
-        <p className="text-2xl font-semibold mt-1">{currency.format(total)}</p>
+      <div className="mb-6 w-fit">
+        <StatCard
+          icon={<Wallet size={18} />}
+          label={t.adminOps.expenses.totalForPeriod}
+          value={currency.format(total)}
+          accent="secondary"
+        />
       </div>
 
-      <ExpensesTable rows={rows} branches={branches} />
+      <ExpensesTable rows={expenses.rows} branches={branches} />
+
+      <Pagination
+        baseHref="/dashboard/admin/expenses"
+        params={{ ...sp, pageSize: sp.pageSize }}
+        page={expenses.page}
+        pageSize={expenses.pageSize}
+        total={expenses.total}
+        totalPages={expenses.totalPages}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { DollarSign, Receipt, Banknote, CreditCard } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getSalesReport, getSalesReportRows } from "@/lib/data/reports/sales";
@@ -11,6 +11,11 @@ import { ReportActions } from "@/components/reports/ReportActions";
 import { SalesChart } from "@/components/reports/SalesChart";
 import { FinancialSummarySection } from "@/components/reports/FinancialSummarySection";
 import { FinancialChart } from "@/components/reports/FinancialChart";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { StatCard } from "@/components/ui/StatCard";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -44,6 +49,8 @@ export default async function SalesReportPage({
     redirect("/login/admin");
   }
 
+  const { t } = await getServerDictionary();
+
   const sp = await searchParams;
   const range = getDateRange({ period: sp.period || "daily", ...sp });
   const filters = { branchId: sp.branchId, userId: sp.userId, paymentMethod: sp.paymentMethod };
@@ -58,128 +65,123 @@ export default async function SalesReportPage({
   const financialTrend = await getFinancialTrend(range, { branchId: sp.branchId });
 
   return (
-    <div className="mx-auto w-full max-w-5xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline no-print">
-        &larr; Rudi Dashboard
-      </Link>
+    <div>
+      <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.sales.title}</h1>
+      <p className="mb-6 text-sm text-secondary">{range.label}</p>
 
-      <h1 className="text-xl font-semibold mt-4 mb-1">Sales Report</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">{range.label}</p>
-
-      <ReportActions reportType="sales" title="Sales Report" />
+      <ReportActions reportType="sales" title={t.reports.sales.title} />
 
       <div className="no-print">
         <ReportControls branches={branches} staff={staff} showPaymentMethod />
       </div>
 
-      <div className="flex justify-end mb-4 no-print">
+      <div className="no-print mb-4 flex justify-end">
         <a
           href={`/api/reports/sales-csv?${new URLSearchParams(
             Object.entries(sp).filter(([, v]) => v) as [string, string][]
           ).toString()}`}
-          className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm"
         >
-          Export CSV
+          <Button type="button" variant="secondary">
+            {t.reports.sales.exportCsv}
+          </Button>
         </a>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="rounded-md border border-black/10 dark:border-white/15 p-4">
-          <p className="text-sm text-black/60 dark:text-white/60">Jumla ya Mauzo</p>
-          <p className="text-xl font-semibold mt-1">{currency.format(report.totalSales)}</p>
-        </div>
-        <div className="rounded-md border border-black/10 dark:border-white/15 p-4">
-          <p className="text-sm text-black/60 dark:text-white/60">Transactions</p>
-          <p className="text-xl font-semibold mt-1">{report.transactionCount}</p>
-        </div>
-        <div className="rounded-md border border-black/10 dark:border-white/15 p-4">
-          <p className="text-sm text-black/60 dark:text-white/60">Cash/Instant</p>
-          <p className="text-xl font-semibold mt-1">{currency.format(report.cashTotal)}</p>
-        </div>
-        <div className="rounded-md border border-black/10 dark:border-white/15 p-4">
-          <p className="text-sm text-black/60 dark:text-white/60">Credit</p>
-          <p className="text-xl font-semibold mt-1">{currency.format(report.creditTotal)}</p>
-        </div>
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={<DollarSign size={18} />}
+          label={t.reports.sales.totalSales}
+          value={currency.format(report.totalSales)}
+          accent="primary"
+        />
+        <StatCard
+          icon={<Receipt size={18} />}
+          label={t.reports.sales.transactions}
+          value={String(report.transactionCount)}
+          accent="tertiary"
+        />
+        <StatCard
+          icon={<Banknote size={18} />}
+          label={t.reports.sales.cashInstant}
+          value={currency.format(report.cashTotal)}
+          accent="success"
+        />
+        <StatCard
+          icon={<CreditCard size={18} />}
+          label={t.reports.sales.credit}
+          value={currency.format(report.creditTotal)}
+          accent="warning"
+        />
       </div>
 
       <FinancialSummarySection summary={financialSummary} />
 
-      <h2 className="text-sm font-medium mb-2">Revenue vs Expenses vs Net Profit</h2>
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.sales.revenueVsExpenses}</h2>
       <FinancialChart data={financialTrend} />
 
-      <h2 className="text-sm font-medium mb-2">Mwenendo wa Mauzo</h2>
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.sales.salesTrend}</h2>
       <SalesChart data={report.chartData} />
 
-      <h2 className="text-sm font-medium mb-2">Breakdown kwa Payment Method</h2>
-      <div className="overflow-x-auto mb-8">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Payment Method</th>
-              <th className="py-2 pr-3 font-medium">Transactions</th>
-              <th className="py-2 pr-3 font-medium">Jumla</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.byPaymentMethod.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna data.
-                </td>
-              </tr>
-            ) : (
-              report.byPaymentMethod.map((row) => (
-                <tr key={row.method} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{PAYMENT_LABEL[row.method] ?? row.method}</td>
-                  <td className="py-2 pr-3">{row.count}</td>
-                  <td className="py-2 pr-3">{currency.format(row.total)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.sales.paymentBreakdown}</h2>
+      <div className="mb-8">
+        {report.byPaymentMethod.length === 0 ? (
+          <EmptyState title={t.common.noData} />
+        ) : (
+          <Table>
+            <THead>
+              <THeadRow>
+                <Th>{t.common.paymentMethod}</Th>
+                <Th>{t.reports.sales.transactions}</Th>
+                <Th className="text-right">{t.common.total}</Th>
+              </THeadRow>
+            </THead>
+            <TBody>
+              {report.byPaymentMethod.map((row, i) => (
+                <Tr key={row.method} index={i}>
+                  <Td>{PAYMENT_LABEL[row.method] ?? row.method}</Td>
+                  <Td>{row.count}</Td>
+                  <Td className="text-right tabular-nums">{currency.format(row.total)}</Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
       </div>
 
-      <h2 className="text-sm font-medium mb-2">Mauzo Yote (Kipindi Kilichochaguliwa)</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Invoice</th>
-              <th className="py-2 pr-3 font-medium">Tarehe</th>
-              <th className="py-2 pr-3 font-medium">Branch</th>
-              <th className="py-2 pr-3 font-medium">Muuzaji</th>
-              <th className="py-2 pr-3 font-medium">Customer</th>
-              <th className="py-2 pr-3 font-medium">Payment</th>
-              <th className="py-2 pr-3 font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna mauzo kwa kipindi hiki.
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.invoiceNumber} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">#{r.invoiceNumber}</td>
-                  <td className="py-2 pr-3">{r.createdAt.toLocaleString("sw-TZ")}</td>
-                  <td className="py-2 pr-3">{r.branchName}</td>
-                  <td className="py-2 pr-3">{r.sellerName}</td>
-                  <td className="py-2 pr-3">{r.customerName ?? "—"}</td>
-                  <td className="py-2 pr-3">
-                    {PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}
-                    {r.isCredit ? " (Credit)" : ""}
-                  </td>
-                  <td className="py-2 pr-3">{currency.format(r.total)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <h2 className="mb-2 text-sm font-semibold text-primary">{t.reports.sales.allSalesTitle}</h2>
+      {rows.length === 0 ? (
+        <EmptyState title={t.reports.sales.noSalesForPeriod} />
+      ) : (
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.reports.sales.invoice}</Th>
+              <Th>{t.common.date}</Th>
+              <Th>{t.common.branch}</Th>
+              <Th>{t.reports.sales.seller}</Th>
+              <Th>{t.reports.sales.customer}</Th>
+              <Th>{t.reports.sales.paymentCol}</Th>
+              <Th className="text-right">{t.common.total}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {rows.map((r, i) => (
+              <Tr key={r.invoiceNumber} index={i}>
+                <Td>#{r.invoiceNumber}</Td>
+                <Td className="text-secondary">{r.createdAt.toLocaleString("sw-TZ")}</Td>
+                <Td>{r.branchName}</Td>
+                <Td>{r.sellerName}</Td>
+                <Td>{r.customerName ?? "—"}</Td>
+                <Td>
+                  {PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}
+                  {r.isCredit ? ` (${t.reports.sales.credit})` : ""}
+                </Td>
+                <Td className="text-right tabular-nums">{currency.format(r.total)}</Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      )}
     </div>
   );
 }

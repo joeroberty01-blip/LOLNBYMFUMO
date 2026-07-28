@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { completeSaleSchema, type CompleteSaleInput } from "@/lib/validators/sales";
 import { getBranchInventoryForPOS, type POSInventoryItem } from "@/lib/data/sales";
+import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -12,8 +13,11 @@ const VOID_WINDOW_MS = 30 * 60 * 1000;
 
 async function requireApprovedSalesStaff() {
   const session = await auth();
-  if (!session || session.user.role !== "SALES_STAFF" || session.user.status !== "APPROVED") {
-    throw new Error("Huna ruhusa ya kufanya hili");
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
+    throw new Error("You are not authorized to do this");
   }
   return session;
 }
@@ -28,6 +32,8 @@ export type ReceiptData = {
   invoiceNumber: number;
   createdAt: string;
   branchName: string;
+  /** Store address printed on the receipt — receipts identify the SHOP, never the software. */
+  branchLocation: string;
   sellerName: string;
   paymentMethod: string;
   isCredit: boolean;
@@ -55,18 +61,27 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
 
   const parsed = completeSaleSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   }
   const { branchId, paymentMethod, isCredit, customerId, items } = parsed.data;
+  // Defaults to the selling point itself — only differs when fulfilling from another store.
+  const sourceBranchId = parsed.data.sourceBranchId ?? branchId;
 
   const branch = await prisma.branch.findUnique({ where: { id: branchId } });
-  if (!branch) return { success: false, error: "Branch haipo" };
+  if (!branch) return { success: false, error: "Branch not found" };
+  if (!branch.isSellingPoint) {
+    return { success: false, error: "This branch is not available for new sales" };
+  }
+  if (sourceBranchId !== branchId) {
+    const sourceBranch = await prisma.branch.findUnique({ where: { id: sourceBranchId } });
+    if (!sourceBranch) return { success: false, error: "Source store not found" };
+  }
 
   let customer = null;
   if (isCredit) {
-    if (!customerId) return { success: false, error: "Chagua customer" };
+    if (!customerId) return { success: false, error: "Select a customer" };
     customer = await prisma.customer.findUnique({ where: { id: customerId } });
-    if (!customer) return { success: false, error: "Customer haipo" };
+    if (!customer) return { success: false, error: "Customer not found" };
   }
 
   const total = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
@@ -76,7 +91,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
     if (newBalance > customer.creditLimit.toNumber()) {
       return {
         success: false,
-        error: `Kiasi kinazidi credit limit ya ${customer.name} (limit: ${customer.creditLimit.toNumber()}, balance ya sasa: ${customer.balance.toNumber()})`,
+        error: `Amount exceeds the credit limit for ${customer.name} (limit: ${customer.creditLimit.toNumber()}, current balance: ${customer.balance.toNumber()})`,
       };
     }
   }
@@ -87,17 +102,17 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
         if (item.isManualEntry) continue;
 
         const inv = await tx.inventory.findUnique({
-          where: { partId_branchId: { partId: item.partId, branchId } },
+          where: { partId_branchId: { partId: item.partId, branchId: sourceBranchId } },
         });
         if (!inv || inv.quantity < item.quantity) {
           const part = await tx.part.findUnique({ where: { id: item.partId } });
           throw new Error(
-            `Stock haitoshi kwa ${part?.name ?? "part hii"} (iliyopo: ${inv?.quantity ?? 0})`
+            `Insufficient stock for ${part?.name ?? "this part"} (available: ${inv?.quantity ?? 0})`
           );
         }
 
         await tx.inventory.update({
-          where: { partId_branchId: { partId: item.partId, branchId } },
+          where: { partId_branchId: { partId: item.partId, branchId: sourceBranchId } },
           data: { quantity: { decrement: item.quantity } },
         });
       }
@@ -105,6 +120,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
       const created = await tx.sale.create({
         data: {
           branchId,
+          sourceBranchId: sourceBranchId !== branchId ? sourceBranchId : null,
           userId: session.user.id,
           paymentMethod,
           isCredit,
@@ -147,6 +163,14 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
         });
       }
 
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "SALE_COMPLETED",
+        entityType: "Sale",
+        entityId: created.id,
+        metadata: { branchId, sourceBranchId, total, isCredit, itemCount: items.length },
+      });
+
       return created;
     });
 
@@ -160,6 +184,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
       invoiceNumber: sale.invoiceNumber,
       createdAt: sale.createdAt.toISOString(),
       branchName: sale.branch.name,
+      branchLocation: sale.branch.location,
       sellerName: sale.user.name,
       paymentMethod: sale.paymentMethod,
       isCredit: sale.isCredit,
@@ -183,11 +208,11 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
 
 export async function voidSale(saleId: string): Promise<ActionResult> {
   const session = await auth();
-  if (!session) return { success: false, error: "Huna ruhusa" };
+  if (!session) return { success: false, error: "Not authorized" };
 
   const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
-  if (!sale) return { success: false, error: "Sale haipo" };
-  if (sale.status === "VOIDED") return { success: false, error: "Sale hii tayari imefutwa" };
+  if (!sale) return { success: false, error: "Sale not found" };
+  if (sale.status === "VOIDED") return { success: false, error: "This sale has already been voided" };
 
   const isAdmin = session.user.role === "ADMIN";
   const isOwnerWithinWindow =
@@ -198,18 +223,20 @@ export async function voidSale(saleId: string): Promise<ActionResult> {
   if (!isAdmin && !isOwnerWithinWindow) {
     return {
       success: false,
-      error: "Huwezi kufuta mauzo haya (dakika 30 zimepita tangu kuuza, au si mauzo yako)",
+      error: "You cannot void this sale (30 minutes have passed since the sale, or it is not your sale)",
     };
   }
+
+  const restockBranchId = sale.sourceBranchId ?? sale.branchId;
 
   try {
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
         if (item.isManualEntry || !item.partId) continue;
         await tx.inventory.upsert({
-          where: { partId_branchId: { partId: item.partId, branchId: sale.branchId } },
+          where: { partId_branchId: { partId: item.partId, branchId: restockBranchId } },
           update: { quantity: { increment: item.quantity } },
-          create: { partId: item.partId, branchId: sale.branchId, quantity: item.quantity },
+          create: { partId: item.partId, branchId: restockBranchId, quantity: item.quantity },
         });
       }
 
@@ -223,6 +250,14 @@ export async function voidSale(saleId: string): Promise<ActionResult> {
       await tx.sale.update({
         where: { id: saleId },
         data: { status: "VOIDED", voidedAt: new Date(), voidedById: session.user.id },
+      });
+
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "SALE_VOIDED",
+        entityType: "Sale",
+        entityId: saleId,
+        metadata: { total: sale.total.toNumber(), branchId: sale.branchId, restockBranchId },
       });
     });
   } catch (e) {

@@ -6,6 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { quickCustomerSchema } from "@/lib/validators/customers";
 import { createCustomerQuick } from "@/lib/actions/customers";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export function QuickCustomerModal({
   onClose,
@@ -14,6 +17,7 @@ export function QuickCustomerModal({
   onClose: () => void;
   onCreated: (customer: { id: string; name: string; phone: string | null }) => void;
 }) {
+  const t = useTranslations();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -34,52 +38,32 @@ export function QuickCustomerModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-background p-5 border border-black/10 dark:border-white/15">
-        <h2 className="font-medium mb-4">Ongeza Customer Mpya</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-card border border-border bg-surface-elevated p-5">
+        <h2 className="mb-4 font-medium text-primary">{t.sales.quickCustomer.title}</h2>
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div>
-            <label htmlFor="qc-name" className="block text-sm font-medium mb-1">
-              Jina
-            </label>
-            <input
-              id="qc-name"
-              type="text"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("name")}
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+            <Label>{t.common.name}</Label>
+            <Input id="qc-name" type="text" {...register("name")} />
+            {errors.name && <p className="mt-1 text-sm text-danger">{errors.name.message}</p>}
           </div>
 
           <div>
-            <label htmlFor="qc-phone" className="block text-sm font-medium mb-1">
-              Simu (hiari)
-            </label>
-            <input
-              id="qc-phone"
-              type="text"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("phone")}
-            />
+            <Label>
+              {t.common.phone} ({t.common.optional})
+            </Label>
+            <Input id="qc-phone" type="text" {...register("phone")} />
           </div>
 
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-sm text-danger">{formError}</p>}
 
-          <div className="flex justify-end gap-2 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-            >
-              Ghairi
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {isSubmitting ? "Inahifadhi..." : "Ongeza"}
-            </button>
+          <div className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? t.common.saving : t.common.add}
+            </Button>
           </div>
         </form>
       </div>

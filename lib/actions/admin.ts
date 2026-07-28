@@ -21,10 +21,14 @@ export async function approveSalesStaff(userId: string): Promise<ActionResult> {
     return { success: false, error: (e as Error).message };
   }
 
-  await prisma.user.update({
-    where: { id: userId, role: "SALES_STAFF" },
-    data: { status: "APPROVED" },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: userId, role: "SALES_STAFF" },
+      data: { status: "APPROVED" },
+    });
+  } catch {
+    return { success: false, error: "Mtumiaji huyu hayupo tena (huenda ameshafutwa)" };
+  }
   revalidatePath("/dashboard/admin/sales-staff");
   return { success: true };
 }
@@ -36,10 +40,14 @@ export async function rejectSalesStaff(userId: string): Promise<ActionResult> {
     return { success: false, error: (e as Error).message };
   }
 
-  await prisma.user.update({
-    where: { id: userId, role: "SALES_STAFF" },
-    data: { status: "REJECTED" },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: userId, role: "SALES_STAFF" },
+      data: { status: "REJECTED" },
+    });
+  } catch {
+    return { success: false, error: "Mtumiaji huyu hayupo tena (huenda ameshafutwa)" };
+  }
   revalidatePath("/dashboard/admin/sales-staff");
   return { success: true };
 }
@@ -51,10 +59,14 @@ export async function deactivateSalesStaff(userId: string): Promise<ActionResult
     return { success: false, error: (e as Error).message };
   }
 
-  await prisma.user.update({
-    where: { id: userId, role: "SALES_STAFF" },
-    data: { status: "DEACTIVATED" },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: userId, role: "SALES_STAFF" },
+      data: { status: "DEACTIVATED" },
+    });
+  } catch {
+    return { success: false, error: "Mtumiaji huyu hayupo tena (huenda ameshafutwa)" };
+  }
   revalidatePath("/dashboard/admin/sales-staff");
   return { success: true };
 }

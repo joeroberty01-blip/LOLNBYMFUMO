@@ -2,8 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { voidSale } from "@/lib/actions/sales";
 import type { SaleListRow } from "@/lib/data/sales";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -27,6 +33,7 @@ export function SalesHistoryTable({
   currentUserId: string;
   isAdmin: boolean;
 }) {
+  const t = useTranslations();
   const router = useRouter();
   const [now] = useState(() => Date.now());
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -34,7 +41,7 @@ export function SalesHistoryTable({
   const [error, setError] = useState<string | null>(null);
 
   function handleVoid(saleId: string) {
-    const confirmed = window.confirm("Una uhakika unataka kufuta (void) mauzo haya?");
+    const confirmed = window.confirm(t.sales.historyTable.confirmVoid);
     if (!confirmed) return;
 
     setError(null);
@@ -51,80 +58,90 @@ export function SalesHistoryTable({
   }
 
   if (rows.length === 0) {
-    return <p className="text-sm text-black/60 dark:text-white/60">Hakuna mauzo yaliyopatikana.</p>;
+    return <EmptyState title={t.sales.historyTable.noResults} />;
   }
 
   return (
-    <div className="overflow-x-auto">
-      {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="border-b border-black/10 dark:border-white/15 text-left">
-            <th className="py-2 pr-3 font-medium">Invoice</th>
-            <th className="py-2 pr-3 font-medium">Tarehe</th>
-            <th className="py-2 pr-3 font-medium">Branch</th>
-            {showSeller && <th className="py-2 pr-3 font-medium">Muuzaji</th>}
-            <th className="py-2 pr-3 font-medium">Customer</th>
-            <th className="py-2 pr-3 font-medium">Payment</th>
-            <th className="py-2 pr-3 font-medium">Total</th>
-            <th className="py-2 pr-3 font-medium">Status</th>
-            <th className="py-2 pr-3 font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
+    <div>
+      {error && <p className="mb-2 text-sm text-danger">{error}</p>}
+      <Table>
+        <THead>
+          <THeadRow>
+            <Th>{t.sales.historyTable.invoiceHeader}</Th>
+            <Th>{t.common.date}</Th>
+            <Th>{t.common.branch}</Th>
+            {showSeller && <Th>{t.sales.historyTable.sellerHeader}</Th>}
+            <Th>{t.sales.historyTable.customerHeader}</Th>
+            <Th>{t.sales.historyTable.paymentHeader}</Th>
+            <Th className="text-right">{t.common.total}</Th>
+            <Th>{t.common.status}</Th>
+            <Th>{t.common.actions}</Th>
+          </THeadRow>
+        </THead>
+        <TBody>
+          {rows.map((row, i) => {
             const withinWindow = now - row.createdAt.getTime() <= VOID_WINDOW_MS;
             const isOwnSale = row.userId === currentUserId;
             const staffCanVoid = isOwnSale && withinWindow;
             const allowVoid = row.status === "COMPLETED" && (isAdmin || staffCanVoid);
 
             return (
-              <tr key={row.id} className="border-b border-black/5 dark:border-white/10">
-                <td className="py-2 pr-3">#{row.invoiceNumber}</td>
-                <td className="py-2 pr-3">{row.createdAt.toLocaleString("sw-TZ")}</td>
-                <td className="py-2 pr-3">{row.branchName}</td>
-                {showSeller && <td className="py-2 pr-3">{row.sellerName}</td>}
-                <td className="py-2 pr-3">{row.customerName ?? "—"}</td>
-                <td className="py-2 pr-3">
+              <Tr key={row.id} index={i}>
+                <Td>#{row.invoiceNumber}</Td>
+                <Td className="text-secondary">{row.createdAt.toLocaleString("sw-TZ")}</Td>
+                <Td>{row.branchName}</Td>
+                {showSeller && <Td>{row.sellerName}</Td>}
+                <Td>{row.customerName ?? "—"}</Td>
+                <Td>
                   {PAYMENT_LABEL[row.paymentMethod] ?? row.paymentMethod}
-                  {row.isCredit ? " (Credit)" : ""}
-                </td>
-                <td className="py-2 pr-3">
+                  {row.isCredit ? ` (${t.sales.historyTable.creditSuffix})` : ""}
+                </Td>
+                <Td className="text-right tabular-nums">
                   {currency.format(row.total)}
                   {row.hasManualItems && (
-                    <span className="ml-1 rounded-full bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 text-[10px] font-medium align-middle">
-                      Manual
+                    <span className="ml-1.5 align-middle">
+                      <Badge status="warning">{t.sales.historyTable.manualBadge}</Badge>
                     </span>
                   )}
-                </td>
-                <td className="py-2 pr-3">
-                  <span
-                    className={
-                      row.status === "VOIDED"
-                        ? "rounded-full bg-red-500/15 text-red-700 dark:text-red-400 px-2 py-0.5 text-xs font-medium"
-                        : "rounded-full bg-green-500/15 text-green-700 dark:text-green-400 px-2 py-0.5 text-xs font-medium"
-                    }
-                  >
-                    {row.status === "VOIDED" ? "Voided" : "Completed"}
-                  </span>
-                </td>
-                <td className="py-2 pr-3">
-                  {allowVoid && (
-                    <button
-                      type="button"
-                      disabled={isPending && pendingId === row.id}
-                      onClick={() => handleVoid(row.id)}
-                      className="rounded-md border border-red-600/40 text-red-600 px-3 py-1.5 text-sm disabled:opacity-50"
-                    >
-                      Void
-                    </button>
-                  )}
-                </td>
-              </tr>
+                </Td>
+                <Td>
+                  <Badge status={row.status === "VOIDED" ? "danger" : "success"}>
+                    {row.status === "VOIDED"
+                      ? t.sales.historyTable.voided
+                      : t.sales.historyTable.completed}
+                  </Badge>
+                </Td>
+                <Td>
+                  <div className="flex flex-wrap gap-2">
+                    {isAdmin && (
+                      <Link href={`/dashboard/admin/sales/${row.id}`}>
+                        <Button type="button" variant="secondary">
+                          {t.common.view}
+                        </Button>
+                      </Link>
+                    )}
+                    <Link href={`/dashboard/sales/receipt/${row.id}`}>
+                      <Button type="button" variant="secondary">
+                        {t.sales.receipt.viewReceipt}
+                      </Button>
+                    </Link>
+                    {allowVoid && (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        disabled={isPending && pendingId === row.id}
+                        onClick={() => handleVoid(row.id)}
+                      >
+                        {t.sales.historyTable.voidButton}
+                      </Button>
+                    )}
+                  </div>
+                </Td>
+              </Tr>
             );
           })}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 }

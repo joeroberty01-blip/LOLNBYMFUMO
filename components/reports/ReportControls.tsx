@@ -3,14 +3,8 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { periods, type Period } from "@/lib/dateRanges";
 import { paymentMethods } from "@/lib/validators/sales";
-
-const PERIOD_LABEL: Record<Period, string> = {
-  daily: "Daily",
-  weekly: "Weekly",
-  monthly: "Monthly",
-  annually: "Annually",
-  custom: "Custom",
-};
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { DateInput, Select, Label } from "@/components/ui/Input";
 
 const PAYMENT_LABEL: Record<string, string> = {
   CASH: "Cash",
@@ -19,11 +13,6 @@ const PAYMENT_LABEL: Record<string, string> = {
   VODA_LIPA: "Voda Lipa",
   TIGO_LIPA: "Tigo Lipa",
 };
-
-const MONTHS = [
-  "Januari", "Februari", "Machi", "Aprili", "Mei", "Juni",
-  "Julai", "Agosti", "Septemba", "Oktoba", "Novemba", "Desemba",
-];
 
 type Props = {
   branches?: { id: string; name: string }[];
@@ -43,6 +32,30 @@ export function ReportControls({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations();
+
+  const PERIOD_LABEL: Record<Period, string> = {
+    daily: t.reports.controls.daily,
+    weekly: t.reports.controls.weekly,
+    monthly: t.reports.controls.monthly,
+    annually: t.reports.controls.annually,
+    custom: t.reports.controls.custom,
+  };
+
+  const MONTHS = [
+    t.reports.controls.january,
+    t.reports.controls.february,
+    t.reports.controls.march,
+    t.reports.controls.april,
+    t.reports.controls.may,
+    t.reports.controls.june,
+    t.reports.controls.july,
+    t.reports.controls.august,
+    t.reports.controls.september,
+    t.reports.controls.october,
+    t.reports.controls.november,
+    t.reports.controls.december,
+  ];
 
   const currentPeriod = (searchParams.get("period") as Period) || "daily";
   const now = new Date();
@@ -74,17 +87,17 @@ export function ReportControls({
   }
 
   return (
-    <div className="flex flex-col gap-3 mb-6">
-      <div className="flex flex-wrap gap-1 rounded-md border border-black/10 dark:border-white/15 p-1 w-fit">
+    <div className="mb-6 flex flex-col gap-3">
+      <div className="flex w-fit flex-wrap gap-1 rounded-control border border-border bg-surface-elevated p-1">
         {periods.map((p) => (
           <button
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
-            className={`rounded px-3 py-1.5 text-sm ${
+            className={`rounded-control px-3 py-1.5 text-sm font-medium transition-colors ${
               currentPeriod === p
-                ? "bg-foreground text-background"
-                : "hover:bg-black/[.04] dark:hover:bg-white/[.08]"
+                ? "bg-accent/20 text-accent"
+                : "text-secondary hover:text-primary"
             }`}
           >
             {PERIOD_LABEL[p]}
@@ -95,26 +108,20 @@ export function ReportControls({
       <div className="flex flex-wrap items-end gap-2">
         {currentPeriod === "daily" && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Tarehe</label>
-            <input
-              type="date"
+            <Label>{t.common.date}</Label>
+            <DateInput
               defaultValue={searchParams.get("date") ?? ""}
               onChange={(e) => updateParams({ date: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
             />
           </div>
         )}
 
         {currentPeriod === "weekly" && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">
-              Siku yoyote ndani ya wiki
-            </label>
-            <input
-              type="date"
+            <Label>{t.reports.controls.anyDayInWeek}</Label>
+            <DateInput
               defaultValue={searchParams.get("weekOf") ?? ""}
               onChange={(e) => updateParams({ weekOf: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
             />
           </div>
         )}
@@ -122,71 +129,67 @@ export function ReportControls({
         {currentPeriod === "monthly" && (
           <>
             <div>
-              <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Mwezi</label>
-              <select
+              <Label>{t.reports.controls.month}</Label>
+              <Select
                 defaultValue={searchParams.get("month") ?? String(now.getMonth() + 1)}
                 onChange={(e) => updateParams({ month: e.target.value })}
-                className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+                className="w-auto"
               >
                 {MONTHS.map((m, i) => (
                   <option key={m} value={i + 1}>
                     {m}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
-              <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Mwaka</label>
-              <select
+              <Label>{t.reports.controls.year}</Label>
+              <Select
                 defaultValue={searchParams.get("year") ?? String(currentYear)}
                 onChange={(e) => updateParams({ year: e.target.value })}
-                className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+                className="w-auto"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
                     {y}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </>
         )}
 
         {currentPeriod === "annually" && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Mwaka</label>
-            <select
+            <Label>{t.reports.controls.year}</Label>
+            <Select
               defaultValue={searchParams.get("year") ?? String(currentYear)}
               onChange={(e) => updateParams({ year: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+              className="w-auto"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {currentPeriod === "custom" && (
           <>
             <div>
-              <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Kutoka</label>
-              <input
-                type="date"
+              <Label>{t.common.from}</Label>
+              <DateInput
                 defaultValue={searchParams.get("from") ?? ""}
                 onChange={(e) => updateParams({ from: e.target.value })}
-                className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Hadi</label>
-              <input
-                type="date"
+              <Label>{t.common.to}</Label>
+              <DateInput
                 defaultValue={searchParams.get("to") ?? ""}
                 onChange={(e) => updateParams({ to: e.target.value })}
-                className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
               />
             </div>
           </>
@@ -194,86 +197,84 @@ export function ReportControls({
 
         {branches && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Branch</label>
-            <select
+            <Label>{t.common.branch}</Label>
+            <Select
               defaultValue={searchParams.get("branchId") ?? ""}
               onChange={(e) => updateParams({ branchId: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+              className="w-auto"
             >
-              <option value="">Branches zote</option>
+              <option value="">{t.common.allBranches}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {staff && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">
-              Sales Staff
-            </label>
-            <select
+            <Label>{t.nav.salesStaff}</Label>
+            <Select
               defaultValue={searchParams.get("userId") ?? ""}
               onChange={(e) => updateParams({ userId: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+              className="w-auto"
             >
-              <option value="">Wote</option>
+              <option value="">{t.reports.controls.allStaff}</option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {categories && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Category</label>
-            <select
+            <Label>{t.common.category}</Label>
+            <Select
               defaultValue={searchParams.get("category") ?? ""}
               onChange={(e) => updateParams({ category: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+              className="w-auto"
             >
-              <option value="">Zote</option>
+              <option value="">{t.reports.controls.allOptions}</option>
               {categories.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {showPaymentMethod && (
           <div>
-            <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Payment</label>
-            <select
+            <Label>{t.reports.controls.payment}</Label>
+            <Select
               defaultValue={searchParams.get("paymentMethod") ?? ""}
               onChange={(e) => updateParams({ paymentMethod: e.target.value })}
-              className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+              className="w-auto"
             >
-              <option value="">Zote</option>
+              <option value="">{t.reports.controls.allOptions}</option>
               {paymentMethods.map((pm) => (
                 <option key={pm} value={pm}>
                   {PAYMENT_LABEL[pm]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {showManualOnly && (
-          <label className="flex items-center gap-1.5 text-sm pb-2">
+          <label className="flex items-center gap-1.5 pb-2 text-sm text-primary">
             <input
               type="checkbox"
               defaultChecked={searchParams.get("manualOnly") === "1"}
               onChange={(e) => updateParams({ manualOnly: e.target.checked ? "1" : undefined })}
             />
-            Manual Items Only
+            {t.reports.controls.manualItemsOnly}
           </label>
         )}
       </div>

@@ -7,6 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { customerSchema, type CustomerInput } from "@/lib/validators/customers";
 import { createCustomer, updateCustomer } from "@/lib/actions/customers";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   mode: "create" | "edit";
@@ -15,6 +18,7 @@ type Props = {
 };
 
 export function CustomerForm({ mode, customerId, defaultValues }: Props) {
+  const t = useTranslations();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -43,55 +47,44 @@ export function CustomerForm({ mode, customerId, defaultValues }: Props) {
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4 max-w-md">
+    <form onSubmit={onSubmit} className="flex max-w-md flex-col gap-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Jina</label>
-        <input
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("name")}
-        />
-        {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+        <Label>{t.common.name}</Label>
+        <Input {...register("name")} />
+        {errors.name && <p className="mt-1 text-sm text-danger">{errors.name.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Simu (hiari)</label>
-        <input
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("phone")}
-        />
+        <Label>
+          {t.common.phone} ({t.common.optional})
+        </Label>
+        <Input {...register("phone")} />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Barua pepe (hiari)</label>
-        <input
-          type="email"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("email")}
-        />
+        <Label>
+          {t.common.email} ({t.common.optional})
+        </Label>
+        <Input type="email" {...register("email")} />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Credit Limit</label>
-        <input
-          type="number"
-          step="0.01"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("creditLimit")}
-        />
+        <Label>{t.adminCatalog.customers.creditLimit}</Label>
+        <Input type="number" step="0.01" {...register("creditLimit")} />
         {errors.creditLimit && (
-          <p className="mt-1 text-sm text-red-600">{errors.creditLimit.message}</p>
+          <p className="mt-1 text-sm text-danger">{errors.creditLimit.message}</p>
         )}
       </div>
 
-      {formError && <p className="text-sm text-red-600">{formError}</p>}
+      {formError && <p className="text-sm text-danger">{formError}</p>}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50 self-start"
-      >
-        {isSubmitting ? "Inahifadhi..." : mode === "create" ? "Ongeza Customer" : "Hifadhi Mabadiliko"}
-      </button>
+      <Button type="submit" variant="primary" disabled={isSubmitting} className="self-start">
+        {isSubmitting
+          ? t.common.saving
+          : mode === "create"
+            ? t.adminCatalog.customers.addSubmit
+            : t.adminCatalog.customers.saveChanges}
+      </Button>
     </form>
   );
 }

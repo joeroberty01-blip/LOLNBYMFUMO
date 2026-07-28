@@ -4,6 +4,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { manualItemFormSchema } from "@/lib/validators/sales";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export function ManualItemModal({
   onClose,
@@ -12,6 +15,7 @@ export function ManualItemModal({
   onClose: () => void;
   onAdd: (data: z.output<typeof manualItemFormSchema>) => void;
 }) {
+  const t = useTranslations();
   const {
     register,
     handleSubmit,
@@ -25,100 +29,55 @@ export function ManualItemModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-background p-5 border border-black/10 dark:border-white/15">
-        <h2 className="font-medium mb-4">Add Manual Item</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-card border border-border bg-surface-elevated p-5">
+        <h2 className="mb-4 font-medium text-primary">{t.sales.manualItem.title}</h2>
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div>
-            <label htmlFor="manualItemName" className="block text-sm font-medium mb-1">
-              Jina la bidhaa
-            </label>
-            <input
-              id="manualItemName"
-              type="text"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("manualItemName")}
-            />
+            <Label>{t.sales.manualItem.nameLabel}</Label>
+            <Input id="manualItemName" type="text" {...register("manualItemName")} />
             {errors.manualItemName && (
-              <p className="mt-1 text-sm text-red-600">{errors.manualItemName.message}</p>
+              <p className="mt-1 text-sm text-danger">{errors.manualItemName.message}</p>
             )}
           </div>
 
           <div>
-            <label htmlFor="manualPartNumber" className="block text-sm font-medium mb-1">
-              Part Number (hiari)
-            </label>
-            <input
-              id="manualPartNumber"
-              type="text"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("manualPartNumber")}
-            />
+            <Label>{t.sales.manualItem.partNumberLabel}</Label>
+            <Input id="manualPartNumber" type="text" {...register("manualPartNumber")} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="quantity" className="block text-sm font-medium mb-1">
-                Quantity
-              </label>
-              <input
-                id="quantity"
-                type="number"
-                min={1}
-                className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-                {...register("quantity")}
-              />
+              <Label>{t.sales.manualItem.quantityLabel}</Label>
+              <Input id="quantity" type="number" min={1} {...register("quantity")} />
               {errors.quantity && (
-                <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>
+                <p className="mt-1 text-sm text-danger">{errors.quantity.message}</p>
               )}
             </div>
             <div>
-              <label htmlFor="unitPrice" className="block text-sm font-medium mb-1">
-                Selling Price
-              </label>
-              <input
-                id="unitPrice"
-                type="number"
-                step="0.01"
-                className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-                {...register("unitPrice")}
-              />
+              <Label>{t.sales.manualItem.sellingPriceLabel}</Label>
+              <Input id="unitPrice" type="number" step="0.01" {...register("unitPrice")} />
               {errors.unitPrice && (
-                <p className="mt-1 text-sm text-red-600">{errors.unitPrice.message}</p>
+                <p className="mt-1 text-sm text-danger">{errors.unitPrice.message}</p>
               )}
             </div>
           </div>
 
           <div>
-            <label htmlFor="manualCostPrice" className="block text-sm font-medium mb-1">
-              Buying Price / Cost Price
-            </label>
-            <input
-              id="manualCostPrice"
-              type="number"
-              step="0.01"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("manualCostPrice")}
-            />
+            <Label>{t.sales.manualItem.costPriceLabel}</Label>
+            <Input id="manualCostPrice" type="number" step="0.01" {...register("manualCostPrice")} />
             {errors.manualCostPrice && (
-              <p className="mt-1 text-sm text-red-600">{errors.manualCostPrice.message}</p>
+              <p className="mt-1 text-sm text-danger">{errors.manualCostPrice.message}</p>
             )}
           </div>
 
-          <div className="flex justify-end gap-2 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-            >
-              Ghairi
-            </button>
-            <button
-              type="submit"
-              className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium"
-            >
-              Ongeza kwenye Cart
-            </button>
+          <div className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" variant="primary">
+              {t.sales.manualItem.addToCart}
+            </Button>
           </div>
         </form>
       </div>

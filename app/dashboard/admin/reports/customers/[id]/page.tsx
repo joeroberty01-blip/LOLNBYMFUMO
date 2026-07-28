@@ -3,6 +3,10 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCustomerCreditHistory } from "@/lib/data/reports/customers";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -16,6 +20,8 @@ export default async function CustomerCreditHistoryPage({
     redirect("/login/admin");
   }
 
+  const { t } = await getServerDictionary();
+
   const { id } = await params;
   const customer = await prisma.customer.findUnique({ where: { id } });
   if (!customer) {
@@ -25,50 +31,55 @@ export default async function CustomerCreditHistoryPage({
   const history = await getCustomerCreditHistory(id);
 
   return (
-    <div className="mx-auto w-full max-w-2xl py-12 px-4">
-      <Link href="/dashboard/admin/reports/customers" className="text-sm underline">
-        &larr; Rudi Customers/Debt Report
+    <div>
+      <Link
+        href="/dashboard/admin/reports/customers"
+        className="text-sm text-accent hover:underline"
+      >
+        {t.reports.customers.backToDebtReport}
       </Link>
 
-      <h1 className="text-xl font-semibold mt-4 mb-1">{customer.name}</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">
-        Balance: {currency.format(customer.balance.toNumber())} · Credit Limit:{" "}
-        {currency.format(customer.creditLimit.toNumber())}
+      <h1 className="mt-4 mb-1 text-xl font-semibold text-primary">{customer.name}</h1>
+      <p className="mb-6 text-sm text-secondary">
+        {t.reports.customers.balance}: {currency.format(customer.balance.toNumber())} ·{" "}
+        {t.reports.customers.creditLimit}: {currency.format(customer.creditLimit.toNumber())}
       </p>
 
-      <h2 className="text-sm font-medium mb-2">Historia ya Credit Sales</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Invoice</th>
-              <th className="py-2 pr-3 font-medium">Tarehe</th>
-              <th className="py-2 pr-3 font-medium">Branch</th>
-              <th className="py-2 pr-3 font-medium">Total</th>
-              <th className="py-2 pr-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna credit sales bado.
-                </td>
-              </tr>
-            ) : (
-              history.map((h) => (
-                <tr key={h.invoiceNumber} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">#{h.invoiceNumber}</td>
-                  <td className="py-2 pr-3">{h.createdAt.toLocaleString("sw-TZ")}</td>
-                  <td className="py-2 pr-3">{h.branchName}</td>
-                  <td className="py-2 pr-3">{currency.format(h.total)}</td>
-                  <td className="py-2 pr-3">{h.status === "VOIDED" ? "Voided" : "Completed"}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <h2 className="mb-2 text-sm font-semibold text-primary">
+        {t.reports.customers.creditHistoryTitle}
+      </h2>
+      {history.length === 0 ? (
+        <EmptyState title={t.reports.customers.noCreditSales} />
+      ) : (
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.reports.customers.invoice}</Th>
+              <Th>{t.common.date}</Th>
+              <Th>{t.common.branch}</Th>
+              <Th className="text-right">{t.common.total}</Th>
+              <Th>{t.common.status}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {history.map((h, i) => (
+              <Tr key={h.invoiceNumber} index={i}>
+                <Td>#{h.invoiceNumber}</Td>
+                <Td className="text-secondary">{h.createdAt.toLocaleString("sw-TZ")}</Td>
+                <Td>{h.branchName}</Td>
+                <Td className="text-right tabular-nums">{currency.format(h.total)}</Td>
+                <Td>
+                  <Badge status={h.status === "VOIDED" ? "danger" : "success"}>
+                    {h.status === "VOIDED"
+                      ? t.reports.customers.voided
+                      : t.reports.customers.completed}
+                  </Badge>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      )}
     </div>
   );
 }

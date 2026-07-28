@@ -3,14 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deletePart } from "@/lib/actions/parts";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Button } from "@/components/ui/Button";
 
 export function DeletePartButton({ partId }: { partId: string }) {
+  const t = useTranslations();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function handleClick() {
-    const confirmed = window.confirm("Una uhakika unataka kufuta part hii?");
+    const confirmed = window.confirm(t.adminCatalog.parts.confirmDelete);
     if (!confirmed) return;
 
     setError(null);
@@ -26,15 +29,10 @@ export function DeletePartButton({ partId }: { partId: string }) {
 
   return (
     <div className="inline-flex flex-col items-end">
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={handleClick}
-        className="rounded-md border border-red-600/40 text-red-600 px-3 py-1.5 text-sm disabled:opacity-50"
-      >
-        Futa
-      </button>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      <Button type="button" variant="danger" disabled={isPending} onClick={handleClick}>
+        {t.common.delete}
+      </Button>
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }

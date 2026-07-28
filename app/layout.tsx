@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { getPreferences } from "@/lib/settings/preferences";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { I18nProvider } from "@/lib/i18n/I18nProvider";
+import { APP_NAME, APP_DESCRIPTION } from "@/config/app";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,21 +18,49 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Woodland ERP",
-  description: "ERP system ya mauzo ya spare parts",
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
 };
 
-export default function RootLayout({
+const SYSTEM_THEME_SCRIPT = `
+(function () {
+  try {
+    var m = window.matchMedia("(prefers-color-scheme: dark)");
+    function apply() {
+      document.documentElement.classList.toggle("dark", m.matches);
+    }
+    apply();
+    m.addEventListener("change", apply);
+  } catch (e) {}
+})();
+`;
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { language, theme, fontSize } = await getPreferences();
+  const dict = getDictionary(language);
+  const themeClass = theme === "dark" ? "dark" : "";
+
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang={language}
+      data-font-size={fontSize}
+      suppressHydrationWarning
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased ${themeClass}`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      {theme === "system" && (
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: SYSTEM_THEME_SCRIPT }} />
+        </head>
+      )}
+      <body className="min-h-full flex flex-col">
+        <I18nProvider t={dict} language={language}>
+          {children}
+        </I18nProvider>
+      </body>
     </html>
   );
 }

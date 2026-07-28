@@ -6,6 +6,10 @@ import { getBranches } from "@/lib/data/branches";
 import { getSalesStaffUsers } from "@/lib/data/users";
 import { SalesFilterBar } from "@/components/sales/SalesFilterBar";
 import { SalesHistoryTable } from "@/components/sales/SalesHistoryTable";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Button } from "@/components/ui/Button";
+import { Pagination } from "@/components/ui/Pagination";
+import { parsePageParams } from "@/lib/pagination";
 
 type SearchParams = {
   branchId?: string;
@@ -14,6 +18,8 @@ type SearchParams = {
   dateFrom?: string;
   dateTo?: string;
   manualOnly?: string;
+  page?: string;
+  pageSize?: string;
 };
 
 export default async function AdminSalesPage({
@@ -26,26 +32,23 @@ export default async function AdminSalesPage({
     redirect("/login/admin");
   }
 
-  const filters = await searchParams;
-  const [rows, branches, staff] = await Promise.all([
-    getSalesForAdmin({ ...filters, manualOnly: filters.manualOnly === "1" }),
+  const { page: pageParam, pageSize, ...filters } = await searchParams;
+  const { t } = await getServerDictionary();
+  const pageArgs = parsePageParams({ page: pageParam, pageSize });
+  const [sales, branches, staff] = await Promise.all([
+    getSalesForAdmin({ ...filters, manualOnly: filters.manualOnly === "1" }, pageArgs),
     getBranches(),
     getSalesStaffUsers(),
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-
-      <div className="flex items-center justify-between mt-4 mb-6">
-        <h1 className="text-xl font-semibold">Mauzo Yote</h1>
-        <Link
-          href="/dashboard/admin/sales/manual-items"
-          className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-        >
-          Manual Items → Convert
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-primary">{t.adminOps.salesList.title}</h1>
+        <Link href="/dashboard/admin/sales/manual-items">
+          <Button type="button" variant="secondary">
+            {t.nav.manualItems} → {t.adminOps.salesList.convert}
+          </Button>
         </Link>
       </div>
 
@@ -57,10 +60,19 @@ export default async function AdminSalesPage({
       />
 
       <SalesHistoryTable
-        rows={rows}
+        rows={sales.rows}
         showSeller={true}
         currentUserId={session.user.id}
         isAdmin={true}
+      />
+
+      <Pagination
+        baseHref="/dashboard/admin/sales"
+        params={{ ...filters, pageSize }}
+        page={sales.page}
+        pageSize={sales.pageSize}
+        total={sales.total}
+        totalPages={sales.totalPages}
       />
     </div>
   );

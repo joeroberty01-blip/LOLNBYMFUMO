@@ -1,4 +1,9 @@
+"use client";
+
 import { paymentMethods } from "@/lib/validators/sales";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { DateInput, Select, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const PAYMENT_LABEL: Record<string, string> = {
   CASH: "Cash",
@@ -23,85 +28,66 @@ type Props = {
 };
 
 export function SalesFilterBar({ action, branches, staff, values }: Props) {
+  const t = useTranslations();
   return (
-    <form action={action} method="GET" className="flex flex-wrap items-end gap-2 mb-6">
+    <form action={action} method="GET" className="mb-6 flex flex-wrap items-end gap-2">
       <div>
-        <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Kutoka</label>
-        <input
-          type="date"
-          name="dateFrom"
-          defaultValue={values.dateFrom}
-          className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-        />
+        <Label>{t.common.from}</Label>
+        <DateInput name="dateFrom" defaultValue={values.dateFrom} />
       </div>
       <div>
-        <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Hadi</label>
-        <input
-          type="date"
-          name="dateTo"
-          defaultValue={values.dateTo}
-          className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-        />
+        <Label>{t.common.to}</Label>
+        <DateInput name="dateTo" defaultValue={values.dateTo} />
       </div>
       <div>
-        <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Branch</label>
-        <select
-          name="branchId"
-          defaultValue={values.branchId ?? ""}
-          className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="">Branches zote</option>
+        <Label>{t.common.branch}</Label>
+        <Select name="branchId" defaultValue={values.branchId ?? ""} className="w-auto">
+          <option value="">{t.common.allBranches}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       {staff && (
         <div>
-          <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Sales Staff</label>
-          <select
-            name="userId"
-            defaultValue={values.userId ?? ""}
-            className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          >
-            <option value="">Wote</option>
+          <Label>{t.sales.historyFilter.staffLabel}</Label>
+          <Select name="userId" defaultValue={values.userId ?? ""} className="w-auto">
+            <option value="">{t.sales.historyFilter.allStaff}</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
       <div>
-        <label className="block text-xs text-black/60 dark:text-white/60 mb-1">Payment</label>
-        <select
-          name="paymentMethod"
-          defaultValue={values.paymentMethod ?? ""}
-          className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="">Zote</option>
+        <Label>{t.sales.historyFilter.paymentLabel}</Label>
+        <Select name="paymentMethod" defaultValue={values.paymentMethod ?? ""} className="w-auto">
+          <option value="">{t.sales.historyFilter.allPayments}</option>
           {paymentMethods.map((pm) => (
             <option key={pm} value={pm}>
               {PAYMENT_LABEL[pm]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       {staff && (
-        <label className="flex items-center gap-1.5 text-sm pb-2">
-          <input type="checkbox" name="manualOnly" value="1" defaultChecked={values.manualOnly === "1"} />
-          Manual Items Only
+        <label className="flex items-center gap-1.5 pb-2 text-sm text-primary">
+          <input
+            type="checkbox"
+            name="manualOnly"
+            value="1"
+            defaultChecked={values.manualOnly === "1"}
+          />
+          {t.sales.historyFilter.manualOnlyLabel}
         </label>
       )}
-      <button
-        type="submit"
-        className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-      >
-        Chuja
-      </button>
+      <Button type="submit" variant="secondary">
+        {t.common.filter}
+      </Button>
     </form>
   );
 }

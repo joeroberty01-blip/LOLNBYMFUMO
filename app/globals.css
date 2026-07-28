@@ -1,32 +1,145 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- Design tokens (Phase 8 design system) ---- */
+/* Light theme (default). Accent/success/danger/warning tokens keep the same hue in both
+   themes on purpose - only the page/surface/text/border tokens invert. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-page: #f7f7fa;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f0f0f4;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --text-primary: #16171d;
+  --text-secondary: #6b6d76;
+  --accent-primary: #a855f7;
+  --accent-secondary: #ec4899;
+  --accent-tertiary: #0891b2;
+  --success-green: #059669;
+  /* Rose, not pure red — reads as a red/purple blend rather than the coral-orange the plain
+     red-600 tended to look like on dark screens (e.g. the "Low Stock" badge). */
+  --danger-red: #e11d48;
+  --warning-amber: #d97706;
+  --gradient-primary: linear-gradient(135deg, #a855f7, #ec4899);
+
+  --background: var(--bg-page);
+  --foreground: var(--text-primary);
+}
+
+.dark {
+  --bg-page: #0d0e14;
+  --bg-surface: #15161f;
+  --bg-surface-elevated: #1b1c28;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-primary: #f5f5f7;
+  --text-secondary: #8b8d98;
+  --accent-tertiary: #22d3ee;
+  --success-green: #34d399;
+  --danger-red: #fb7185;
+  --warning-amber: #fbbf24;
+
+  --background: var(--bg-page);
+  --foreground: var(--text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  --color-page: var(--bg-page);
+  --color-surface: var(--bg-surface);
+  --color-surface-elevated: var(--bg-surface-elevated);
+  --color-border: var(--border-subtle);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-accent: var(--accent-primary);
+  --color-accent-2: var(--accent-secondary);
+  --color-accent-3: var(--accent-tertiary);
+  --color-success: var(--success-green);
+  --color-danger: var(--danger-red);
+  --color-warning: var(--warning-amber);
+
+  --radius-card: 16px;
+  --radius-control: 10px;
+
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html[data-font-size="sm"] {
+  font-size: 14px;
+}
+
+html[data-font-size="md"] {
+  font-size: 16px;
+}
+
+html[data-font-size="lg"] {
+  font-size: 18px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.gradient-primary-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @media print {
-  .no-print {
+  .no-print,
+  aside,
+  header {
     display: none !important;
+  }
+
+  /* Print the real DOM as a clean document: white paper, black text, no app chrome. */
+  :root,
+  .dark {
+    --bg-page: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #ffffff;
+    --border-subtle: #999999;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  /* Receipts print as a narrow slip, not stretched across the sheet. */
+  .receipt-sheet {
+    max-width: 80mm !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
   }
 }

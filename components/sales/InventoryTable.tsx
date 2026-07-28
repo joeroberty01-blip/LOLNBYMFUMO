@@ -1,39 +1,37 @@
 import type { SalesInventoryRow } from "@/lib/data/parts";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Package } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-black/60 dark:text-white/60">Hakuna parts zilizopatikana.</p>;
+    return <EmptyState icon={<Package size={20} />} title="Hakuna parts zilizopatikana." />;
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="border-b border-black/10 dark:border-white/15 text-left">
-            <th className="py-2 pr-3 font-medium">Name</th>
-            <th className="py-2 pr-3 font-medium">Part Number</th>
-            <th className="py-2 pr-3 font-medium">Selling Price</th>
-            <th className="py-2 pr-3 font-medium">Branch</th>
-            <th className="py-2 pr-3 font-medium">Quantity</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr
-              key={`${row.partId}-${i}`}
-              className="border-b border-black/5 dark:border-white/10"
-            >
-              <td className="py-2 pr-3">{row.name}</td>
-              <td className="py-2 pr-3">{row.partNumber}</td>
-              <td className="py-2 pr-3">{currency.format(row.unitPrice)}</td>
-              <td className="py-2 pr-3">{row.branchName}</td>
-              <td className="py-2 pr-3">{row.quantity}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table>
+      <THead>
+        <THeadRow>
+          <Th>Name</Th>
+          <Th>Part Number</Th>
+          <Th className="text-right">Selling Price</Th>
+          <Th>Branch</Th>
+          <Th className="text-right">Quantity</Th>
+        </THeadRow>
+      </THead>
+      <TBody>
+        {rows.map((row, i) => (
+          <Tr key={`${row.partId}-${i}`} index={i}>
+            <Td className="font-medium text-primary">{row.name}</Td>
+            <Td className="text-secondary">{row.partNumber}</Td>
+            <Td className="text-right tabular-nums">{currency.format(row.unitPrice)}</Td>
+            <Td>{row.branchName}</Td>
+            <Td className="text-right tabular-nums">{row.quantity}</Td>
+          </Tr>
+        ))}
+      </TBody>
+    </Table>
   );
 }

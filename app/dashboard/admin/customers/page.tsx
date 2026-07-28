@@ -2,72 +2,105 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getCustomers } from "@/lib/data/customers";
+import { getBranches } from "@/lib/data/branches";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Button } from "@/components/ui/Button";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ArchiveCustomerButton } from "@/components/admin/ArchiveCustomerButton";
+import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { parsePageParams } from "@/lib/pagination";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
-export default async function AdminCustomersPage() {
+export default async function AdminCustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const customers = await getCustomers();
+  const { page: pageParam, pageSize } = await searchParams;
+  const pageArgs = parsePageParams({ page: pageParam, pageSize });
+  const [customers, branches] = await Promise.all([getCustomers(pageArgs), getBranches()]);
+  const { t } = await getServerDictionary();
 
   return (
-    <div className="mx-auto w-full max-w-4xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-
-      <div className="flex items-center justify-between mt-4 mb-6">
-        <h1 className="text-xl font-semibold">Customers</h1>
-        <Link
-          href="/dashboard/admin/customers/new"
-          className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium"
-        >
-          + Ongeza Customer
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-primary">{t.nav.customers}</h1>
+        <Link href="/dashboard/admin/customers/new">
+          <Button type="button" variant="primary">
+            {t.adminCatalog.customers.addNew}
+          </Button>
         </Link>
       </div>
 
-      {customers.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60">Hakuna customers bado.</p>
+      {customers.rows.length === 0 ? (
+        <EmptyState title={t.adminCatalog.customers.empty} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-black/10 dark:border-white/15 text-left">
-                <th className="py-2 pr-3 font-medium">Jina</th>
-                <th className="py-2 pr-3 font-medium">Simu</th>
-                <th className="py-2 pr-3 font-medium">Credit Limit</th>
-                <th className="py-2 pr-3 font-medium">Balance</th>
-                <th className="py-2 pr-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((c) => (
-                <tr key={c.id} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{c.name}</td>
-                  <td className="py-2 pr-3">{c.phone ?? "—"}</td>
-                  <td className="py-2 pr-3">{currency.format(c.creditLimit)}</td>
-                  <td className="py-2 pr-3">
-                    <span className={c.balance > 0 ? "text-red-600 font-medium" : ""}>
-                      {currency.format(c.balance)}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <Link
-                      href={`/dashboard/admin/customers/${c.id}/edit`}
-                      className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm"
-                    >
-                      Edit
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.common.name}</Th>
+              <Th>{t.common.phone}</Th>
+              <Th className="text-right">{t.adminCatalog.customers.creditLimit}</Th>
+              <Th className="text-right">{t.adminCatalog.customers.balance}</Th>
+              <Th>{t.common.actions}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {customers.rows.map((c, i) => (
+              <Tr key={c.id} index={i}>
+                <Td>{c.name}</Td>
+                <Td>{c.phone ?? "—"}</Td>
+                <Td className="text-right tabular-nums">{currency.format(c.creditLimit)}</Td>
+                <Td className="text-right tabular-nums">
+                  <span className={c.balance > 0 ? "font-medium text-danger" : ""}>
+                    {currency.format(c.balance)}
+                  </span>
+                </Td>
+                <Td>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/dashboard/admin/customers/${c.id}`}>
+                      <Button type="button" variant="secondary">
+                        {t.common.view}
+                      </Button>
                     </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <Link href={`/dashboard/admin/customers/${c.id}/edit`}>
+                      <Button type="button" variant="secondary">
+                        {t.common.edit}
+                      </Button>
+                    </Link>
+                    {c.balance > 0 && (
+                      <PayCustomerButton
+                        customerId={c.id}
+                        customerName={c.name}
+                        currentBalance={c.balance}
+                        branches={branches}
+                      />
+                    )}
+                    <ArchiveCustomerButton customerId={c.id} />
+                  </div>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
+
+      <Pagination
+        baseHref="/dashboard/admin/customers"
+        params={{ pageSize }}
+        page={customers.page}
+        pageSize={customers.pageSize}
+        total={customers.total}
+        totalPages={customers.totalPages}
+      />
     </div>
   );
 }

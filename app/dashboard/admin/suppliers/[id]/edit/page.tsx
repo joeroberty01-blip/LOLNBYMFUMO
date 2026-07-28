@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SupplierForm } from "@/components/admin/SupplierForm";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function EditSupplierPage({
   params,
@@ -20,12 +21,16 @@ export default async function EditSupplierPage({
     notFound();
   }
 
+  const { t } = await getServerDictionary();
+
   return (
-    <div className="mx-auto w-full max-w-md py-12 px-4">
-      <Link href="/dashboard/admin/suppliers" className="text-sm underline">
-        &larr; Rudi Suppliers
+    <div>
+      <Link href="/dashboard/admin/suppliers" className="text-sm text-accent hover:underline">
+        {t.adminCatalog.suppliers.backToSuppliers}
       </Link>
-      <h1 className="text-xl font-semibold mt-4 mb-6">Hariri Supplier</h1>
+      <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
+        {t.adminCatalog.suppliers.editTitle}
+      </h1>
       <SupplierForm
         mode="edit"
         supplierId={supplier.id}

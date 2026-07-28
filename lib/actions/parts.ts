@@ -57,7 +57,11 @@ export async function updatePart(partId: string, input: PartInput): Promise<Acti
     return { success: false, error: "Part number hii tayari inatumiwa na part nyingine" };
   }
 
-  await prisma.part.update({ where: { id: partId }, data });
+  try {
+    await prisma.part.update({ where: { id: partId }, data });
+  } catch {
+    return { success: false, error: "Part hii haipo tena (huenda imeshafutwa)" };
+  }
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/sales/inventory");
   return { success: true };
@@ -70,9 +74,13 @@ export async function deletePart(partId: string): Promise<ActionResult> {
     return { success: false, error: (e as Error).message };
   }
 
-  // Soft delete only — isActive: false. Part history referenced by SaleItem/PurchaseItem must
-  // never be hard-deleted, and no hard-delete path is exposed anywhere in this app.
-  await prisma.part.update({ where: { id: partId }, data: { isActive: false } });
+  try {
+    // Soft delete only — isActive: false. Part history referenced by SaleItem/PurchaseItem must
+    // never be hard-deleted, and no hard-delete path is exposed anywhere in this app.
+    await prisma.part.update({ where: { id: partId }, data: { isActive: false } });
+  } catch {
+    return { success: false, error: "Part hii haipo tena (huenda imeshafutwa)" };
+  }
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/sales/inventory");
   return { success: true };

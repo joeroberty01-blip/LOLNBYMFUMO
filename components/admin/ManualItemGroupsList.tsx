@@ -3,6 +3,11 @@
 import { useState } from "react";
 import type { ManualItemGroup } from "@/lib/data/sales";
 import { ConvertManualItemModal } from "@/components/admin/ConvertManualItemModal";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Boxes } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -13,42 +18,45 @@ export function ManualItemGroupsList({
   groups: ManualItemGroup[];
   branches: { id: string; name: string }[];
 }) {
+  const t = useTranslations();
   const [converting, setConverting] = useState<ManualItemGroup | null>(null);
 
   if (groups.length === 0) {
-    return (
-      <p className="text-sm text-black/60 dark:text-white/60">
-        Hakuna manual items zilizouzwa bado.
-      </p>
-    );
+    return <EmptyState icon={<Boxes size={20} />} title={t.adminOps.manualItems.empty} />;
   }
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        {groups.map((g) => (
-          <div
-            key={g.name}
-            className="flex items-center justify-between gap-4 rounded-md border border-black/10 dark:border-white/15 p-4"
-          >
-            <div className="min-w-0">
-              <p className="font-medium truncate">{g.name}</p>
-              <p className="text-sm text-black/60 dark:text-white/60">
-                {g.partNumber ? `${g.partNumber} · ` : ""}
-                Imeuzwa mara {g.timesSold} · Selling: {currency.format(g.lastUnitPrice)} · Buying:{" "}
-                {currency.format(g.lastCostPrice)}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setConverting(g)}
-              className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm whitespace-nowrap"
-            >
-              Convert to Official Part
-            </button>
-          </div>
-        ))}
-      </div>
+      <Table>
+        <THead>
+          <THeadRow>
+            <Th>{t.adminCatalog.parts.nameLabel}</Th>
+            <Th>{t.adminCatalog.parts.partNumberLabel}</Th>
+            <Th className="text-right">{t.adminOps.manualItems.timesSold}</Th>
+            <Th className="text-right">{t.adminCatalog.parts.sellingPrice}</Th>
+            <Th className="text-right">{t.adminCatalog.parts.buyingPrice}</Th>
+            <Th>{t.common.actions}</Th>
+          </THeadRow>
+        </THead>
+        <TBody>
+          {groups.map((g, i) => (
+            <Tr key={g.name} index={i}>
+              <Td className="font-medium text-primary">{g.name}</Td>
+              <Td className="text-secondary">{g.partNumber ?? "—"}</Td>
+              <Td className="text-right tabular-nums">
+                {g.timesSold} {t.adminOps.manualItems.times}
+              </Td>
+              <Td className="text-right tabular-nums">{currency.format(g.lastUnitPrice)}</Td>
+              <Td className="text-right tabular-nums">{currency.format(g.lastCostPrice)}</Td>
+              <Td>
+                <Button type="button" variant="secondary" onClick={() => setConverting(g)}>
+                  {t.adminOps.manualItems.convertButton}
+                </Button>
+              </Td>
+            </Tr>
+          ))}
+        </TBody>
+      </Table>
 
       {converting && (
         <ConvertManualItemModal

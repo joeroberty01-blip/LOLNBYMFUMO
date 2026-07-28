@@ -1,16 +1,19 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getSalesForStaff } from "@/lib/data/sales";
 import { getBranches } from "@/lib/data/branches";
 import { SalesFilterBar } from "@/components/sales/SalesFilterBar";
 import { SalesHistoryTable } from "@/components/sales/SalesHistoryTable";
+import { Pagination } from "@/components/ui/Pagination";
+import { parsePageParams } from "@/lib/pagination";
 
 type SearchParams = {
   branchId?: string;
   paymentMethod?: string;
   dateFrom?: string;
   dateTo?: string;
+  page?: string;
+  pageSize?: string;
 };
 
 export default async function SalesHistoryPage({
@@ -19,30 +22,40 @@ export default async function SalesHistoryPage({
   searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "SALES_STAFF" || session.user.status !== "APPROVED") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/sales-staff");
   }
 
-  const filters = await searchParams;
-  const [rows, branches] = await Promise.all([
-    getSalesForStaff(session.user.id, filters),
+  const { page: pageParam, pageSize, ...filters } = await searchParams;
+  const pageArgs = parsePageParams({ page: pageParam, pageSize });
+  const [sales, branches] = await Promise.all([
+    getSalesForStaff(session.user.id, filters, pageArgs),
     getBranches(),
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl py-12 px-4">
-      <Link href="/dashboard/sales" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-      <h1 className="text-xl font-semibold mt-4 mb-6">Historia ya Mauzo Yangu</h1>
+    <div>
+      <h1 className="mb-6 text-xl font-semibold text-primary">Sales History</h1>
 
       <SalesFilterBar action="/dashboard/sales/history" branches={branches} values={filters} />
 
       <SalesHistoryTable
-        rows={rows}
+        rows={sales.rows}
         showSeller={false}
         currentUserId={session.user.id}
-        isAdmin={false}
+        isAdmin={isAdmin}
+      />
+
+      <Pagination
+        baseHref="/dashboard/sales/history"
+        params={{ ...filters, pageSize }}
+        page={sales.page}
+        pageSize={sales.pageSize}
+        total={sales.total}
+        totalPages={sales.totalPages}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-# Woodland ERP
+# LOLNBY MFUMO
 
 ERP system ya kitaalamu kwa ajili ya kampuni ya mauzo ya spare parts. Inashughulikia matawi
 (branches), wateja, wasambazaji (suppliers), inventory, mauzo (sales) na manunuzi (purchases).

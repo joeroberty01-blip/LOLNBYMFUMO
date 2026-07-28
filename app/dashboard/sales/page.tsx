@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ShoppingCart, History, Boxes, Truck, LineChart } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { SignOutButton } from "@/components/auth/SignOutButton";
+import { Card } from "@/components/ui/Card";
+
+const ICON_WRAPPER_CLASS: Record<string, string> = {
+  accent: "bg-accent/15 text-accent",
+  "accent-2": "bg-accent-2/15 text-accent-2",
+  "accent-3": "bg-accent-3/15 text-accent-3",
+};
 
 export default async function SalesDashboardPage() {
   const session = await auth();
@@ -9,56 +16,67 @@ export default async function SalesDashboardPage() {
     redirect("/login/sales-staff");
   }
 
+  const links = [
+    {
+      href: "/dashboard/sales/pos",
+      icon: ShoppingCart,
+      accent: "accent",
+      title: "New Sale (POS)",
+      description: "Start a new sale — search parts, add manual items, checkout",
+    },
+    {
+      href: "/dashboard/sales/history",
+      icon: History,
+      accent: "accent-2",
+      title: "Sales History",
+      description: "View and filter sales you have already completed",
+    },
+    {
+      href: "/dashboard/sales/inventory",
+      icon: Boxes,
+      accent: "accent-3",
+      title: "Inventory",
+      description: "View parts and stock quantity at each branch (view-only)",
+    },
+    {
+      href: "/dashboard/sales/suppliers",
+      icon: Truck,
+      accent: "accent",
+      title: "Suppliers",
+      description: "View supplier contact details (view-only)",
+    },
+    {
+      href: "/dashboard/sales/my-performance",
+      icon: LineChart,
+      accent: "accent-2",
+      title: "My Performance",
+      description: "View your sales, manual items, and voided transactions",
+    },
+  ] as const;
+
   return (
-    <div className="mx-auto w-full max-w-2xl py-12 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-xl font-semibold">Sales Dashboard</h1>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Karibu, {session.user.name}
-          </p>
-        </div>
-        <SignOutButton />
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-primary">Sales Dashboard</h1>
+        <p className="text-sm text-secondary">Welcome, {session.user.name}</p>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <Link
-          href="/dashboard/sales/pos"
-          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
-        >
-          <p className="font-medium">Point of Sale</p>
-          <p className="text-sm text-black/60 dark:text-white/60">Uza parts au manual items</p>
-        </Link>
-
-        <Link
-          href="/dashboard/sales/history"
-          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
-        >
-          <p className="font-medium">Historia ya Mauzo Yangu</p>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Angalia na uchuje mauzo uliyofanya
-          </p>
-        </Link>
-
-        <Link
-          href="/dashboard/sales/inventory"
-          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
-        >
-          <p className="font-medium">Inventory</p>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Angalia parts na quantity zilizopo kwenye kila branch
-          </p>
-        </Link>
-
-        <Link
-          href="/dashboard/sales/my-performance"
-          className="block rounded-md border border-black/10 dark:border-white/15 p-4 hover:bg-black/[.03] dark:hover:bg-white/[.06]"
-        >
-          <p className="font-medium">My Performance</p>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Angalia mauzo yako, manual items, na voided
-          </p>
-        </Link>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {links.map(({ href, icon: Icon, accent, title, description }) => (
+          <Link key={href} href={href}>
+            <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-white/[0.03]">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${ICON_WRAPPER_CLASS[accent]}`}
+              >
+                <Icon size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-primary">{title}</p>
+                <p className="truncate text-xs text-secondary">{description}</p>
+              </div>
+            </Card>
+          </Link>
+        ))}
       </div>
     </div>
   );

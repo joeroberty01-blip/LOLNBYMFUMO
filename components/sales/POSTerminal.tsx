@@ -1,14 +1,25 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { Search, Plus, X } from "lucide-react";
 import { getPOSInventory, completeSale, type ReceiptData } from "@/lib/actions/sales";
 import { paymentMethods } from "@/lib/validators/sales";
 import type { POSInventoryItem } from "@/lib/data/sales";
 import { ManualItemModal } from "@/components/sales/ManualItemModal";
 import { QuickCustomerModal } from "@/components/sales/QuickCustomerModal";
 import { ReceiptView } from "@/components/sales/ReceiptView";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Input, Select } from "@/components/ui/Input";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
+
+/** Sales above this trigger an extra warning in the confirm dialog — not a hard limit, just a
+ * "did you mean to type an extra zero" nudge before the money/stock actually moves. */
+const LARGE_SALE_THRESHOLD = 500_000;
 
 const PAYMENT_LABEL: Record<(typeof paymentMethods)[number], string> = {
   CASH: "Cash",
@@ -44,12 +55,18 @@ type CartLine =
 
 export function POSTerminal({
   branches,
+  allStores,
   customers: initialCustomers,
 }: {
   branches: Branch[];
+  /** Every store, including warehouse-only ones — used only for the "Source Store" picker,
+   * never for the Selling Point picker above it. */
+  allStores: Branch[];
   customers: Customer[];
 }) {
+  const t = useTranslations();
   const [branchId, setBranchId] = useState<string | null>(null);
+  const [sourceBranchId, setSourceBranchId] = useState<string | null>(null);
   const [inventory, setInventory] = useState<POSInventoryItem[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,13 +80,12 @@ export function POSTerminal({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
+  const sourceBranchName = allStores.find((b) => b.id === sourceBranchId)?.name ?? "";
 
-  async function selectBranch(id: string) {
-    setBranchId(id);
-    setCart([]);
-    setSearchQuery("");
+  async function loadInventoryFrom(id: string) {
     setLoadingInventory(true);
     try {
       const items = await getPOSInventory(id);
@@ -77,6 +93,21 @@ export function POSTerminal({
     } finally {
       setLoadingInventory(false);
     }
+  }
+
+  async function selectBranch(id: string) {
+    setBranchId(id);
+    setSourceBranchId(id);
+    setCart([]);
+    setSearchQuery("");
+    await loadInventoryFrom(id);
+  }
+
+  async function selectSourceBranch(id: string) {
+    setSourceBranchId(id);
+    setCart([]);
+    setSearchQuery("");
+    await loadInventoryFrom(id);
   }
 
   const filteredInventory = useMemo(() => {
@@ -150,6 +181,14 @@ export function POSTerminal({
     );
   }
 
+  /** Price is editable in the cart for every user (bargaining/discounts happen at the counter).
+   * The unit price actually sold at is what gets persisted on the SaleItem. */
+  function updateUnitPrice(key: string, unitPrice: number) {
+    setCart((prev) =>
+      prev.map((l) => (l.key === key ? { ...l, unitPrice: Math.max(0, unitPrice) } : l))
+    );
+  }
+
   function removeItem(key: string) {
     setCart((prev) => prev.filter((l) => l.key !== key));
   }
@@ -169,10 +208,16 @@ export function POSTerminal({
   function handleCompleteSale() {
     if (!branchId || cart.length === 0) return;
     setSubmitError(null);
+    setConfirmOpen(true);
+  }
+
+  function submitSale() {
+    if (!branchId) return;
 
     startSubmit(async () => {
       const result = await completeSale({
         branchId,
+        sourceBranchId: sourceBranchId ?? branchId,
         paymentMethod,
         isCredit,
         customerId: customerId ?? undefined,
@@ -196,9 +241,11 @@ export function POSTerminal({
       });
 
       if (!result.success) {
+        setConfirmOpen(false);
         setSubmitError(result.error);
         return;
       }
+      setConfirmOpen(false);
       setReceipt(result.data);
     });
   }
@@ -210,14 +257,14 @@ export function POSTerminal({
   if (!branchId) {
     return (
       <div className="mx-auto w-full max-w-sm">
-        <h2 className="text-lg font-medium mb-4">Chagua Branch</h2>
+        <h2 className="mb-4 text-lg font-medium text-primary">{t.sales.pos.chooseBranch}</h2>
         <div className="flex flex-col gap-3">
           {branches.map((b) => (
             <button
               key={b.id}
               type="button"
               onClick={() => selectBranch(b.id)}
-              className="rounded-md border border-black/15 dark:border-white/20 px-4 py-3 text-left hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+              className="rounded-card border border-border bg-surface px-4 py-3 text-left text-primary transition-colors hover:bg-white/[0.04]"
             >
               {b.name}
             </button>
@@ -228,138 +275,177 @@ export function POSTerminal({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_380px]">
       {/* Left: search + inventory */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Branch: <span className="font-medium text-foreground">{branchName}</span>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm text-secondary">
+            {t.common.branch}: <span className="font-medium text-primary">{branchName}</span>
           </p>
           <button
             type="button"
             onClick={() => setBranchId(null)}
-            className="text-xs underline text-black/60 dark:text-white/60"
+            className="text-xs text-accent hover:underline"
           >
-            Badilisha Branch
+            {t.sales.pos.changeBranch}
           </button>
         </div>
 
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            placeholder="Tafuta part kwa jina au namba..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setManualModalOpen(true)}
-            className="rounded-md border border-black/15 dark:border-white/20 px-3 py-2 text-sm whitespace-nowrap"
+        <div className="mb-3 flex items-center gap-2">
+          <label className="shrink-0 text-sm text-secondary">{t.sales.pos.sourceStoreLabel}</label>
+          <Select
+            value={sourceBranchId ?? branchId}
+            onChange={(e) => selectSourceBranch(e.target.value)}
+            className="w-auto"
           >
-            + Manual Item
-          </button>
+            {allStores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+          {sourceBranchId && sourceBranchId !== branchId && (
+            <span className="text-xs text-warning">{t.sales.pos.sourceStoreDifferentWarning}</span>
+          )}
+        </div>
+
+        <div className="mb-3 flex gap-2">
+          <div className="relative flex-1">
+            <Search
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-secondary"
+            />
+            <Input
+              type="text"
+              placeholder={t.sales.pos.searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button type="button" variant="secondary" onClick={() => setManualModalOpen(true)}>
+            <Plus size={15} />
+            {t.sales.pos.addManualItem}
+          </Button>
         </div>
 
         {loadingInventory ? (
-          <p className="text-sm text-black/60 dark:text-white/60">Inapakia...</p>
+          <p className="text-sm text-secondary">{t.common.loading}</p>
         ) : (
-          <div className="flex flex-col gap-2 max-h-[420px] overflow-y-auto">
+          <div className="flex max-h-[520px] flex-col gap-2 overflow-y-auto">
             {filteredInventory.length === 0 && (
-              <p className="text-sm text-black/60 dark:text-white/60">Hakuna parts zilizopatikana.</p>
+              <p className="text-sm text-secondary">{t.sales.pos.noPartsFound}</p>
             )}
             {filteredInventory.map((item) => (
               <button
                 key={item.partId}
                 type="button"
                 onClick={() => addRegularItem(item)}
-                className="flex items-center justify-between rounded-md border border-black/10 dark:border-white/15 px-3 py-2 text-left text-sm hover:bg-black/[.03] dark:hover:bg-white/[.06]"
+                className="flex items-center justify-between rounded-card border border-border bg-surface px-4 py-3 text-left text-sm text-primary transition-colors hover:bg-white/[0.04]"
               >
                 <div className="min-w-0">
-                  <p className="truncate">{item.name}</p>
-                  <p className="text-xs text-black/50 dark:text-white/50">
-                    {item.partNumber} · Iliyopo: {item.quantity}
+                  <p className="truncate font-medium">{item.name}</p>
+                  <p className="text-xs text-secondary">
+                    {item.partNumber} · {t.sales.pos.inStock}: {item.quantity}
                   </p>
                 </div>
-                <span className="shrink-0 ml-2">{currency.format(item.unitPrice)}</span>
+                <span className="ml-2 shrink-0 tabular-nums text-primary">
+                  {currency.format(item.unitPrice)}
+                </span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Right: cart + payment */}
-      <div>
-        <h2 className="text-sm font-medium mb-3">Cart</h2>
-        <div className="flex flex-col gap-2 mb-4">
-          {cart.length === 0 && (
-            <p className="text-sm text-black/60 dark:text-white/60">Cart ipo tupu.</p>
-          )}
+      {/* Right: sticky cart + payment */}
+      <Card className="sticky top-6 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-primary">{t.sales.pos.cartTitle}</h2>
+        <div className="mb-4 flex max-h-64 flex-col gap-2 overflow-y-auto">
+          {cart.length === 0 && <p className="text-sm text-secondary">{t.sales.pos.cartEmpty}</p>}
           {cart.map((line) => (
             <div
               key={line.key}
-              className="flex items-center justify-between gap-2 rounded-md border border-black/10 dark:border-white/15 px-3 py-2 text-sm"
+              className="rounded-control border border-border bg-surface-elevated px-3 py-2 text-sm"
             >
-              <div className="min-w-0">
-                <p className="truncate">
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 truncate text-primary">
                   {line.name}
                   {line.type === "manual" && (
-                    <span className="ml-1 rounded-full bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 text-[10px] font-medium align-middle">
-                      Manual
+                    <span className="ml-1.5 align-middle">
+                      <Badge status="warning">Manual</Badge>
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-black/50 dark:text-white/50">
-                  {currency.format(line.unitPrice)} kila moja
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {line.type === "regular" ? (
-                  <input
-                    type="number"
-                    min={1}
-                    max={line.maxQuantity}
-                    value={line.quantity}
-                    onChange={(e) => updateRegularQuantity(line.key, Number(e.target.value))}
-                    className="w-16 rounded-md border border-black/15 dark:border-white/20 bg-transparent px-2 py-1 text-sm"
-                  />
-                ) : (
-                  <span className="w-16 text-center">{line.quantity}</span>
-                )}
-                <span className="w-20 text-right">
-                  {currency.format(line.unitPrice * line.quantity)}
-                </span>
                 <button
                   type="button"
                   onClick={() => removeItem(line.key)}
-                  className="text-red-600 text-xs"
+                  aria-label={t.sales.pos.removeFromCart}
+                  className="shrink-0 text-secondary hover:text-danger"
                 >
-                  Ondoa
+                  <X size={14} />
                 </button>
+              </div>
+
+              <div className="mt-1.5 flex items-center gap-2">
+                <label className="flex items-center gap-1">
+                  <span className="text-xs text-secondary">{t.sales.pos.priceLabel}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={line.unitPrice}
+                    onChange={(e) => updateUnitPrice(line.key, Number(e.target.value))}
+                    aria-label={`${t.sales.pos.priceLabel} — ${line.name}`}
+                    className="w-24 rounded-control border border-border bg-surface px-2 py-1 text-sm text-primary tabular-nums"
+                  />
+                </label>
+
+                <label className="flex items-center gap-1">
+                  <span className="text-xs text-secondary">{t.sales.pos.qtyLabel}</span>
+                  {line.type === "regular" ? (
+                    <input
+                      type="number"
+                      min={1}
+                      max={line.maxQuantity}
+                      value={line.quantity}
+                      onChange={(e) => updateRegularQuantity(line.key, Number(e.target.value))}
+                      aria-label={`${t.sales.pos.qtyLabel} — ${line.name}`}
+                      className="w-14 rounded-control border border-border bg-surface px-2 py-1 text-sm text-primary tabular-nums"
+                    />
+                  ) : (
+                    <span className="w-14 text-center text-primary tabular-nums">
+                      {line.quantity}
+                    </span>
+                  )}
+                </label>
+
+                <span className="ml-auto text-right font-medium text-primary tabular-nums">
+                  {currency.format(line.unitPrice * line.quantity)}
+                </span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-between font-semibold text-lg mb-4">
-          <span>Jumla</span>
-          <span>{currency.format(total)}</span>
+        <div className="mb-4 flex justify-between border-t border-border pt-3 text-lg font-semibold text-primary">
+          <span>{t.common.total}</span>
+          <span className="tabular-nums">{currency.format(total)}</span>
         </div>
 
-        <div className="flex flex-col gap-3 mb-4">
+        <div className="mb-4 flex flex-col gap-3">
           <div>
-            <p className="text-sm font-medium mb-1">Payment Method</p>
-            <div className="grid grid-cols-3 gap-2">
+            <p className="mb-1.5 text-sm font-medium text-primary">{t.sales.pos.paymentMethod}</p>
+            <div className="grid grid-cols-3 gap-1.5">
               {paymentMethods.map((pm) => (
                 <button
                   key={pm}
                   type="button"
                   onClick={() => setPaymentMethod(pm)}
-                  className={`rounded-md border px-2 py-1.5 text-xs ${
+                  className={`rounded-full border px-2 py-1.5 text-xs font-medium transition-colors ${
                     paymentMethod === pm
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-black/15 dark:border-white/20"
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-border text-secondary hover:text-primary"
                   }`}
                 >
                   {PAYMENT_LABEL[pm]}
@@ -368,7 +454,7 @@ export function POSTerminal({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm text-primary">
             <input
               type="checkbox"
               checked={isCredit}
@@ -377,49 +463,53 @@ export function POSTerminal({
                 if (!e.target.checked) setCustomerId(null);
               }}
             />
-            Is Credit Sale
+            {t.sales.pos.isCreditSale}
           </label>
 
           {isCredit && (
             <div>
-              <p className="text-sm font-medium mb-1">Customer</p>
+              <p className="mb-1.5 text-sm font-medium text-primary">
+                {t.sales.pos.customerLabel}
+              </p>
               <div className="flex gap-2">
-                <select
+                <Select
                   value={customerId ?? ""}
                   onChange={(e) => setCustomerId(e.target.value || null)}
-                  className="flex-1 rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+                  className="flex-1"
                 >
-                  <option value="">-- Chagua customer --</option>
+                  <option value="">{t.sales.pos.selectCustomer}</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                       {c.phone ? ` (${c.phone})` : ""}
                     </option>
                   ))}
-                </select>
-                <button
+                </Select>
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setQuickCustomerOpen(true)}
-                  className="rounded-md border border-black/15 dark:border-white/20 px-3 py-2 text-sm whitespace-nowrap"
+                  className="whitespace-nowrap"
                 >
-                  + Mpya
-                </button>
+                  {t.sales.pos.newCustomer}
+                </Button>
               </div>
             </div>
           )}
         </div>
 
-        {submitError && <p className="text-sm text-red-600 mb-3">{submitError}</p>}
+        {submitError && <p className="mb-3 text-sm text-danger">{submitError}</p>}
 
-        <button
+        <Button
           type="button"
+          variant="primary"
           disabled={cart.length === 0 || isSubmitting || (isCredit && !customerId)}
           onClick={handleCompleteSale}
-          className="w-full rounded-md bg-foreground text-background px-4 py-3 text-sm font-medium disabled:opacity-50"
+          className="w-full py-3"
         >
-          {isSubmitting ? "Inakamilisha..." : "Complete Sale"}
-        </button>
-      </div>
+          {isSubmitting ? t.sales.pos.completingSale : t.sales.pos.completeSale}
+        </Button>
+      </Card>
 
       {manualModalOpen && (
         <ManualItemModal onClose={() => setManualModalOpen(false)} onAdd={addManualItem} />
@@ -432,6 +522,45 @@ export function POSTerminal({
             setCustomerId(c.id);
             setQuickCustomerOpen(false);
           }}
+        />
+      )}
+
+      {confirmOpen && (
+        <ConfirmDialog
+          title={t.sales.pos.confirmTitle}
+          lines={[
+            { label: t.common.branch, value: branchName },
+            ...(sourceBranchId && sourceBranchId !== branchId
+              ? [{ label: t.sales.pos.sourceStoreLabel, value: sourceBranchName }]
+              : []),
+            { label: t.sales.pos.confirmItems, value: String(cart.length) },
+            { label: t.sales.pos.confirmPayment, value: PAYMENT_LABEL[paymentMethod] },
+            ...(isCredit
+              ? [
+                  {
+                    label: t.sales.pos.confirmCustomer,
+                    value: customers.find((c) => c.id === customerId)?.name ?? "—",
+                  },
+                  { label: t.sales.pos.confirmCredit, value: t.common.yes },
+                ]
+              : []),
+            { label: t.sales.pos.confirmTotal, value: currency.format(total), emphasis: true },
+          ]}
+          itemsTable={{
+            headers: [t.common.name, t.sales.pos.qtyLabel, t.sales.pos.priceLabel, t.common.total],
+            rows: cart.map((l) => [
+              l.name,
+              l.quantity,
+              currency.format(l.unitPrice),
+              currency.format(l.unitPrice * l.quantity),
+            ]),
+          }}
+          warning={total >= LARGE_SALE_THRESHOLD ? t.sales.pos.confirmLargeAmount : undefined}
+          confirmLabel={t.sales.pos.confirmButton}
+          cancelLabel={t.sales.pos.editButton}
+          isSubmitting={isSubmitting}
+          onConfirm={submitSale}
+          onCancel={() => setConfirmOpen(false)}
         />
       )}
     </div>

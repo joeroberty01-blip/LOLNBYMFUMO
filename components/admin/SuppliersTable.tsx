@@ -3,6 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { RecordPaymentModal } from "@/components/admin/RecordPaymentModal";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ArchiveSupplierButton } from "@/components/admin/ArchiveSupplierButton";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -22,56 +27,56 @@ export function SuppliersTable({
   suppliers: Supplier[];
   branches: { id: string; name: string }[];
 }) {
+  const t = useTranslations();
   const [paying, setPaying] = useState<Supplier | null>(null);
 
   if (suppliers.length === 0) {
-    return <p className="text-sm text-black/60 dark:text-white/60">Hakuna suppliers bado.</p>;
+    return <EmptyState title={t.adminCatalog.suppliers.empty} />;
   }
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Jina</th>
-              <th className="py-2 pr-3 font-medium">Simu</th>
-              <th className="py-2 pr-3 font-medium">Balance (Tunalodaiwa)</th>
-              <th className="py-2 pr-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {suppliers.map((s) => (
-              <tr key={s.id} className="border-b border-black/5 dark:border-white/10">
-                <td className="py-2 pr-3">{s.name}</td>
-                <td className="py-2 pr-3">{s.phone ?? "—"}</td>
-                <td className="py-2 pr-3">
-                  <span className={s.balance > 0 ? "text-red-600 font-medium" : ""}>
-                    {currency.format(s.balance)}
-                  </span>
-                </td>
-                <td className="py-2 pr-3">
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={`/dashboard/admin/suppliers/${s.id}/edit`}
-                      className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setPaying(s)}
-                      className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm"
-                    >
-                      Record Payment
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <THeadRow>
+            <Th>{t.common.name}</Th>
+            <Th>{t.common.phone}</Th>
+            <Th className="text-right">{t.adminCatalog.suppliers.balanceColumn}</Th>
+            <Th>{t.common.actions}</Th>
+          </THeadRow>
+        </THead>
+        <TBody>
+          {suppliers.map((s, i) => (
+            <Tr key={s.id} index={i}>
+              <Td>{s.name}</Td>
+              <Td>{s.phone ?? "—"}</Td>
+              <Td className="text-right tabular-nums">
+                <span className={s.balance > 0 ? "font-medium text-danger" : ""}>
+                  {currency.format(s.balance)}
+                </span>
+              </Td>
+              <Td>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/dashboard/admin/suppliers/${s.id}`}>
+                    <Button type="button" variant="secondary">
+                      {t.common.view}
+                    </Button>
+                  </Link>
+                  <Link href={`/dashboard/admin/suppliers/${s.id}/edit`}>
+                    <Button type="button" variant="secondary">
+                      {t.common.edit}
+                    </Button>
+                  </Link>
+                  <Button type="button" variant="secondary" onClick={() => setPaying(s)}>
+                    {t.adminCatalog.suppliers.recordPayment}
+                  </Button>
+                  <ArchiveSupplierButton supplierId={s.id} />
+                </div>
+              </Td>
+            </Tr>
+          ))}
+        </TBody>
+      </Table>
 
       {paying && (
         <RecordPaymentModal

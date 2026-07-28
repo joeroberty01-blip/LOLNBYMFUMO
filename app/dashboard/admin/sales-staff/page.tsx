@@ -1,14 +1,16 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SalesStaffTable } from "@/components/admin/SalesStaffTable";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function ManageSalesStaffPage() {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
+
+  const { t } = await getServerDictionary();
 
   const salesStaff = await prisma.user.findMany({
     where: { role: "SALES_STAFF" },
@@ -17,14 +19,9 @@ export default async function ManageSalesStaffPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-3xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-      <h1 className="text-xl font-semibold mt-4 mb-1">Manage Sales Staff</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">
-        Idhinisha akaunti mpya, kataa zisizohitajika, au zima akaunti za wale wanaosumbua.
-      </p>
+    <div className="mx-auto w-full max-w-3xl">
+      <h1 className="mb-1 text-xl font-semibold text-primary">{t.adminOps.salesStaff.title}</h1>
+      <p className="mb-6 text-sm text-secondary">{t.adminOps.salesStaff.subtitle}</p>
 
       <SalesStaffTable initialStaff={salesStaff} />
     </div>

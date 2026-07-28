@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { buildReportPdfBuffer, type ReportParams } from "@/lib/reports/build";
+import { APP_NAME } from "@/config/app";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -50,7 +51,7 @@ export async function sendReportEmail(
     await transporter.sendMail({
       from: user,
       to: parsedEmail.data,
-      subject: `${result.title} — Woodland ERP`,
+      subject: `${result.title} — ${APP_NAME}`,
       text: message?.trim() || `Tafadhali angalia ${result.title} iliyoambatanishwa.`,
       attachments: [{ filename: result.filename, content: result.buffer }],
     });

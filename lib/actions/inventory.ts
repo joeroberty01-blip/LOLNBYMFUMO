@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { adjustStockSchema, type AdjustStockInput } from "@/lib/validators/inventory";
+import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -38,8 +39,16 @@ export async function adjustStock(input: AdjustStockInput): Promise<ActionResult
         create: { partId, branchId, quantity: newQty },
       });
 
-      await tx.stockAdjustment.create({
+      const adjustment = await tx.stockAdjustment.create({
         data: { partId, branchId, quantityChange, reason, userId },
+      });
+
+      await logAudit(tx, {
+        userId,
+        action: "STOCK_ADJUSTED",
+        entityType: "StockAdjustment",
+        entityId: adjustment.id,
+        metadata: { partId, branchId, quantityChange, reason, previousQty: currentQty, newQty },
       });
     });
   } catch (e) {

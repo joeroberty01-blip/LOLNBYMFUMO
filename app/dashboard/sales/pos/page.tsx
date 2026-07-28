@@ -1,26 +1,29 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getBranches } from "@/lib/data/branches";
+import { getSellingPointBranches, getBranches } from "@/lib/data/branches";
 import { getCustomersForPOS } from "@/lib/data/customers";
 import { POSTerminal } from "@/components/sales/POSTerminal";
 
 export default async function POSPage() {
   const session = await auth();
-  if (!session || session.user.role !== "SALES_STAFF" || session.user.status !== "APPROVED") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/sales-staff");
   }
 
-  const [branches, customers] = await Promise.all([getBranches(), getCustomersForPOS()]);
+  const [sellingPoints, allStores, customers] = await Promise.all([
+    getSellingPointBranches(),
+    getBranches(),
+    getCustomersForPOS(),
+  ]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl py-12 px-4">
-      <Link href="/dashboard/sales" className="text-sm underline">
-        &larr; Rudi Dashboard
-      </Link>
-      <h1 className="text-xl font-semibold mt-4 mb-6">Point of Sale</h1>
+    <div>
+      <h1 className="mb-6 text-xl font-semibold text-primary">New Sale (POS)</h1>
 
-      <POSTerminal branches={branches} customers={customers} />
+      <POSTerminal branches={sellingPoints} allStores={allStores} customers={customers} />
     </div>
   );
 }

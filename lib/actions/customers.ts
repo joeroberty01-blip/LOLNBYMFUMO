@@ -6,9 +6,12 @@ import { prisma } from "@/lib/db";
 import {
   quickCustomerSchema,
   customerSchema,
+  recordCustomerPaymentSchema,
   type QuickCustomerInput,
   type CustomerInput,
+  type RecordCustomerPaymentInput,
 } from "@/lib/validators/customers";
+import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true; customerId: string } | { success: false; error: string };
 
@@ -36,6 +39,7 @@ async function requireAdmin() {
   if (!session || session.user.role !== "ADMIN") {
     throw new Error("Huna ruhusa ya kufanya hili");
   }
+  return session;
 }
 
 export async function createCustomer(input: CustomerInput): Promise<ActionResult> {
@@ -72,7 +76,91 @@ export async function updateCustomer(
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
 
-  await prisma.customer.update({ where: { id: customerId }, data: parsed.data });
+  try {
+    await prisma.customer.update({ where: { id: customerId }, data: parsed.data });
+  } catch {
+    return { success: false, error: "Customer huyu hayupo tena (huenda ameshafutwa)" };
+  }
   revalidatePath("/dashboard/admin/customers");
   return { success: true, customerId };
+}
+
+type SimpleResult = { success: true } | { success: false; error: string };
+
+export async function archiveCustomer(customerId: string): Promise<SimpleResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer) return { success: false, error: "Customer not found" };
+  if (customer.balance.toNumber() > 0) {
+    return {
+      success: false,
+      error: "This customer still has an outstanding balance — settle it before archiving",
+    };
+  }
+
+  // Soft delete only — isActive: false. Sale history referencing this customer must never be
+  // hard-deleted, and no hard-delete path is exposed anywhere in this app (same convention as
+  // deletePart).
+  await prisma.customer.update({ where: { id: customerId }, data: { isActive: false } });
+  revalidatePath("/dashboard/admin/customers");
+  return { success: true };
+}
+
+/**
+ * Records a cash collection against a customer's outstanding debt. This only reduces
+ * Customer.balance — it must NOT create a Sale (revenue for this amount was already recognized
+ * at the original credit sale, so a second Sale would double-count it) and must NOT create an
+ * Expense (no cash left the business). See CustomerPayment model comment in schema.prisma.
+ */
+export async function recordCustomerPayment(input: RecordCustomerPaymentInput): Promise<SimpleResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const parsed = recordCustomerPaymentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+  }
+  const { customerId, amount, paymentMethod, branchId } = parsed.data;
+
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer) return { success: false, error: "Customer haipo" };
+
+  await prisma.$transaction(async (tx) => {
+    const payment = await tx.customerPayment.create({
+      data: {
+        customerId,
+        amount,
+        paymentMethod,
+        branchId,
+        userId: session.user.id,
+      },
+    });
+
+    await tx.customer.update({
+      where: { id: customerId },
+      data: { balance: { decrement: amount } },
+    });
+
+    await logAudit(tx, {
+      userId: session.user.id,
+      action: "CUSTOMER_PAYMENT_RECORDED",
+      entityType: "CustomerPayment",
+      entityId: payment.id,
+      metadata: { customerId, amount, paymentMethod, branchId },
+    });
+  });
+
+  revalidatePath("/dashboard/admin/customers");
+  revalidatePath(`/dashboard/admin/customers/${customerId}`);
+  revalidatePath("/dashboard/admin");
+  return { success: true };
 }

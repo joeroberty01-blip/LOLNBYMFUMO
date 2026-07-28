@@ -7,6 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { partSchema, type PartInput } from "@/lib/validators/parts";
 import { createPart, updatePart } from "@/lib/actions/parts";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   mode: "create" | "edit";
@@ -15,6 +18,7 @@ type Props = {
 };
 
 export function PartForm({ mode, partId, defaultValues }: Props) {
+  const t = useTranslations();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -41,132 +45,81 @@ export function PartForm({ mode, partId, defaultValues }: Props) {
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4 max-w-md">
+    <form onSubmit={onSubmit} className="flex max-w-md flex-col gap-4">
       <div>
-        <label htmlFor="partNumber" className="block text-sm font-medium mb-1">
-          Part Number
-        </label>
-        <input
-          id="partNumber"
-          type="text"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("partNumber")}
-        />
+        <Label>{t.adminCatalog.parts.partNumberLabel}</Label>
+        <Input id="partNumber" type="text" {...register("partNumber")} />
         {errors.partNumber && (
-          <p className="mt-1 text-sm text-red-600">{errors.partNumber.message}</p>
+          <p className="mt-1 text-sm text-danger">{errors.partNumber.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="oemNumber" className="block text-sm font-medium mb-1">
-          OEM Number (hiari)
-        </label>
-        <input
-          id="oemNumber"
-          type="text"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("oemNumber")}
-        />
+        <Label>
+          {t.adminCatalog.parts.oemNumber} ({t.common.optional})
+        </Label>
+        <Input id="oemNumber" type="text" {...register("oemNumber")} />
       </div>
 
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1">
-          Jina la Part
-        </label>
-        <input
-          id="name"
-          type="text"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("name")}
-        />
-        {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+        <Label>{t.adminCatalog.parts.nameLabel}</Label>
+        <Input id="name" type="text" {...register("name")} />
+        {errors.name && <p className="mt-1 text-sm text-danger">{errors.name.message}</p>}
       </div>
 
       <div>
-        <label htmlFor="category" className="block text-sm font-medium mb-1">
-          Category
-        </label>
-        <input
-          id="category"
-          type="text"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("category")}
-        />
-        {errors.category && (
-          <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
-        )}
+        <Label>{t.common.category}</Label>
+        <Input id="category" type="text" {...register("category")} />
+        {errors.category && <p className="mt-1 text-sm text-danger">{errors.category.message}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label htmlFor="costPrice" className="block text-sm font-medium mb-1">
-            Buying Price
-          </label>
-          <input
-            id="costPrice"
-            type="number"
-            step="0.01"
-            className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-            {...register("costPrice")}
-          />
+          <Label>{t.adminCatalog.parts.buyingPrice}</Label>
+          <Input id="costPrice" type="number" step="0.01" {...register("costPrice")} />
           {errors.costPrice && (
-            <p className="mt-1 text-sm text-red-600">{errors.costPrice.message}</p>
+            <p className="mt-1 text-sm text-danger">{errors.costPrice.message}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="unitPrice" className="block text-sm font-medium mb-1">
-            Selling Price
-          </label>
-          <input
-            id="unitPrice"
-            type="number"
-            step="0.01"
-            className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-            {...register("unitPrice")}
-          />
+          <Label>{t.adminCatalog.parts.sellingPrice}</Label>
+          <Input id="unitPrice" type="number" step="0.01" {...register("unitPrice")} />
           {errors.unitPrice && (
-            <p className="mt-1 text-sm text-red-600">{errors.unitPrice.message}</p>
+            <p className="mt-1 text-sm text-danger">{errors.unitPrice.message}</p>
           )}
         </div>
       </div>
 
       <div>
-        <label htmlFor="lowStockThreshold" className="block text-sm font-medium mb-1">
-          Low Stock Threshold
-        </label>
-        <input
-          id="lowStockThreshold"
-          type="number"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("lowStockThreshold")}
-        />
+        <Label>{t.adminCatalog.parts.lowStockThreshold}</Label>
+        <Input id="lowStockThreshold" type="number" {...register("lowStockThreshold")} />
         {errors.lowStockThreshold && (
-          <p className="mt-1 text-sm text-red-600">{errors.lowStockThreshold.message}</p>
+          <p className="mt-1 text-sm text-danger">{errors.lowStockThreshold.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium mb-1">
-          Description (hiari)
-        </label>
+        <Label>
+          {t.common.description} ({t.common.optional})
+        </Label>
         <textarea
           id="description"
           rows={3}
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-primary placeholder:text-secondary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
           {...register("description")}
         />
       </div>
 
-      {formError && <p className="text-sm text-red-600">{formError}</p>}
+      {formError && <p className="text-sm text-danger">{formError}</p>}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50 self-start"
-      >
-        {isSubmitting ? "Inahifadhi..." : mode === "create" ? "Ongeza Part" : "Hifadhi Mabadiliko"}
-      </button>
+      <Button type="submit" variant="primary" disabled={isSubmitting} className="self-start">
+        {isSubmitting
+          ? t.common.saving
+          : mode === "create"
+            ? t.adminCatalog.parts.addSubmit
+            : t.adminCatalog.parts.saveChanges}
+      </Button>
     </form>
   );
 }

@@ -1,22 +1,26 @@
 import Link from "next/link";
 import { SalesSignupForm } from "@/components/auth/SalesSignupForm";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Card } from "@/components/ui/Card";
 
-export default function SalesStaffSignupPage() {
+export default async function SalesStaffSignupPage() {
+  const { t } = await getServerDictionary();
+
   return (
     <div className="mx-auto w-full max-w-sm py-16 px-4">
-      <h1 className="text-xl font-semibold mb-1">Jisajili kama Sales Staff</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">
-        Baada ya kujisajili, akaunti yako itasubiri uthibitisho wa admin kabla hujaweza kuingia.
-      </p>
+      <Card className="p-6">
+        <h1 className="mb-1 text-xl font-semibold text-primary">{t.auth.salesSignupTitle}</h1>
+        <p className="mb-6 text-sm text-secondary">{t.auth.salesSignupSubtitle}</p>
 
-      <SalesSignupForm />
+        <SalesSignupForm />
 
-      <p className="mt-6 text-sm text-black/60 dark:text-white/60">
-        Una akaunti tayari?{" "}
-        <Link href="/login/sales-staff" className="underline">
-          Ingia hapa
-        </Link>
-      </p>
+        <p className="mt-6 text-sm text-secondary">
+          {t.auth.haveAccountQuestion}{" "}
+          <Link href="/login/sales-staff" className="text-accent hover:underline">
+            {t.auth.loginHereLink}
+          </Link>
+        </p>
+      </Card>
     </div>
   );
 }

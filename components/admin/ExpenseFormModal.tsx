@@ -8,6 +8,9 @@ import type { z } from "zod";
 import { expenseSchema, manualExpenseCategories } from "@/lib/validators/expenses";
 import { paymentMethods } from "@/lib/validators/sales";
 import { createExpense, updateExpense } from "@/lib/actions/expenses";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, DateInput, Select, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const CATEGORY_LABEL: Record<string, string> = {
   RENT: "Rent",
@@ -34,6 +37,7 @@ type Props = {
 };
 
 export function ExpenseFormModal({ mode, expenseId, branches, defaultValues, onClose }: Props) {
+  const t = useTranslations();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -59,99 +63,78 @@ export function ExpenseFormModal({ mode, expenseId, branches, defaultValues, onC
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-background p-5 border border-black/10 dark:border-white/15">
-        <h2 className="font-medium mb-4">{mode === "create" ? "Add Expense" : "Hariri Expense"}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-card border border-border bg-surface-elevated p-5">
+        <h2 className="mb-4 font-medium text-primary">
+          {mode === "create" ? t.adminOps.expenses.addExpense : t.adminOps.expenses.editExpense}
+        </h2>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Category</label>
-            <select
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("category")}
-            >
+            <Label>{t.common.category}</Label>
+            <Select {...register("category")}>
               {manualExpenseCategories.map((c) => (
                 <option key={c} value={c}>
                   {CATEGORY_LABEL[c]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Amount</label>
-            <input
-              type="number"
-              step="0.01"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("amount")}
-            />
-            {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>}
+            <Label>{t.common.amount}</Label>
+            <Input type="number" step="0.01" {...register("amount")} />
+            {errors.amount && <p className="mt-1 text-sm text-danger">{errors.amount.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Description (hiari)</label>
-            <input
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("description")}
-            />
+            <Label>
+              {t.common.description} ({t.common.optional})
+            </Label>
+            <Input {...register("description")} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Payment Method</label>
-            <select
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("paymentMethod")}
-            >
+            <Label>{t.common.paymentMethod}</Label>
+            <Select {...register("paymentMethod")}>
               {paymentMethods.map((pm) => (
                 <option key={pm} value={pm}>
                   {PAYMENT_LABEL[pm]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Branch (hiari)</label>
-            <select
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("branchId")}
-            >
-              <option value="">— Hakuna —</option>
+            <Label>
+              {t.common.branch} ({t.common.optional})
+            </Label>
+            <Select {...register("branchId")}>
+              <option value="">{t.adminOps.expenses.noneOption}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Tarehe (default leo)</label>
-            <input
-              type="date"
-              className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-              {...register("date")}
-            />
+            <Label>
+              {t.common.date} ({t.adminOps.expenses.defaultToday})
+            </Label>
+            <DateInput {...register("date")} />
           </div>
 
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-sm text-danger">{formError}</p>}
 
-          <div className="flex justify-end gap-2 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-            >
-              Ghairi
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {isSubmitting ? "Inahifadhi..." : mode === "create" ? "Ongeza" : "Hifadhi"}
-            </button>
+          <div className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? t.common.saving : mode === "create" ? t.common.add : t.common.save}
+            </Button>
           </div>
         </form>
       </div>

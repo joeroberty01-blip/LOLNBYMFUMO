@@ -23,7 +23,7 @@ const optionalText = z
 
 export const expenseSchema = z.object({
   category: z.enum(manualExpenseCategories),
-  amount: z.coerce.number().positive("Weka amount zaidi ya 0"),
+  amount: z.coerce.number().positive("Enter an amount greater than 0"),
   description: optionalText,
   paymentMethod: z.enum(paymentMethods),
   branchId: optionalText,

@@ -6,9 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { adminSignupSchema, type AdminSignupInput } from "@/lib/validators/auth";
 import { signupAdmin } from "@/lib/actions/auth";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export function AdminSignupForm() {
   const router = useRouter();
+  const t = useTranslations();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -31,89 +35,54 @@ export function AdminSignupForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1">
-          Jina
-        </label>
-        <input
-          id="name"
-          type="text"
-          autoComplete="name"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("name")}
-        />
-        {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+        <Label htmlFor="name">{t.common.name}</Label>
+        <Input id="name" type="text" autoComplete="name" {...register("name")} />
+        {errors.name && <p className="mt-1 text-sm text-danger">{errors.name.message}</p>}
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-1">
-          Barua pepe
-        </label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("email")}
-        />
-        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
+        <Label htmlFor="email">{t.common.email}</Label>
+        <Input id="email" type="email" autoComplete="email" {...register("email")} />
+        {errors.email && <p className="mt-1 text-sm text-danger">{errors.email.message}</p>}
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium mb-1">
-          Nywila
-        </label>
-        <input
+        <Label htmlFor="password">{t.auth.password}</Label>
+        <Input
           id="password"
           type="password"
           autoComplete="new-password"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
           {...register("password")}
         />
-        {errors.password && (
-          <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="mt-1 text-sm text-danger">{errors.password.message}</p>}
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
-          Rudia Nywila
-        </label>
-        <input
+        <Label htmlFor="confirmPassword">{t.auth.confirmPassword}</Label>
+        <Input
           id="confirmPassword"
           type="password"
           autoComplete="new-password"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
           {...register("confirmPassword")}
         />
         {errors.confirmPassword && (
-          <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+          <p className="mt-1 text-sm text-danger">{errors.confirmPassword.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="inviteSecret" className="block text-sm font-medium mb-1">
-          Admin Invite Code
-        </label>
-        <input
-          id="inviteSecret"
-          type="password"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("inviteSecret")}
-        />
+        <Label htmlFor="inviteSecret">Admin Invite Code</Label>
+        <Input id="inviteSecret" type="password" {...register("inviteSecret")} />
         {errors.inviteSecret && (
-          <p className="mt-1 text-sm text-red-600">{errors.inviteSecret.message}</p>
+          <p className="mt-1 text-sm text-danger">{errors.inviteSecret.message}</p>
         )}
       </div>
 
-      {formError && <p className="text-sm text-red-600">{formError}</p>}
+      {formError && <p className="text-sm text-danger">{formError}</p>}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {isSubmitting ? "Inaunda akaunti..." : "Unda Akaunti ya Admin"}
-      </button>
+      <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? t.auth.creatingAccount : t.auth.adminSignupTitle}
+      </Button>
     </form>
   );
 }

@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
+import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
 
 export type POSInventoryItem = {
   partId: string;
@@ -71,27 +72,34 @@ function buildSaleWhere(filters: SaleFilters): Prisma.SaleWhereInput {
   return where;
 }
 
-async function listSales(filters: SaleFilters): Promise<SaleListRow[]> {
-  const sales = await prisma.sale.findMany({
-    where: buildSaleWhere(filters),
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      invoiceNumber: true,
-      createdAt: true,
-      paymentMethod: true,
-      isCredit: true,
-      status: true,
-      total: true,
-      userId: true,
-      branch: { select: { name: true } },
-      user: { select: { name: true } },
-      customer: { select: { name: true } },
-      items: { select: { isManualEntry: true } },
-    },
-  });
+async function listSales(filters: SaleFilters, page: PageArgs): Promise<Paginated<SaleListRow>> {
+  const where = buildSaleWhere(filters);
 
-  return sales.map((s) => ({
+  const [sales, total] = await Promise.all([
+    prisma.sale.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: page.skip,
+      take: page.take,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        createdAt: true,
+        paymentMethod: true,
+        isCredit: true,
+        status: true,
+        total: true,
+        userId: true,
+        branch: { select: { name: true } },
+        user: { select: { name: true } },
+        customer: { select: { name: true } },
+        items: { select: { isManualEntry: true } },
+      },
+    }),
+    prisma.sale.count({ where }),
+  ]);
+
+  const rows = sales.map((s) => ({
     id: s.id,
     invoiceNumber: s.invoiceNumber,
     createdAt: s.createdAt,
@@ -105,18 +113,36 @@ async function listSales(filters: SaleFilters): Promise<SaleListRow[]> {
     hasManualItems: s.items.some((i) => i.isManualEntry),
     customerName: s.customer?.name ?? null,
   }));
+
+  return paginated(rows, total, page);
 }
 
-export function getSalesForStaff(userId: string, filters: Omit<SaleFilters, "userId">) {
-  return listSales({ ...filters, userId });
+export function getSalesForStaff(userId: string, filters: Omit<SaleFilters, "userId">, page: PageArgs) {
+  return listSales({ ...filters, userId }, page);
 }
 
-export function getSalesForAdmin(filters: SaleFilters) {
-  return listSales(filters);
+export function getSalesForAdmin(filters: SaleFilters, page: PageArgs) {
+  return listSales(filters, page);
 }
 
 export async function getSaleWithItems(saleId: string) {
   return prisma.sale.findUnique({
+    where: { id: saleId },
+    include: {
+      branch: true,
+      sourceBranch: true,
+      user: true,
+      customer: true,
+      voidedBy: true,
+      items: { include: { part: true } },
+    },
+  });
+}
+
+/** Rebuilds the same ReceiptData shape completeSale returns, for any past sale, so the receipt
+ * can be viewed/reprinted later instead of existing only once right after checkout. */
+export async function getSaleReceipt(saleId: string) {
+  const sale = await prisma.sale.findUnique({
     where: { id: saleId },
     include: {
       branch: true,
@@ -125,6 +151,30 @@ export async function getSaleWithItems(saleId: string) {
       items: { include: { part: true } },
     },
   });
+  if (!sale) return null;
+
+  return {
+    id: sale.id,
+    invoiceNumber: sale.invoiceNumber,
+    createdAt: sale.createdAt.toISOString(),
+    branchName: sale.branch.name,
+    branchLocation: sale.branch.location,
+    sellerName: sale.user.name,
+    paymentMethod: sale.paymentMethod,
+    isCredit: sale.isCredit,
+    customerName: sale.customer?.name ?? null,
+    status: sale.status,
+    userId: sale.userId,
+    total: sale.total.toNumber(),
+    items: sale.items.map((i) => ({
+      name: i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part"),
+      partNumber: i.isManualEntry ? (i.manualPartNumber ?? null) : (i.part?.partNumber ?? null),
+      quantity: i.quantity,
+      unitPrice: i.unitPrice.toNumber(),
+      subtotal: i.quantity * i.unitPrice.toNumber(),
+      isManualEntry: i.isManualEntry,
+    })),
+  };
 }
 
 export type ManualItemGroup = {

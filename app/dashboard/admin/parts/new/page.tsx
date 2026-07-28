@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { PartForm } from "@/components/admin/PartForm";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function NewPartPage() {
   const session = await auth();
@@ -9,12 +10,16 @@ export default async function NewPartPage() {
     redirect("/login/admin");
   }
 
+  const { t } = await getServerDictionary();
+
   return (
-    <div className="mx-auto w-full max-w-md py-12 px-4">
-      <Link href="/dashboard/admin/parts" className="text-sm underline">
-        &larr; Rudi Parts
+    <div>
+      <Link href="/dashboard/admin/parts" className="text-sm text-accent hover:underline">
+        {t.adminCatalog.parts.backToParts}
       </Link>
-      <h1 className="text-xl font-semibold mt-4 mb-6">Ongeza Part Mpya</h1>
+      <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
+        {t.adminCatalog.parts.newTitle}
+      </h1>
       <PartForm mode="create" />
     </div>
   );

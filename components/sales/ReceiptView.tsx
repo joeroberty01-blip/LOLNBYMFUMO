@@ -1,4 +1,10 @@
+"use client";
+
 import type { ReceiptData } from "@/lib/actions/sales";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -9,79 +15,100 @@ const PAYMENT_LABEL: Record<string, string> = {
   TIGO_LIPA: "Tigo Lipa",
 };
 
-export function ReceiptView({ receipt, onNewSale }: { receipt: ReceiptData; onNewSale: () => void }) {
+export function ReceiptView({
+  receipt,
+  onNewSale,
+}: {
+  receipt: ReceiptData;
+  /** Omitted when viewing/reprinting a past receipt rather than finishing a checkout. */
+  onNewSale?: () => void;
+}) {
+  const t = useTranslations();
   return (
-    <div className="mx-auto w-full max-w-sm rounded-lg border border-black/10 dark:border-white/15 p-5">
-      <div className="text-center mb-4">
-        <p className="font-semibold">Woodland ERP</p>
-        <p className="text-sm text-black/60 dark:text-white/60">Risiti ya Mauzo</p>
+    <Card className="receipt-sheet mx-auto w-full max-w-sm p-5">
+      {/* Customer-facing document: it carries the STORE's identity. The software name
+          (APP_NAME) must never appear here — only on internal staff screens. */}
+      <div className="mb-4 text-center">
+        <p className="text-lg font-semibold text-primary">{receipt.branchName}</p>
+        {receipt.branchLocation && (
+          <p className="text-sm text-secondary">{receipt.branchLocation}</p>
+        )}
+        <p className="mt-1 text-sm text-secondary">{t.sales.receipt.subtitle}</p>
       </div>
 
-      <div className="text-sm flex flex-col gap-1 mb-4">
+      <div className="mb-4 flex flex-col gap-1 text-sm">
         <div className="flex justify-between">
-          <span className="text-black/60 dark:text-white/60">Invoice No.</span>
-          <span>#{receipt.invoiceNumber}</span>
+          <span className="text-secondary">{t.sales.receipt.invoiceNo}</span>
+          <span className="text-primary tabular-nums">#{receipt.invoiceNumber}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-black/60 dark:text-white/60">Tarehe</span>
-          <span>{new Date(receipt.createdAt).toLocaleString("sw-TZ")}</span>
+          <span className="text-secondary">{t.common.date}</span>
+          <span className="text-primary">{new Date(receipt.createdAt).toLocaleString("sw-TZ")}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-black/60 dark:text-white/60">Branch</span>
-          <span>{receipt.branchName}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-black/60 dark:text-white/60">Muuzaji</span>
-          <span>{receipt.sellerName}</span>
+          <span className="text-secondary">{t.sales.receipt.seller}</span>
+          <span className="text-primary">{receipt.sellerName}</span>
         </div>
         {receipt.customerName && (
           <div className="flex justify-between">
-            <span className="text-black/60 dark:text-white/60">Customer</span>
-            <span>{receipt.customerName}</span>
+            <span className="text-secondary">{t.sales.receipt.customer}</span>
+            <span className="text-primary">{receipt.customerName}</span>
           </div>
         )}
         <div className="flex justify-between">
-          <span className="text-black/60 dark:text-white/60">Payment</span>
-          <span>
+          <span className="text-secondary">{t.sales.receipt.payment}</span>
+          <span className="text-primary">
             {PAYMENT_LABEL[receipt.paymentMethod] ?? receipt.paymentMethod}
-            {receipt.isCredit ? " (Credit)" : ""}
+            {receipt.isCredit ? ` (${t.sales.receipt.credit})` : ""}
           </span>
         </div>
       </div>
 
-      <div className="border-t border-b border-black/10 dark:border-white/15 py-2 mb-3">
+      <div className="mb-3 border-t border-b border-border py-2">
         {receipt.items.map((item, i) => (
-          <div key={i} className="flex justify-between text-sm py-1">
+          <div key={i} className="flex justify-between py-1 text-sm">
             <div className="min-w-0 pr-2">
-              <p className="truncate">
+              <p className="truncate text-primary">
                 {item.name}
                 {item.isManualEntry && (
-                  <span className="ml-1 rounded-full bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 text-[10px] font-medium align-middle">
-                    Manual
+                  <span className="ml-1.5 align-middle">
+                    <Badge status="warning">{t.sales.receipt.manualBadge}</Badge>
                   </span>
                 )}
               </p>
-              <p className="text-xs text-black/50 dark:text-white/50">
+              <p className="text-xs text-secondary">
                 {item.quantity} x {currency.format(item.unitPrice)}
               </p>
             </div>
-            <span className="shrink-0">{currency.format(item.subtotal)}</span>
+            <span className="shrink-0 text-primary tabular-nums">
+              {currency.format(item.subtotal)}
+            </span>
           </div>
         ))}
       </div>
 
-      <div className="flex justify-between font-semibold mb-6">
-        <span>Jumla</span>
-        <span>{currency.format(receipt.total)}</span>
+      <div className="mb-4 flex justify-between font-semibold text-primary">
+        <span>{t.common.total}</span>
+        <span className="tabular-nums">{currency.format(receipt.total)}</span>
       </div>
 
-      <button
-        type="button"
-        onClick={onNewSale}
-        className="w-full rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium"
-      >
-        Mauzo Mengine
-      </button>
-    </div>
+      <p className="mb-6 text-center text-sm text-secondary">{t.sales.receipt.thankYou}</p>
+
+      <div className="no-print flex gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => window.print()}
+          className="flex-1"
+        >
+          {t.sales.receipt.print}
+        </Button>
+        {onNewSale && (
+          <Button type="button" variant="primary" onClick={onNewSale} className="flex-1">
+            {t.sales.receipt.newSale}
+          </Button>
+        )}
+      </div>
+    </Card>
   );
 }

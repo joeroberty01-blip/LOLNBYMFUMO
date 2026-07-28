@@ -7,6 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { adjustStock } from "@/lib/actions/inventory";
 import { adjustmentReasons } from "@/lib/validators/inventory";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Button } from "@/components/ui/Button";
+import { Input, Select, Label } from "@/components/ui/Input";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const REASON_LABEL: Record<(typeof adjustmentReasons)[number], string> = {
   NEW_STOCK: "New stock",
@@ -14,13 +18,6 @@ const REASON_LABEL: Record<(typeof adjustmentReasons)[number], string> = {
   CORRECTION: "Correction",
   OTHER: "Other",
 };
-
-const formSchema = z.object({
-  branchId: z.string().min(1, "Chagua branch"),
-  type: z.enum(["ADD", "REMOVE"]),
-  amount: z.coerce.number().int().positive("Weka namba zaidi ya 0"),
-  reason: z.enum(adjustmentReasons),
-});
 
 type Branch = { id: string; name: string };
 
@@ -37,14 +34,23 @@ export function StockAdjustmentModal({
   branchName: string;
   branches: Branch[];
 }) {
+  const t = useTranslations();
+  const formSchema = z.object({
+    branchId: z.string().min(1, t.adminCatalog.parts.selectBranchError),
+    type: z.enum(["ADD", "REMOVE"]),
+    amount: z.coerce.number().int().positive(t.adminCatalog.parts.positiveNumberError),
+    reason: z.enum(adjustmentReasons),
+  });
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [pending, setPending] = useState<z.output<typeof formSchema> | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<z.input<typeof formSchema>, unknown, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { branchId: branchId ?? "", type: "ADD", reason: "NEW_STOCK" },
@@ -53,143 +59,153 @@ export function StockAdjustmentModal({
   function close() {
     setOpen(false);
     setFormError(null);
+    setPending(null);
     reset();
   }
 
-  const onSubmit = handleSubmit(async (values) => {
+  // Step 1: validate the form and show a confirmation summary — nothing is written yet.
+  const onReview = handleSubmit((values) => {
     setFormError(null);
-    const quantityChange = values.type === "ADD" ? values.amount : -values.amount;
+    setPending(values);
+  });
+
+  // Step 2: the admin explicitly confirmed — now actually adjust stock.
+  async function confirmAdjustment() {
+    if (!pending) return;
+    setIsSubmitting(true);
+    const quantityChange = pending.type === "ADD" ? pending.amount : -pending.amount;
 
     const result = await adjustStock({
       partId,
-      branchId: values.branchId,
+      branchId: pending.branchId,
       quantityChange,
-      reason: values.reason,
+      reason: pending.reason,
     });
+    setIsSubmitting(false);
 
     if (!result.success) {
+      setPending(null);
       setFormError(result.error);
       return;
     }
 
     close();
     router.refresh();
-  });
+  }
+
+  const pendingBranchName =
+    branches.find((b) => b.id === pending?.branchId)?.name ?? branchName;
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-md border border-black/15 dark:border-white/20 px-3 py-1.5 text-sm"
-      >
-        Rekebisha Stock
-      </button>
+      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+        {t.adminCatalog.parts.adjustStock}
+      </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-lg bg-background p-5 border border-black/10 dark:border-white/15">
-            <h2 className="font-medium mb-1">Rekebisha Stock</h2>
-            <p className="text-sm text-black/60 dark:text-white/60 mb-4">{partName}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-card border border-border bg-surface-elevated p-5">
+            <h2 className="mb-1 font-medium text-primary">{t.adminCatalog.parts.adjustStock}</h2>
+            <p className="mb-4 text-sm text-secondary">{partName}</p>
 
-            <form onSubmit={onSubmit} className="flex flex-col gap-3">
+            <form onSubmit={onReview} className="flex flex-col gap-3">
               {branchId ? (
                 <div>
-                  <p className="text-sm font-medium mb-1">Branch</p>
-                  <p className="text-sm">{branchName}</p>
+                  <Label>{t.common.branch}</Label>
+                  <p className="text-sm text-primary">{branchName}</p>
                   <input type="hidden" value={branchId} {...register("branchId")} />
                 </div>
               ) : (
                 <div>
-                  <label htmlFor="branchId" className="block text-sm font-medium mb-1">
-                    Branch
-                  </label>
-                  <select
-                    id="branchId"
-                    className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-                    {...register("branchId")}
-                  >
-                    <option value="">-- Chagua branch --</option>
+                  <Label>{t.common.branch}</Label>
+                  <Select id="branchId" {...register("branchId")}>
+                    <option value="">{t.adminCatalog.parts.selectBranch}</option>
                     {branches.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {errors.branchId && (
-                    <p className="mt-1 text-sm text-red-600">{errors.branchId.message}</p>
+                    <p className="mt-1 text-sm text-danger">{errors.branchId.message}</p>
                   )}
                 </div>
               )}
 
               <div>
-                <p className="text-sm font-medium mb-1">Aina</p>
-                <div className="flex gap-4 text-sm">
+                <Label>{t.adminCatalog.parts.type}</Label>
+                <div className="flex gap-4 text-sm text-primary">
                   <label className="flex items-center gap-1.5">
                     <input type="radio" value="ADD" {...register("type")} />
-                    Ongeza
+                    {t.common.add}
                   </label>
                   <label className="flex items-center gap-1.5">
                     <input type="radio" value="REMOVE" {...register("type")} />
-                    Punguza
+                    {t.adminCatalog.parts.remove}
                   </label>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="amount" className="block text-sm font-medium mb-1">
-                  Kiasi
-                </label>
-                <input
-                  id="amount"
-                  type="number"
-                  min={1}
-                  className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-                  {...register("amount")}
-                />
+                <Label>{t.adminCatalog.parts.quantity}</Label>
+                <Input id="amount" type="number" min={1} {...register("amount")} />
                 {errors.amount && (
-                  <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>
+                  <p className="mt-1 text-sm text-danger">{errors.amount.message}</p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="reason" className="block text-sm font-medium mb-1">
-                  Sababu
-                </label>
-                <select
-                  id="reason"
-                  className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-                  {...register("reason")}
-                >
+                <Label>{t.adminCatalog.parts.reason}</Label>
+                <Select id="reason" {...register("reason")}>
                   {adjustmentReasons.map((r) => (
                     <option key={r} value={r}>
                       {REASON_LABEL[r]}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
-              {formError && <p className="text-sm text-red-600">{formError}</p>}
+              {formError && <p className="text-sm text-danger">{formError}</p>}
 
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={close}
-                  className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-                >
-                  Ghairi
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50"
-                >
-                  {isSubmitting ? "Inahifadhi..." : "Hifadhi"}
-                </button>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={close}>
+                  {t.common.cancel}
+                </Button>
+                <Button type="submit" variant="primary" disabled={isSubmitting}>
+                  {isSubmitting ? t.common.saving : t.common.save}
+                </Button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {pending && (
+        <ConfirmDialog
+          title={`${t.adminCatalog.parts.confirmAdjustmentTitle} — ${partName}`}
+          lines={[
+            { label: t.common.branch, value: pendingBranchName },
+            {
+              label: t.adminCatalog.parts.type,
+              value: pending.type === "ADD" ? t.common.add : t.adminCatalog.parts.remove,
+            },
+            {
+              label: t.adminCatalog.parts.quantity,
+              value: `${pending.type === "ADD" ? "+" : "-"}${pending.amount}`,
+              emphasis: true,
+            },
+            { label: t.adminCatalog.parts.reason, value: REASON_LABEL[pending.reason] },
+          ]}
+          warning={
+            pending.type === "REMOVE" && pending.amount >= 100
+              ? t.adminCatalog.parts.confirmLargeAdjustment
+              : undefined
+          }
+          confirmLabel={t.adminCatalog.parts.confirmAdjustmentButton}
+          isSubmitting={isSubmitting}
+          onConfirm={confirmAdjustment}
+          onCancel={() => setPending(null)}
+        />
       )}
     </>
   );

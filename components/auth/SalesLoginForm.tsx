@@ -6,15 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { salesLoginSchema, type SalesLoginInput } from "@/lib/validators/auth";
-
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid_credentials: "Barua pepe au nywila si sahihi",
-  pending_approval: "Akaunti yako inasubiri uthibitisho wa admin",
-  not_approved: "Akaunti yako haijaidhinishwa kuingia. Wasiliana na admin.",
-};
+import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export function SalesLoginForm() {
   const router = useRouter();
+  const t = useTranslations();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -22,14 +20,18 @@ export function SalesLoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<SalesLoginInput>({ resolver: zodResolver(salesLoginSchema) });
 
+  const errorMessages: Record<string, string> = {
+    invalid_credentials: t.auth.invalidCredentials,
+    pending_approval: t.auth.pendingApproval,
+    not_approved: t.auth.notApproved,
+  };
+
   const onSubmit = handleSubmit(async (data) => {
     setFormError(null);
     const result = await signIn("sales-login", { ...data, redirect: false });
 
     if (result?.error) {
-      setFormError(
-        (result.code && ERROR_MESSAGES[result.code]) ?? "Imeshindikana kuingia. Jaribu tena."
-      );
+      setFormError((result.code && errorMessages[result.code]) ?? t.auth.loginFailedGeneric);
       return;
     }
 
@@ -40,44 +42,27 @@ export function SalesLoginForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-1">
-          Barua pepe
-        </label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-          {...register("email")}
-        />
-        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
+        <Label htmlFor="email">{t.common.email}</Label>
+        <Input id="email" type="email" autoComplete="email" {...register("email")} />
+        {errors.email && <p className="mt-1 text-sm text-danger">{errors.email.message}</p>}
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium mb-1">
-          Nywila
-        </label>
-        <input
+        <Label htmlFor="password">{t.auth.password}</Label>
+        <Input
           id="password"
           type="password"
           autoComplete="current-password"
-          className="w-full rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
           {...register("password")}
         />
-        {errors.password && (
-          <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="mt-1 text-sm text-danger">{errors.password.message}</p>}
       </div>
 
-      {formError && <p className="text-sm text-red-600">{formError}</p>}
+      {formError && <p className="text-sm text-danger">{formError}</p>}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {isSubmitting ? "Inaingia..." : "Ingia kama Sales Staff"}
-      </button>
+      <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? t.auth.signingIn : t.auth.loginAsSalesStaff}
+      </Button>
     </form>
   );
 }

@@ -3,6 +3,11 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getCustomersWithDebt } from "@/lib/data/reports/customers";
 import { ReportActions } from "@/components/reports/ReportActions";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { StatCard } from "@/components/ui/StatCard";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { CreditCard } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -12,68 +17,65 @@ export default async function CustomersDebtReportPage() {
     redirect("/login/admin");
   }
 
+  const { t } = await getServerDictionary();
+
   const debtors = await getCustomersWithDebt();
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
 
   return (
-    <div className="mx-auto w-full max-w-3xl py-12 px-4">
-      <Link href="/dashboard/admin" className="text-sm underline no-print">
-        &larr; Rudi Dashboard
-      </Link>
-
-      <h1 className="text-xl font-semibold mt-4 mb-1">Customers / Debt Report</h1>
-      <p className="text-sm text-black/60 dark:text-white/60 mb-6">
-        Snapshot ya sasa — {new Date().toLocaleDateString("sw-TZ")}
+    <div>
+      <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.customers.title}</h1>
+      <p className="mb-6 text-sm text-secondary">
+        {t.reports.customers.snapshotAsOf}
+        {new Date().toLocaleDateString("sw-TZ")}
       </p>
 
-      <ReportActions reportType="customers" title="Customers / Debt Report" />
+      <ReportActions reportType="customers" title={t.reports.customers.title} />
 
-      <div className="rounded-md border border-black/10 dark:border-white/15 p-4 mb-6 w-fit">
-        <p className="text-sm text-black/60 dark:text-white/60">Jumla ya Deni</p>
-        <p className="text-2xl font-semibold mt-1">{currency.format(totalDebt)}</p>
+      <div className="mb-6 w-fit">
+        <StatCard
+          icon={<CreditCard size={18} />}
+          label={t.reports.customers.totalDebt}
+          value={currency.format(totalDebt)}
+          alert
+        />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-black/10 dark:border-white/15 text-left">
-              <th className="py-2 pr-3 font-medium">Jina</th>
-              <th className="py-2 pr-3 font-medium">Simu</th>
-              <th className="py-2 pr-3 font-medium">Balance</th>
-              <th className="py-2 pr-3 font-medium">Credit Limit</th>
-              <th className="py-2 pr-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {debtors.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-2 text-black/60 dark:text-white/60">
-                  Hakuna customer mwenye deni kwa sasa.
-                </td>
-              </tr>
-            ) : (
-              debtors.map((d) => (
-                <tr key={d.id} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2 pr-3">{d.name}</td>
-                  <td className="py-2 pr-3">{d.phone ?? "—"}</td>
-                  <td className="py-2 pr-3 text-red-600 font-medium">
-                    {currency.format(d.balance)}
-                  </td>
-                  <td className="py-2 pr-3">{currency.format(d.creditLimit)}</td>
-                  <td className="py-2 pr-3">
-                    <Link
-                      href={`/dashboard/admin/reports/customers/${d.id}`}
-                      className="underline no-print"
-                    >
-                      Historia
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {debtors.length === 0 ? (
+        <EmptyState title={t.reports.customers.noDebtors} />
+      ) : (
+        <Table>
+          <THead>
+            <THeadRow>
+              <Th>{t.common.name}</Th>
+              <Th>{t.common.phone}</Th>
+              <Th className="text-right">{t.reports.customers.balance}</Th>
+              <Th className="text-right">{t.reports.customers.creditLimit}</Th>
+              <Th>{t.common.actions}</Th>
+            </THeadRow>
+          </THead>
+          <TBody>
+            {debtors.map((d, i) => (
+              <Tr key={d.id} index={i}>
+                <Td>{d.name}</Td>
+                <Td>{d.phone ?? "—"}</Td>
+                <Td className="text-right font-medium text-danger tabular-nums">
+                  {currency.format(d.balance)}
+                </Td>
+                <Td className="text-right tabular-nums">{currency.format(d.creditLimit)}</Td>
+                <Td>
+                  <Link
+                    href={`/dashboard/admin/reports/customers/${d.id}`}
+                    className="text-accent no-print hover:underline"
+                  >
+                    {t.reports.customers.history}
+                  </Link>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      )}
     </div>
   );
 }

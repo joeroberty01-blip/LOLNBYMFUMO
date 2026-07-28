@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { supplierSchema, recordPaymentSchema, type SupplierInput, type RecordPaymentInput } from "@/lib/validators/suppliers";
+import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -44,7 +45,35 @@ export async function updateSupplier(id: string, input: SupplierInput): Promise<
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
 
-  await prisma.supplier.update({ where: { id }, data: parsed.data });
+  try {
+    await prisma.supplier.update({ where: { id }, data: parsed.data });
+  } catch {
+    return { success: false, error: "Supplier huyu hayupo tena (huenda ameshafutwa)" };
+  }
+  revalidatePath("/dashboard/admin/suppliers");
+  return { success: true };
+}
+
+export async function archiveSupplier(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const supplier = await prisma.supplier.findUnique({ where: { id } });
+  if (!supplier) return { success: false, error: "Supplier haipo" };
+  if (supplier.balance.toNumber() > 0) {
+    return {
+      success: false,
+      error: "Supplier huyu bado ana deni tunalodaiwa — lipa kabla ya ku-archive",
+    };
+  }
+
+  // Soft delete only — isActive: false. Purchase/payment history referencing this supplier must
+  // never be hard-deleted, and no hard-delete path is exposed anywhere in this app (same
+  // convention as deletePart/archiveCustomer).
+  await prisma.supplier.update({ where: { id }, data: { isActive: false } });
   revalidatePath("/dashboard/admin/suppliers");
   return { success: true };
 }
@@ -92,6 +121,14 @@ export async function recordSupplierPayment(input: RecordPaymentInput): Promise<
     await tx.supplier.update({
       where: { id: supplierId },
       data: { balance: { decrement: amount } },
+    });
+
+    await logAudit(tx, {
+      userId: session.user.id,
+      action: "SUPPLIER_PAYMENT_RECORDED",
+      entityType: "SupplierPayment",
+      entityId: payment.id,
+      metadata: { supplierId, amount, paymentMethod, branchId },
     });
   });
 

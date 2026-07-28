@@ -1,3 +1,7 @@
+import { getServerDictionary } from "@/lib/i18n/server";
+import { Input, Select } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+
 type Props = {
   action: string;
   categories: string[];
@@ -5,34 +9,29 @@ type Props = {
   category?: string;
 };
 
-export function PartsFilterBar({ action, categories, q, category }: Props) {
+export async function PartsFilterBar({ action, categories, q, category }: Props) {
+  const { t } = await getServerDictionary();
+
   return (
-    <form action={action} method="GET" className="flex flex-wrap gap-2 mb-6">
-      <input
+    <form action={action} method="GET" className="mb-6 flex flex-wrap gap-2">
+      <Input
         type="text"
         name="q"
-        placeholder="Tafuta kwa jina au part number..."
+        placeholder={t.adminCatalog.parts.searchPlaceholder}
         defaultValue={q}
-        className="flex-1 min-w-[200px] rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
+        className="min-w-[200px] flex-1"
       />
-      <select
-        name="category"
-        defaultValue={category ?? ""}
-        className="rounded-md border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm"
-      >
-        <option value="">Categories zote</option>
+      <Select name="category" defaultValue={category ?? ""} className="w-auto">
+        <option value="">{t.adminCatalog.parts.allCategories}</option>
         {categories.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
         ))}
-      </select>
-      <button
-        type="submit"
-        className="rounded-md border border-black/15 dark:border-white/20 px-4 py-2 text-sm"
-      >
-        Tafuta
-      </button>
+      </Select>
+      <Button type="submit" variant="secondary">
+        {t.common.search}
+      </Button>
     </form>
   );
 }
