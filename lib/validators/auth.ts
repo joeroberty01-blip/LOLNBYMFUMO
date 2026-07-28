@@ -42,3 +42,21 @@ export const salesSignupSchema = z
     path: ["confirmPassword"],
   });
 export type SalesSignupInput = z.infer<typeof salesSignupSchema>;
+
+/** Used by an already-logged-in admin to create another Admin or Sales Staff account directly
+ * from the dashboard — no invite code needed (the admin session itself is the authorization),
+ * and the account is active immediately rather than going through the public-signup pending
+ * flow, since an admin is directly vouching for it. */
+export const adminCreateUserSchema = z
+  .object({
+    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    email,
+    password,
+    confirmPassword: z.string(),
+    role: z.enum(["ADMIN", "SALES_STAFF"]),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
