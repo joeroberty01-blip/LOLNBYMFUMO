@@ -41,9 +41,18 @@ function normalizeKey(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** Money comparison at 2dp, so 45000 and 45000.00 are the same part, not a conflict. */
-function sameMoney(a: number, b: number): boolean {
-  return Math.round(a * 100) === Math.round(b * 100);
+/** Part Number is not a unique catalog key in this business's data — the same code is
+ * legitimately reused across different vehicle-specific variants (different name/price). A row
+ * is only "the same part" as another when Part Number, Name, Buying Price, and Selling Price all
+ * match; anything else is a distinct catalog entry, even sharing a Part Number. */
+function catalogKey(partNumber: string, name: string, costPrice: number, unitPrice: number): string {
+  return [normalizeKey(partNumber), normalizeKey(name), costPrice.toFixed(2), unitPrice.toFixed(2)].join("|");
+}
+
+/** Within one sheet, a row is only a true duplicate (safe to skip) when all 5 columns — Part
+ * Number, Name, Buying Price, Selling Price, and Quantity — match a row already seen. */
+function fullRowKey(partNumber: string, name: string, costPrice: number, unitPrice: number, quantity: number): string {
+  return `${catalogKey(partNumber, name, costPrice, unitPrice)}|${quantity}`;
 }
 
 /**
@@ -68,10 +77,12 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
     );
   }
 
-  const partsByNumber = new Map(existingParts.map((p) => [normalizeKey(p.partNumber), p]));
+  const partsByCatalogKey = new Map(
+    existingParts.map((p) => [catalogKey(p.partNumber, p.name, p.costPrice, p.unitPrice), p])
+  );
   const analyzed: AnalyzedRow[] = [];
-  // Guards against the same part number appearing twice within one sheet, which would
-  // otherwise produce two conflicting writes to the same inventory row.
+  // Guards against the exact same row (all 5 columns) appearing twice within one sheet — a real
+  // copy-paste duplicate, not just a reused Part Number.
   const seenInSheet = new Map<string, number>();
 
   for (const { rowNumber, cells } of rows) {
@@ -112,12 +123,7 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
     const errors: string[] = [];
     if (!rawPartNumber) errors.push("Part Number ni tupu");
     if (!rawName) errors.push("Name ni tupu");
-    if (costPrice === null) errors.push("Buying Price si namba");
-    else if (costPrice <= 0) errors.push("Buying Price lazima iwe zaidi ya 0");
-    if (unitPrice === null) errors.push("Selling Price si namba");
-    else if (unitPrice <= 0) errors.push("Selling Price lazima iwe zaidi ya 0");
     if (quantity === null) errors.push("Quantity si namba");
-    else if (quantity < 0) errors.push("Quantity haiwezi kuwa negative");
     else if (!Number.isInteger(quantity)) errors.push("Quantity lazima iwe namba nzima");
 
     if (errors.length > 0) {
@@ -125,16 +131,18 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
       continue;
     }
 
-    const key = normalizeKey(rawPartNumber);
-    const firstSeen = seenInSheet.get(key);
+    const rowKey = fullRowKey(rawPartNumber, rawName, values.costPrice, values.unitPrice, values.quantity);
+    const firstSeen = seenInSheet.get(rowKey);
     if (firstSeen !== undefined) {
-      push("ERROR", `Part Number hii imejirudia kwenye sheet hii (tazama row ${firstSeen})`);
+      push("ERROR", `Row hii imejirudia kabisa (Part Number, Name, Bei, Quantity vyote sawa) kwenye sheet hii (tazama row ${firstSeen})`);
       continue;
     }
-    seenInSheet.set(key, rowNumber);
+    seenInSheet.set(rowKey, rowNumber);
 
     // --- Duplicate / Conflict classification ----------------------------------------------
-    const existing = partsByNumber.get(key);
+    const existing = partsByCatalogKey.get(
+      catalogKey(rawPartNumber, rawName, values.costPrice, values.unitPrice)
+    );
     if (!existing) {
       push("NEW", "Part mpya");
       continue;
@@ -143,23 +151,14 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
     const existingInfo = { partId: existing.id, currentQuantity: existing.quantityAtStore };
 
     const differences: string[] = [];
-    if (normalizeKey(existing.name) !== normalizeKey(rawName)) {
-      differences.push(`Name (database: "${existing.name}", faili: "${rawName}")`);
-    }
     if (mapping.category !== null && normalizeKey(existing.category) !== normalizeKey(category)) {
       differences.push(`Category (database: "${existing.category}", faili: "${category}")`);
-    }
-    if (!sameMoney(existing.costPrice, values.costPrice)) {
-      differences.push(`Buying Price (database: ${existing.costPrice}, faili: ${values.costPrice})`);
-    }
-    if (!sameMoney(existing.unitPrice, values.unitPrice)) {
-      differences.push(`Selling Price (database: ${existing.unitPrice}, faili: ${values.unitPrice})`);
     }
 
     if (differences.length > 0) {
       push(
         "CONFLICT",
-        `Part Number ipo lakini taarifa zinatofautiana — ${differences.join("; ")}`,
+        `Part hii ipo lakini Category inatofautiana — ${differences.join("; ")}`,
         { existing: existingInfo }
       );
       continue;

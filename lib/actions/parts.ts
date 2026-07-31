@@ -28,11 +28,6 @@ export async function createPart(input: PartInput): Promise<ActionResult> {
   }
   const data = parsed.data;
 
-  const existing = await prisma.part.findUnique({ where: { partNumber: data.partNumber } });
-  if (existing) {
-    return { success: false, error: "Part number hii tayari ipo" };
-  }
-
   await prisma.part.create({ data });
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/sales/inventory");
@@ -51,11 +46,6 @@ export async function updatePart(partId: string, input: PartInput): Promise<Acti
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
   const data = parsed.data;
-
-  const existing = await prisma.part.findUnique({ where: { partNumber: data.partNumber } });
-  if (existing && existing.id !== partId) {
-    return { success: false, error: "Part number hii tayari inatumiwa na part nyingine" };
-  }
 
   try {
     await prisma.part.update({ where: { id: partId }, data });

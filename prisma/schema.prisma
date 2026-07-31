@@ -238,7 +238,10 @@ model BackupLog {
 
 model Part {
   id                String   @id @default(cuid())
-  partNumber        String   @unique
+  /// Not globally unique — this business reuses the same supplier code across different
+  /// vehicle-specific variants (different name/price), so two Parts can legitimately share a
+  /// Part Number. Identity for dedup purposes is Part Number + Name + Buying + Selling Price.
+  partNumber        String
   oemNumber         String?
   name              String
   category          String
@@ -254,6 +257,7 @@ model Part {
   purchaseItems    PurchaseItem[]
   stockAdjustments StockAdjustment[]
 
+  @@index([partNumber])
   @@index([oemNumber])
   @@index([name])
   @@index([category])

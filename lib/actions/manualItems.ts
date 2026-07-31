@@ -25,11 +25,6 @@ export async function convertManualItemToPart(
   }
   const { branchId, initialQuantity, ...partData } = parsed.data;
 
-  const existing = await prisma.part.findUnique({ where: { partNumber: partData.partNumber } });
-  if (existing) {
-    return { success: false, error: "Part number hii tayari ipo" };
-  }
-
   const branch = await prisma.branch.findUnique({ where: { id: branchId } });
   if (!branch) {
     return { success: false, error: "Branch haipo" };

@@ -269,8 +269,16 @@ export async function commitBulkImport(rowsToCommit: CommitRow[]): Promise<Commi
               ? `Compatibility: ${values.compatibility}`
               : undefined;
 
+            // Part Number alone isn't a unique catalog identity (see schema comment) — the same
+            // code is legitimately reused across different vehicle-specific variants. "Existing"
+            // means Part Number + Name + Buying + Selling Price all match.
             const existing = await tx.part.findFirst({
-              where: { partNumber: { equals: values.partNumber, mode: "insensitive" } },
+              where: {
+                partNumber: { equals: values.partNumber, mode: "insensitive" },
+                name: { equals: values.name, mode: "insensitive" },
+                costPrice: values.costPrice,
+                unitPrice: values.unitPrice,
+              },
               select: { id: true },
             });
 
