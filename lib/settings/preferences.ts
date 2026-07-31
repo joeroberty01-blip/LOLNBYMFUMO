@@ -25,7 +25,7 @@ export async function getPreferences(): Promise<Preferences> {
 
   return {
     language: language === "sw" ? "sw" : "en",
-    theme: theme === "dark" || theme === "light" ? theme : "system",
-    fontSize: fontSize === "sm" || fontSize === "lg" ? fontSize : "md",
+    theme: theme === "light" || theme === "system" ? theme : "dark",
+    fontSize: fontSize === "md" || fontSize === "lg" ? fontSize : "sm",
   };
 }

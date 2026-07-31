@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { completeSaleSchema, type CompleteSaleInput } from "@/lib/validators/sales";
-import { getBranchInventoryForPOS, type POSInventoryItem } from "@/lib/data/sales";
+import {
+  getBranchInventoryForPOS,
+  getAllStoresInventoryForPOS,
+  type POSInventoryItem,
+} from "@/lib/data/sales";
 import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -25,6 +29,11 @@ async function requireApprovedSalesStaff() {
 export async function getPOSInventory(branchId: string): Promise<POSInventoryItem[]> {
   await requireApprovedSalesStaff();
   return getBranchInventoryForPOS(branchId);
+}
+
+export async function getPOSInventoryAllStores(): Promise<POSInventoryItem[]> {
+  await requireApprovedSalesStaff();
+  return getAllStoresInventoryForPOS();
 }
 
 export type ReceiptData = {

@@ -2,7 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Search, Plus, X } from "lucide-react";
-import { getPOSInventory, completeSale, type ReceiptData } from "@/lib/actions/sales";
+import {
+  getPOSInventory,
+  getPOSInventoryAllStores,
+  completeSale,
+  type ReceiptData,
+} from "@/lib/actions/sales";
 import { paymentMethods } from "@/lib/validators/sales";
 import type { POSInventoryItem } from "@/lib/data/sales";
 import { ManualItemModal } from "@/components/sales/ManualItemModal";
@@ -20,6 +25,10 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 /** Sales above this trigger an extra warning in the confirm dialog — not a hard limit, just a
  * "did you mean to type an extra zero" nudge before the money/stock actually moves. */
 const LARGE_SALE_THRESHOLD = 500_000;
+
+/** Sentinel Source Store value meaning "search every store's stock at once" — the default, so a
+ * selling point can sell any part in the business, not just what's physically at its own store. */
+const ALL_STORES = "ALL";
 
 const PAYMENT_LABEL: Record<(typeof paymentMethods)[number], string> = {
   CASH: "Cash",
@@ -67,6 +76,11 @@ export function POSTerminal({
   const t = useTranslations();
   const [branchId, setBranchId] = useState<string | null>(null);
   const [sourceBranchId, setSourceBranchId] = useState<string | null>(null);
+  /** The store cart items will actually be pulled from — fixed the moment the first item is
+   * added (from that item's own branch when browsing "All Stores"), cleared when the cart empties.
+   * Distinct from `sourceBranchId`, which is just which store's list is currently being searched. */
+  const [activeSourceBranchId, setActiveSourceBranchId] = useState<string | null>(null);
+  const [addItemError, setAddItemError] = useState<string | null>(null);
   const [inventory, setInventory] = useState<POSInventoryItem[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,12 +97,12 @@ export function POSTerminal({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
-  const sourceBranchName = allStores.find((b) => b.id === sourceBranchId)?.name ?? "";
+  const activeSourceBranchName = allStores.find((b) => b.id === activeSourceBranchId)?.name ?? "";
 
   async function loadInventoryFrom(id: string) {
     setLoadingInventory(true);
     try {
-      const items = await getPOSInventory(id);
+      const items = id === ALL_STORES ? await getPOSInventoryAllStores() : await getPOSInventory(id);
       setInventory(items);
     } finally {
       setLoadingInventory(false);
@@ -97,14 +111,16 @@ export function POSTerminal({
 
   async function selectBranch(id: string) {
     setBranchId(id);
-    setSourceBranchId(id);
+    setSourceBranchId(ALL_STORES);
+    setActiveSourceBranchId(null);
     setCart([]);
     setSearchQuery("");
-    await loadInventoryFrom(id);
+    await loadInventoryFrom(ALL_STORES);
   }
 
   async function selectSourceBranch(id: string) {
     setSourceBranchId(id);
+    setActiveSourceBranchId(null);
     setCart([]);
     setSearchQuery("");
     await loadInventoryFrom(id);
@@ -124,6 +140,17 @@ export function POSTerminal({
   );
 
   function addRegularItem(item: POSInventoryItem) {
+    const itemBranchId = item.branchId ?? sourceBranchId ?? branchId;
+    if (activeSourceBranchId && itemBranchId && activeSourceBranchId !== itemBranchId) {
+      const currentName = allStores.find((b) => b.id === activeSourceBranchId)?.name ?? "";
+      setAddItemError(t.sales.pos.differentStoreCartError.replace("{store}", currentName));
+      return;
+    }
+    setAddItemError(null);
+    if (!activeSourceBranchId && itemBranchId) {
+      setActiveSourceBranchId(itemBranchId);
+    }
+
     setCart((prev) => {
       const existing = prev.find((l) => l.type === "regular" && l.partId === item.partId);
       if (existing) {
@@ -190,7 +217,11 @@ export function POSTerminal({
   }
 
   function removeItem(key: string) {
-    setCart((prev) => prev.filter((l) => l.key !== key));
+    setCart((prev) => {
+      const next = prev.filter((l) => l.key !== key);
+      if (next.length === 0) setActiveSourceBranchId(null);
+      return next;
+    });
   }
 
   function resetForNewSale() {
@@ -217,7 +248,7 @@ export function POSTerminal({
     startSubmit(async () => {
       const result = await completeSale({
         branchId,
-        sourceBranchId: sourceBranchId ?? branchId,
+        sourceBranchId: activeSourceBranchId ?? branchId,
         paymentMethod,
         isCredit,
         customerId: customerId ?? undefined,
@@ -294,20 +325,23 @@ export function POSTerminal({
         <div className="mb-3 flex items-center gap-2">
           <label className="shrink-0 text-sm text-secondary">{t.sales.pos.sourceStoreLabel}</label>
           <Select
-            value={sourceBranchId ?? branchId}
+            value={sourceBranchId ?? ALL_STORES}
             onChange={(e) => selectSourceBranch(e.target.value)}
             className="w-auto"
           >
+            <option value={ALL_STORES}>{t.sales.pos.sourceStoreAllOption}</option>
             {allStores.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </Select>
-          {sourceBranchId && sourceBranchId !== branchId && (
+          {activeSourceBranchId && activeSourceBranchId !== branchId && (
             <span className="text-xs text-warning">{t.sales.pos.sourceStoreDifferentWarning}</span>
           )}
         </div>
+
+        {addItemError && <p className="mb-3 text-sm text-danger">{addItemError}</p>}
 
         <div className="mb-3 flex gap-2">
           <div className="relative flex-1">
@@ -338,7 +372,7 @@ export function POSTerminal({
             )}
             {filteredInventory.map((item) => (
               <button
-                key={item.partId}
+                key={`${item.partId}-${item.branchId ?? ""}`}
                 type="button"
                 onClick={() => addRegularItem(item)}
                 className="flex items-center justify-between rounded-card border border-border bg-surface px-4 py-3 text-left text-sm text-primary transition-colors hover:bg-white/[0.04]"
@@ -347,6 +381,12 @@ export function POSTerminal({
                   <p className="truncate font-medium">{item.name}</p>
                   <p className="text-xs text-secondary">
                     {item.partNumber} · {t.sales.pos.inStock}: {item.quantity}
+                    {item.branchName && (
+                      <>
+                        {" · "}
+                        <span className="text-accent">{item.branchName}</span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <span className="ml-2 shrink-0 tabular-nums text-primary">
@@ -530,8 +570,8 @@ export function POSTerminal({
           title={t.sales.pos.confirmTitle}
           lines={[
             { label: t.common.branch, value: branchName },
-            ...(sourceBranchId && sourceBranchId !== branchId
-              ? [{ label: t.sales.pos.sourceStoreLabel, value: sourceBranchName }]
+            ...(activeSourceBranchId && activeSourceBranchId !== branchId
+              ? [{ label: t.sales.pos.sourceStoreLabel, value: activeSourceBranchName }]
               : []),
             { label: t.sales.pos.confirmItems, value: String(cart.length) },
             { label: t.sales.pos.confirmPayment, value: PAYMENT_LABEL[paymentMethod] },

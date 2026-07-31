@@ -27,7 +27,7 @@ export function PartForm({ mode, partId, defaultValues }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<z.input<typeof partSchema>, unknown, z.output<typeof partSchema>>({
     resolver: zodResolver(partSchema),
-    defaultValues: { lowStockThreshold: 10, ...defaultValues },
+    defaultValues: { lowStockThreshold: 5, ...defaultValues },
   });
 
   const onSubmit = handleSubmit(async (data) => {

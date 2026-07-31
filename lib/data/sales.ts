@@ -9,6 +9,11 @@ export type POSInventoryItem = {
   partNumber: string;
   unitPrice: number;
   quantity: number;
+  /** Present only when the item comes from the "All Stores" search (not a single selected
+   * branch) — lets the cashier see, and the UI derive the sale's source branch from, where the
+   * stock actually is. */
+  branchId?: string;
+  branchName?: string;
 };
 
 export async function getBranchInventoryForPOS(branchId: string): Promise<POSInventoryItem[]> {
@@ -27,6 +32,32 @@ export async function getBranchInventoryForPOS(branchId: string): Promise<POSInv
     partNumber: r.part.partNumber,
     unitPrice: r.part.unitPrice.toNumber(),
     quantity: r.quantity,
+  }));
+}
+
+/** Every part in stock at ANY store, not just one — lets a selling point sell the whole
+ * business's inventory instead of only what happens to be stocked at its own store. Each row is
+ * one (part, branch) combination, since the same part can sit at several stores with different
+ * quantities; the cashier picks which store's stock to actually pull from. */
+export async function getAllStoresInventoryForPOS(): Promise<POSInventoryItem[]> {
+  const rows = await prisma.inventory.findMany({
+    where: { quantity: { gt: 0 }, part: { isActive: true } },
+    select: {
+      quantity: true,
+      branch: { select: { id: true, name: true } },
+      part: { select: { id: true, name: true, partNumber: true, unitPrice: true } },
+    },
+    orderBy: [{ part: { name: "asc" } }, { branch: { name: "asc" } }],
+  });
+
+  return rows.map((r) => ({
+    partId: r.part.id,
+    name: r.part.name,
+    partNumber: r.part.partNumber,
+    unitPrice: r.part.unitPrice.toNumber(),
+    quantity: r.quantity,
+    branchId: r.branch.id,
+    branchName: r.branch.name,
   }));
 }
 
