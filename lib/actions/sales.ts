@@ -86,16 +86,12 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
     if (!sourceBranch) return { success: false, error: "Source store not found" };
   }
 
-  let customer = null;
-  if (isCredit) {
-    if (!customerId) return { success: false, error: "Select a customer" };
-    customer = await prisma.customer.findUnique({ where: { id: customerId } });
-    if (!customer) return { success: false, error: "Customer not found" };
-  }
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer) return { success: false, error: "Customer not found" };
 
   const total = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
 
-  if (isCredit && customer) {
+  if (isCredit) {
     const newBalance = customer.balance.toNumber() + total;
     if (newBalance > customer.creditLimit.toNumber()) {
       return {
@@ -133,7 +129,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
           userId: session.user.id,
           paymentMethod,
           isCredit,
-          customerId: isCredit ? customerId : null,
+          customerId,
           total,
           status: "COMPLETED",
           items: {
@@ -165,7 +161,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
         },
       });
 
-      if (isCredit && customerId) {
+      if (isCredit) {
         await tx.customer.update({
           where: { id: customerId },
           data: { balance: { increment: total } },

@@ -29,22 +29,19 @@ export const saleItemInputSchema = z.discriminatedUnion("isManualEntry", [
 ]);
 export type SaleItemInput = z.infer<typeof saleItemInputSchema>;
 
-export const completeSaleSchema = z
-  .object({
-    branchId: z.string().min(1, "Select a branch"),
-    /** Store inventory is actually deducted from. Defaults to branchId (the common case: sell
-     * and fulfill at the same place) — only differs when a selling point is fulfilling a sale
-     * from a warehouse store's stock. */
-    sourceBranchId: z.string().min(1).optional(),
-    paymentMethod: z.enum(paymentMethods),
-    isCredit: z.boolean(),
-    customerId: z.string().optional(),
-    items: z.array(saleItemInputSchema).min(1, "Add at least one item to the cart"),
-  })
-  .refine((data) => !data.isCredit || !!data.customerId, {
-    message: "Select a customer for a credit sale",
-    path: ["customerId"],
-  });
+export const completeSaleSchema = z.object({
+  branchId: z.string().min(1, "Select a branch"),
+  /** Store inventory is actually deducted from. Defaults to branchId (the common case: sell
+   * and fulfill at the same place) — only differs when a selling point is fulfilling a sale
+   * from a warehouse store's stock. */
+  sourceBranchId: z.string().min(1).optional(),
+  paymentMethod: z.enum(paymentMethods),
+  isCredit: z.boolean(),
+  /** Every sale — cash or credit — is now tied to a customer, captured before the cashier can
+   * start adding items to the cart. */
+  customerId: z.string().min(1, "Select a customer"),
+  items: z.array(saleItemInputSchema).min(1, "Add at least one item to the cart"),
+});
 export type CompleteSaleInput = z.infer<typeof completeSaleSchema>;
 
 export const manualItemFormSchema = z.object({

@@ -32,6 +32,10 @@ export const en = {
     sourceStoreDifferentWarning: "Stock will be taken from a different store than the selling point.",
     sourceStoreAllOption: "All Stores (search everything)",
     differentStoreCartError: "Cart already has items from {store} — finish or clear this sale before adding an item from a different store.",
+    chooseCustomer: "Choose Customer",
+    changeCustomer: "Change Customer",
+    customerSearchPlaceholder: "Search customer by name or phone...",
+    noCustomersFound: "No customers found — add a new one above.",
   },
   manualItem: {
     title: "Add Manual Item",
@@ -116,6 +120,10 @@ export const sw = {
     sourceStoreDifferentWarning: "Stock itatolewa kwenye store tofauti na Selling Point.",
     sourceStoreAllOption: "Stores Zote (tafuta kila kitu)",
     differentStoreCartError: "Cart tayari ina items kutoka {store} — maliza au futa mauzo haya kabla ya kuongeza item ya store tofauti.",
+    chooseCustomer: "Chagua Customer",
+    changeCustomer: "Badilisha Customer",
+    customerSearchPlaceholder: "Tafuta customer kwa jina au namba...",
+    noCustomersFound: "Hakuna customer aliyepatikana — ongeza mpya hapo juu.",
   },
   manualItem: {
     title: "Ongeza Bidhaa Mwenyewe",

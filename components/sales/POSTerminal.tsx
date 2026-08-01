@@ -91,12 +91,14 @@ export function POSTerminal({
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethods)[number]>("CASH");
   const [isCredit, setIsCredit] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [customerSearch, setCustomerSearch] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
+  const customerName = customers.find((c) => c.id === customerId)?.name ?? "";
   const activeSourceBranchName = allStores.find((b) => b.id === activeSourceBranchId)?.name ?? "";
 
   async function loadInventoryFrom(id: string) {
@@ -230,10 +232,16 @@ export function POSTerminal({
     setSubmitError(null);
     setIsCredit(false);
     setCustomerId(null);
+    setCustomerSearch("");
     setPaymentMethod("CASH");
     if (branchId) {
       void selectBranch(branchId);
     }
+  }
+
+  function changeCustomer() {
+    setCustomerId(null);
+    setCustomerSearch("");
   }
 
   function handleCompleteSale() {
@@ -243,7 +251,7 @@ export function POSTerminal({
   }
 
   function submitSale() {
-    if (!branchId) return;
+    if (!branchId || !customerId) return;
 
     startSubmit(async () => {
       const result = await completeSale({
@@ -251,7 +259,7 @@ export function POSTerminal({
         sourceBranchId: activeSourceBranchId ?? branchId,
         paymentMethod,
         isCredit,
-        customerId: customerId ?? undefined,
+        customerId,
         items: cart.map((l) =>
           l.type === "regular"
             ? {
@@ -305,6 +313,76 @@ export function POSTerminal({
     );
   }
 
+  if (!customerId) {
+    const filteredCustomers = customerSearch.trim()
+      ? customers.filter(
+          (c) =>
+            c.name.toLowerCase().includes(customerSearch.trim().toLowerCase()) ||
+            (c.phone ?? "").includes(customerSearch.trim())
+        )
+      : customers;
+
+    return (
+      <div className="mx-auto w-full max-w-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-medium text-primary">{t.sales.pos.chooseCustomer}</h2>
+          <button
+            type="button"
+            onClick={() => setBranchId(null)}
+            className="text-xs text-accent hover:underline"
+          >
+            {t.sales.pos.changeBranch}
+          </button>
+        </div>
+
+        <Button
+          type="button"
+          variant="primary"
+          className="mb-3 w-full"
+          onClick={() => setQuickCustomerOpen(true)}
+        >
+          + {t.sales.pos.newCustomer}
+        </Button>
+
+        <Input
+          type="text"
+          placeholder={t.sales.pos.customerSearchPlaceholder}
+          value={customerSearch}
+          onChange={(e) => setCustomerSearch(e.target.value)}
+          className="mb-3"
+        />
+
+        <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
+          {filteredCustomers.length === 0 && (
+            <p className="text-sm text-secondary">{t.sales.pos.noCustomersFound}</p>
+          )}
+          {filteredCustomers.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setCustomerId(c.id)}
+              className="rounded-card border border-border bg-surface px-4 py-3 text-left text-primary transition-colors hover:bg-white/[0.04]"
+            >
+              <p className="font-medium">{c.name}</p>
+              {c.phone && <p className="text-xs text-secondary">{c.phone}</p>}
+            </button>
+          ))}
+        </div>
+
+        {quickCustomerOpen && (
+          <QuickCustomerModal
+            onClose={() => setQuickCustomerOpen(false)}
+            onCreated={(c) => {
+              setCustomers((prev) => [...prev, c]);
+              setCustomerId(c.id);
+              setQuickCustomerOpen(false);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_380px]">
       {/* Left: search + inventory */}
@@ -319,6 +397,15 @@ export function POSTerminal({
             className="text-xs text-accent hover:underline"
           >
             {t.sales.pos.changeBranch}
+          </button>
+        </div>
+
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm text-secondary">
+            {t.sales.pos.customerLabel}: <span className="font-medium text-primary">{customerName}</span>
+          </p>
+          <button type="button" onClick={changeCustomer} className="text-xs text-accent hover:underline">
+            {t.sales.pos.changeCustomer}
           </button>
         </div>
 
@@ -498,44 +585,10 @@ export function POSTerminal({
             <input
               type="checkbox"
               checked={isCredit}
-              onChange={(e) => {
-                setIsCredit(e.target.checked);
-                if (!e.target.checked) setCustomerId(null);
-              }}
+              onChange={(e) => setIsCredit(e.target.checked)}
             />
             {t.sales.pos.isCreditSale}
           </label>
-
-          {isCredit && (
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-primary">
-                {t.sales.pos.customerLabel}
-              </p>
-              <div className="flex gap-2">
-                <Select
-                  value={customerId ?? ""}
-                  onChange={(e) => setCustomerId(e.target.value || null)}
-                  className="flex-1"
-                >
-                  <option value="">{t.sales.pos.selectCustomer}</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.phone ? ` (${c.phone})` : ""}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setQuickCustomerOpen(true)}
-                  className="whitespace-nowrap"
-                >
-                  {t.sales.pos.newCustomer}
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         {submitError && <p className="mb-3 text-sm text-danger">{submitError}</p>}
@@ -543,7 +596,7 @@ export function POSTerminal({
         <Button
           type="button"
           variant="primary"
-          disabled={cart.length === 0 || isSubmitting || (isCredit && !customerId)}
+          disabled={cart.length === 0 || isSubmitting}
           onClick={handleCompleteSale}
           className="w-full py-3"
         >
@@ -554,16 +607,6 @@ export function POSTerminal({
       {manualModalOpen && (
         <ManualItemModal onClose={() => setManualModalOpen(false)} onAdd={addManualItem} />
       )}
-      {quickCustomerOpen && (
-        <QuickCustomerModal
-          onClose={() => setQuickCustomerOpen(false)}
-          onCreated={(c) => {
-            setCustomers((prev) => [...prev, c]);
-            setCustomerId(c.id);
-            setQuickCustomerOpen(false);
-          }}
-        />
-      )}
 
       {confirmOpen && (
         <ConfirmDialog
@@ -573,17 +616,10 @@ export function POSTerminal({
             ...(activeSourceBranchId && activeSourceBranchId !== branchId
               ? [{ label: t.sales.pos.sourceStoreLabel, value: activeSourceBranchName }]
               : []),
+            { label: t.sales.pos.confirmCustomer, value: customerName },
             { label: t.sales.pos.confirmItems, value: String(cart.length) },
             { label: t.sales.pos.confirmPayment, value: PAYMENT_LABEL[paymentMethod] },
-            ...(isCredit
-              ? [
-                  {
-                    label: t.sales.pos.confirmCustomer,
-                    value: customers.find((c) => c.id === customerId)?.name ?? "—",
-                  },
-                  { label: t.sales.pos.confirmCredit, value: t.common.yes },
-                ]
-              : []),
+            ...(isCredit ? [{ label: t.sales.pos.confirmCredit, value: t.common.yes }] : []),
             { label: t.sales.pos.confirmTotal, value: currency.format(total), emphasis: true },
           ]}
           itemsTable={{
