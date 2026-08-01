@@ -240,22 +240,19 @@ export function POSTerminal({
     }
   }
 
-  function changeCustomer() {
-    setCustomerId(null);
-    setCustomerSearch("");
-    setCustomerNameError(null);
-  }
-
-  async function submitCustomerName() {
+  /** Resolves the typed name to a Customer id — reuses an existing customer with that name
+   * (case-insensitive) or creates one on the spot. Returns null (and sets the field error) on
+   * failure so the caller can bail out without opening the confirm dialog. */
+  async function resolveCustomer(): Promise<string | null> {
     const name = customerSearch.trim();
-    if (!name) return;
+    if (!name) return null;
     setCustomerNameError(null);
     setIsSavingCustomerName(true);
     try {
       const result = await findOrCreateCustomerByName(name);
       if (!result.success) {
         setCustomerNameError(result.error);
-        return;
+        return null;
       }
       setCustomers((prev) =>
         prev.some((c) => c.id === result.customerId)
@@ -263,14 +260,17 @@ export function POSTerminal({
           : [...prev, { id: result.customerId, name, phone: null }]
       );
       setCustomerId(result.customerId);
+      return result.customerId;
     } finally {
       setIsSavingCustomerName(false);
     }
   }
 
-  function handleCompleteSale() {
+  async function handleCompleteSale() {
     if (!branchId || cart.length === 0) return;
     setSubmitError(null);
+    const id = await resolveCustomer();
+    if (!id) return;
     setConfirmOpen(true);
   }
 
@@ -337,58 +337,6 @@ export function POSTerminal({
     );
   }
 
-  if (!customerId) {
-    return (
-      <div className="mx-auto w-full max-w-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-primary">{t.sales.pos.chooseCustomer}</h2>
-          <button
-            type="button"
-            onClick={() => setBranchId(null)}
-            className="text-xs text-accent hover:underline"
-          >
-            {t.sales.pos.changeBranch}
-          </button>
-        </div>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submitCustomerName();
-          }}
-        >
-          <Input
-            type="text"
-            autoFocus
-            list="pos-known-customers"
-            placeholder={t.sales.pos.customerNamePlaceholder}
-            value={customerSearch}
-            onChange={(e) => setCustomerSearch(e.target.value)}
-            className="mb-2"
-          />
-          <datalist id="pos-known-customers">
-            {customers.map((c) => (
-              <option key={c.id} value={c.name} />
-            ))}
-          </datalist>
-
-          {customerNameError && (
-            <p className="mb-2 text-sm text-danger">{customerNameError}</p>
-          )}
-
-          <Button
-            type="submit"
-            variant="primary"
-            className="w-full"
-            disabled={!customerSearch.trim() || isSavingCustomerName}
-          >
-            {isSavingCustomerName ? t.common.saving : t.sales.pos.continueButton}
-          </Button>
-        </form>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_380px]">
       {/* Left: search + inventory */}
@@ -403,15 +351,6 @@ export function POSTerminal({
             className="text-xs text-accent hover:underline"
           >
             {t.sales.pos.changeBranch}
-          </button>
-        </div>
-
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm text-secondary">
-            {t.sales.pos.customerLabel}: <span className="font-medium text-primary">{customerName}</span>
-          </p>
-          <button type="button" onClick={changeCustomer} className="text-xs text-accent hover:underline">
-            {t.sales.pos.changeCustomer}
           </button>
         </div>
 
@@ -568,6 +507,29 @@ export function POSTerminal({
 
         <div className="mb-4 flex flex-col gap-3">
           <div>
+            <p className="mb-1.5 text-sm font-medium text-primary">{t.sales.pos.chooseCustomer}</p>
+            <Input
+              type="text"
+              list="pos-known-customers"
+              placeholder={t.sales.pos.customerNamePlaceholder}
+              value={customerSearch}
+              onChange={(e) => {
+                setCustomerSearch(e.target.value);
+                setCustomerId(null);
+                setCustomerNameError(null);
+              }}
+            />
+            <datalist id="pos-known-customers">
+              {customers.map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+            {customerNameError && (
+              <p className="mt-1 text-sm text-danger">{customerNameError}</p>
+            )}
+          </div>
+
+          <div>
             <p className="mb-1.5 text-sm font-medium text-primary">{t.sales.pos.paymentMethod}</p>
             <div className="grid grid-cols-3 gap-1.5">
               {paymentMethods.map((pm) => (
@@ -602,11 +564,15 @@ export function POSTerminal({
         <Button
           type="button"
           variant="primary"
-          disabled={cart.length === 0 || isSubmitting}
+          disabled={cart.length === 0 || !customerSearch.trim() || isSubmitting || isSavingCustomerName}
           onClick={handleCompleteSale}
           className="w-full py-3"
         >
-          {isSubmitting ? t.sales.pos.completingSale : t.sales.pos.completeSale}
+          {isSavingCustomerName
+            ? t.common.saving
+            : isSubmitting
+              ? t.sales.pos.completingSale
+              : t.sales.pos.completeSale}
         </Button>
       </Card>
 
