@@ -34,6 +34,35 @@ export async function createCustomerQuick(input: QuickCustomerInput): Promise<Ac
   return { success: true, customerId: customer.id };
 }
 
+/** Typing a customer's name at the start of a POS sale is the fast path — reuse the existing
+ * Customer record if that name is already on file (case-insensitive), otherwise create one on
+ * the spot with just the name. Either way it shows up on the Customers page like any other. */
+export async function findOrCreateCustomerByName(name: string): Promise<ActionResult> {
+  const session = await auth();
+  if (!session || session.user.status !== "APPROVED") {
+    return { success: false, error: "Huna ruhusa ya kufanya hili" };
+  }
+
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { success: false, error: "Andika jina la mteja" };
+  }
+
+  const existing = await prisma.customer.findFirst({
+    where: { name: { equals: trimmed, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) {
+    return { success: true, customerId: existing.id };
+  }
+
+  const customer = await prisma.customer.create({
+    data: { name: trimmed, phone: null, creditLimit: 0, balance: 0 },
+  });
+  revalidatePath("/dashboard/admin/customers");
+  return { success: true, customerId: customer.id };
+}
+
 async function requireAdmin() {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {

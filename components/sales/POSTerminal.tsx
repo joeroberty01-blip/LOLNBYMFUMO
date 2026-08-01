@@ -10,8 +10,8 @@ import {
 } from "@/lib/actions/sales";
 import { paymentMethods } from "@/lib/validators/sales";
 import type { POSInventoryItem } from "@/lib/data/sales";
+import { findOrCreateCustomerByName } from "@/lib/actions/customers";
 import { ManualItemModal } from "@/components/sales/ManualItemModal";
-import { QuickCustomerModal } from "@/components/sales/QuickCustomerModal";
 import { ReceiptView } from "@/components/sales/ReceiptView";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Card } from "@/components/ui/Card";
@@ -86,12 +86,13 @@ export function POSTerminal({
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [manualModalOpen, setManualModalOpen] = useState(false);
-  const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
   const [customers, setCustomers] = useState(initialCustomers);
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethods)[number]>("CASH");
   const [isCredit, setIsCredit] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerNameError, setCustomerNameError] = useState<string | null>(null);
+  const [isSavingCustomerName, setIsSavingCustomerName] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -242,6 +243,29 @@ export function POSTerminal({
   function changeCustomer() {
     setCustomerId(null);
     setCustomerSearch("");
+    setCustomerNameError(null);
+  }
+
+  async function submitCustomerName() {
+    const name = customerSearch.trim();
+    if (!name) return;
+    setCustomerNameError(null);
+    setIsSavingCustomerName(true);
+    try {
+      const result = await findOrCreateCustomerByName(name);
+      if (!result.success) {
+        setCustomerNameError(result.error);
+        return;
+      }
+      setCustomers((prev) =>
+        prev.some((c) => c.id === result.customerId)
+          ? prev
+          : [...prev, { id: result.customerId, name, phone: null }]
+      );
+      setCustomerId(result.customerId);
+    } finally {
+      setIsSavingCustomerName(false);
+    }
   }
 
   function handleCompleteSale() {
@@ -314,14 +338,6 @@ export function POSTerminal({
   }
 
   if (!customerId) {
-    const filteredCustomers = customerSearch.trim()
-      ? customers.filter(
-          (c) =>
-            c.name.toLowerCase().includes(customerSearch.trim().toLowerCase()) ||
-            (c.phone ?? "").includes(customerSearch.trim())
-        )
-      : customers;
-
     return (
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-4 flex items-center justify-between">
@@ -335,50 +351,40 @@ export function POSTerminal({
           </button>
         </div>
 
-        <Button
-          type="button"
-          variant="primary"
-          className="mb-3 w-full"
-          onClick={() => setQuickCustomerOpen(true)}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitCustomerName();
+          }}
         >
-          + {t.sales.pos.newCustomer}
-        </Button>
-
-        <Input
-          type="text"
-          placeholder={t.sales.pos.customerSearchPlaceholder}
-          value={customerSearch}
-          onChange={(e) => setCustomerSearch(e.target.value)}
-          className="mb-3"
-        />
-
-        <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
-          {filteredCustomers.length === 0 && (
-            <p className="text-sm text-secondary">{t.sales.pos.noCustomersFound}</p>
-          )}
-          {filteredCustomers.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setCustomerId(c.id)}
-              className="rounded-card border border-border bg-surface px-4 py-3 text-left text-primary transition-colors hover:bg-white/[0.04]"
-            >
-              <p className="font-medium">{c.name}</p>
-              {c.phone && <p className="text-xs text-secondary">{c.phone}</p>}
-            </button>
-          ))}
-        </div>
-
-        {quickCustomerOpen && (
-          <QuickCustomerModal
-            onClose={() => setQuickCustomerOpen(false)}
-            onCreated={(c) => {
-              setCustomers((prev) => [...prev, c]);
-              setCustomerId(c.id);
-              setQuickCustomerOpen(false);
-            }}
+          <Input
+            type="text"
+            autoFocus
+            list="pos-known-customers"
+            placeholder={t.sales.pos.customerNamePlaceholder}
+            value={customerSearch}
+            onChange={(e) => setCustomerSearch(e.target.value)}
+            className="mb-2"
           />
-        )}
+          <datalist id="pos-known-customers">
+            {customers.map((c) => (
+              <option key={c.id} value={c.name} />
+            ))}
+          </datalist>
+
+          {customerNameError && (
+            <p className="mb-2 text-sm text-danger">{customerNameError}</p>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full"
+            disabled={!customerSearch.trim() || isSavingCustomerName}
+          >
+            {isSavingCustomerName ? t.common.saving : t.sales.pos.continueButton}
+          </Button>
+        </form>
       </div>
     );
   }
