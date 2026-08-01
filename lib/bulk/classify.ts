@@ -55,20 +55,6 @@ function fullRowKey(partNumber: string, name: string, costPrice: number, unitPri
   return `${catalogKey(partNumber, name, costPrice, unitPrice)}|${quantity}`;
 }
 
-/**
- * Splits "89545-0K290=REVO RR RH" into part number "89545-0K290" and compatibility note
- * "REVO RR RH". Real inventory sheets from this business encode the vehicle a part fits this
- * way instead of (or in addition to) a separate column. Only the first "=" is treated as the
- * separator — a part number legitimately containing more "=" keeps the rest verbatim.
- */
-export function splitPartNumberCompatibility(raw: string): { partNumber: string; suffix: string | null } {
-  const idx = raw.indexOf("=");
-  if (idx === -1) return { partNumber: raw, suffix: null };
-  const partNumber = raw.slice(0, idx).trim();
-  const suffix = raw.slice(idx + 1).trim();
-  return { partNumber, suffix: suffix || null };
-}
-
 export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): AnalysisSummary {
   const missing = REQUIRED_FIELDS.filter((f) => mapping[f] === null);
   if (missing.length > 0) {
@@ -91,18 +77,17 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
       return idx === null ? "" : (cells[idx] ?? "").trim();
     };
 
-    const rawPartNumberCell = get("partNumber");
-    const { partNumber: rawPartNumber, suffix: compatSuffix } =
-      splitPartNumberCompatibility(rawPartNumberCell);
+    // Part Number is kept exactly as written in the source file — including any "=VEHICLE"
+    // suffix — because the full string (number + description together) is what makes a row
+    // unique in this business's catalog, not the number alone.
+    const rawPartNumber = get("partNumber");
     const rawName = get("name");
     const costPrice = parseNumber(get("costPrice"));
     const unitPrice = parseNumber(get("unitPrice"));
     const quantity = parseNumber(get("quantity"));
     const category = get("category") || "Uncategorized";
     const oemNumber = get("oemNumber") || null;
-    const mappedCompatibility = get("compatibility");
-    const compatibility =
-      [compatSuffix, mappedCompatibility].filter(Boolean).join("; ") || null;
+    const compatibility = get("compatibility") || null;
 
     const values = {
       partNumber: rawPartNumber,

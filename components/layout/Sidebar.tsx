@@ -88,6 +88,7 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
         { href: "/dashboard/sales/history", label: t.nav.salesHistory, icon: History },
         { href: "/dashboard/sales/inventory", label: t.nav.inventory, icon: Package },
         { href: "/dashboard/sales/suppliers", label: t.nav.suppliers, icon: Truck },
+        { href: "/dashboard/sales/expenses", label: t.nav.expenses, icon: Wallet },
         { href: "/dashboard/sales/my-performance", label: t.nav.myPerformance, icon: LineChart },
       ],
     },

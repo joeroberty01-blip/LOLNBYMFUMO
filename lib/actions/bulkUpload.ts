@@ -4,12 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseWorkbookAllSheets, detectHeaderRowIndex } from "@/lib/bulk/parse";
-import {
-  classifyRows,
-  splitPartNumberCompatibility,
-  type ExistingPart,
-  type NumberedRow,
-} from "@/lib/bulk/classify";
+import { classifyRows, type ExistingPart, type NumberedRow } from "@/lib/bulk/classify";
 import {
   autoDetectMapping,
   normalizeStoreKey,
@@ -152,7 +147,6 @@ export async function analyzeBulkSheets(requests: SheetAnalysisRequest[]): Promi
         ...new Set(
           req.rows
             .map((r) => (partNumberIdx === null ? "" : (r.cells[partNumberIdx] ?? "").trim()))
-            .map((raw) => splitPartNumberCompatibility(raw).partNumber)
             .filter(Boolean)
         ),
       ];

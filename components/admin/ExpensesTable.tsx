@@ -31,9 +31,12 @@ const PAYMENT_LABEL: Record<string, string> = {
 export function ExpensesTable({
   rows,
   branches,
+  canManage = true,
 }: {
   rows: ExpenseRow[];
   branches: { id: string; name: string }[];
+  /** Sales staff can add expenses but not edit/delete existing ones — only an admin can. */
+  canManage?: boolean;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -108,7 +111,11 @@ export function ExpensesTable({
                   <Td>{PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}</Td>
                   <Td className="text-right tabular-nums">{currency.format(r.amount)}</Td>
                   <Td>
-                    {r.isEditable ? (
+                    {!r.isEditable ? (
+                      <span className="text-xs text-secondary">
+                        {t.adminOps.expenses.autoSupplierPayment}
+                      </span>
+                    ) : canManage ? (
                       <div className="flex gap-2">
                         <Button type="button" variant="secondary" onClick={() => setEditing(r)}>
                           {t.common.edit}
@@ -123,9 +130,7 @@ export function ExpensesTable({
                         </Button>
                       </div>
                     ) : (
-                      <span className="text-xs text-secondary">
-                        {t.adminOps.expenses.autoSupplierPayment}
-                      </span>
+                      <span className="text-xs text-secondary">—</span>
                     )}
                   </Td>
                 </Tr>

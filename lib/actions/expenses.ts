@@ -16,10 +16,22 @@ async function requireAdmin() {
   return session;
 }
 
+/** Sales staff can log an expense too (recording money actually spent at the counter), but only
+ * an admin can edit or delete one afterward — see updateExpense/deleteExpense below. */
+async function requireStaffOrAdmin() {
+  const session = await auth();
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  if (!session || (session.user.role !== "ADMIN" && !isApprovedSalesStaff)) {
+    throw new Error("You don't have permission to do this");
+  }
+  return session;
+}
+
 export async function createExpense(input: ExpenseInput): Promise<ActionResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -53,6 +65,7 @@ export async function createExpense(input: ExpenseInput): Promise<ActionResult> 
   });
 
   revalidatePath("/dashboard/admin/expenses");
+  revalidatePath("/dashboard/sales/expenses");
   revalidatePath("/dashboard/admin");
   return { success: true };
 }
