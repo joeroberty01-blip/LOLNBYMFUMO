@@ -7,6 +7,10 @@ const regularItemSchema = z.object({
   partId: z.string().min(1),
   quantity: z.coerce.number().int().positive(),
   unitPrice: z.coerce.number().positive(),
+  /** Which store this specific line's stock comes from — a cart can freely mix items from any
+   * store, so this is tracked per item. Falls back to the sale's branch/sourceBranchId when
+   * not set. */
+  branchId: z.string().min(1).optional(),
 });
 
 const manualItemSchema = z.object({

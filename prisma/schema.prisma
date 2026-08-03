@@ -108,15 +108,16 @@ model Branch {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  users             User[]
-  inventory         Inventory[]
-  sales             Sale[]
-  salesFulfilledFor Sale[]            @relation("SaleSourceBranch")
-  purchases         Purchase[]
-  stockAdjustments  StockAdjustment[]
-  expenses          Expense[]
-  supplierPayments  SupplierPayment[]
-  customerPayments  CustomerPayment[]
+  users               User[]
+  inventory           Inventory[]
+  sales               Sale[]
+  salesFulfilledFor   Sale[]            @relation("SaleSourceBranch")
+  saleItemsFulfilledFor SaleItem[]
+  purchases           Purchase[]
+  stockAdjustments    StockAdjustment[]
+  expenses            Expense[]
+  supplierPayments    SupplierPayment[]
+  customerPayments    CustomerPayment[]
 }
 
 model Supplier {
@@ -342,13 +343,19 @@ model SaleItem {
   manualItemName   String?
   manualPartNumber String?
   manualCostPrice  Decimal? @db.Decimal(12, 2)
+  /// The store this specific line's stock was actually pulled from — a single sale can now mix
+  /// items from different stores (no same-store restriction in POS), so fulfillment is tracked
+  /// per item rather than once per Sale.
+  sourceBranchId   String?
 
-  sale Sale  @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  part Part? @relation(fields: [partId], references: [id])
+  sale         Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  part         Part?   @relation(fields: [partId], references: [id])
+  sourceBranch Branch? @relation(fields: [sourceBranchId], references: [id])
 
   @@index([saleId])
   @@index([partId])
   @@index([isManualEntry])
+  @@index([sourceBranchId])
 }
 
 model Purchase {

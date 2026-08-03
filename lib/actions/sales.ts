@@ -73,17 +73,14 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   }
   const { branchId, paymentMethod, isCredit, customerId, items } = parsed.data;
-  // Defaults to the selling point itself — only differs when fulfilling from another store.
-  const sourceBranchId = parsed.data.sourceBranchId ?? branchId;
+  // Sale-level default when an item doesn't carry its own branchId — kept for backward
+  // compatibility with the single-source-store case.
+  const defaultSourceBranchId = parsed.data.sourceBranchId ?? branchId;
 
   const branch = await prisma.branch.findUnique({ where: { id: branchId } });
   if (!branch) return { success: false, error: "Branch not found" };
   if (!branch.isSellingPoint) {
     return { success: false, error: "This branch is not available for new sales" };
-  }
-  if (sourceBranchId !== branchId) {
-    const sourceBranch = await prisma.branch.findUnique({ where: { id: sourceBranchId } });
-    if (!sourceBranch) return { success: false, error: "Source store not found" };
   }
 
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
@@ -91,23 +88,23 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
 
   const total = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
 
-  if (isCredit) {
-    const newBalance = customer.balance.toNumber() + total;
-    if (newBalance > customer.creditLimit.toNumber()) {
-      return {
-        success: false,
-        error: `Amount exceeds the credit limit for ${customer.name} (limit: ${customer.creditLimit.toNumber()}, current balance: ${customer.balance.toNumber()})`,
-      };
-    }
-  }
+  // No credit-limit check — a credit sale is always recorded regardless of how far over the
+  // customer's limit it puts them; the limit is informational only (still shown/tracked on the
+  // customer record), not a hard block.
 
   try {
     const sale = await prisma.$transaction(async (tx) => {
-      for (const item of items) {
+      const itemSourceBranchIds = new Map<number, string>();
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
         if (item.isManualEntry) continue;
 
+        const itemBranchId = item.branchId ?? defaultSourceBranchId;
+        itemSourceBranchIds.set(i, itemBranchId);
+
         const inv = await tx.inventory.findUnique({
-          where: { partId_branchId: { partId: item.partId, branchId: sourceBranchId } },
+          where: { partId_branchId: { partId: item.partId, branchId: itemBranchId } },
         });
         if (!inv || inv.quantity < item.quantity) {
           const part = await tx.part.findUnique({ where: { id: item.partId } });
@@ -117,7 +114,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
         }
 
         await tx.inventory.update({
-          where: { partId_branchId: { partId: item.partId, branchId: sourceBranchId } },
+          where: { partId_branchId: { partId: item.partId, branchId: itemBranchId } },
           data: { quantity: { decrement: item.quantity } },
         });
       }
@@ -125,7 +122,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
       const created = await tx.sale.create({
         data: {
           branchId,
-          sourceBranchId: sourceBranchId !== branchId ? sourceBranchId : null,
+          sourceBranchId: defaultSourceBranchId !== branchId ? defaultSourceBranchId : null,
           userId: session.user.id,
           paymentMethod,
           isCredit,
@@ -133,7 +130,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
           total,
           status: "COMPLETED",
           items: {
-            create: items.map((item) =>
+            create: items.map((item, i) =>
               item.isManualEntry
                 ? {
                     partId: null,
@@ -149,6 +146,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
                     isManualEntry: false,
+                    sourceBranchId: itemSourceBranchIds.get(i),
                   }
             ),
           },
@@ -173,7 +171,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
         action: "SALE_COMPLETED",
         entityType: "Sale",
         entityId: created.id,
-        metadata: { branchId, sourceBranchId, total, isCredit, itemCount: items.length },
+        metadata: { branchId, total, isCredit, itemCount: items.length },
       });
 
       return created;
@@ -232,12 +230,13 @@ export async function voidSale(saleId: string): Promise<ActionResult> {
     };
   }
 
-  const restockBranchId = sale.sourceBranchId ?? sale.branchId;
+  const defaultRestockBranchId = sale.sourceBranchId ?? sale.branchId;
 
   try {
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
         if (item.isManualEntry || !item.partId) continue;
+        const restockBranchId = item.sourceBranchId ?? defaultRestockBranchId;
         await tx.inventory.upsert({
           where: { partId_branchId: { partId: item.partId, branchId: restockBranchId } },
           update: { quantity: { increment: item.quantity } },
@@ -262,7 +261,7 @@ export async function voidSale(saleId: string): Promise<ActionResult> {
         action: "SALE_VOIDED",
         entityType: "Sale",
         entityId: saleId,
-        metadata: { total: sale.total.toNumber(), branchId: sale.branchId, restockBranchId },
+        metadata: { total: sale.total.toNumber(), branchId: sale.branchId, defaultRestockBranchId },
       });
     });
   } catch (e) {

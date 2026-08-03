@@ -51,6 +51,10 @@ type CartLine =
       unitPrice: number;
       quantity: number;
       maxQuantity: number;
+      /** Store this specific line's stock comes from — carts can freely mix items from any
+       * store, so each line tracks its own source rather than sharing one for the whole sale. */
+      branchId: string;
+      branchName: string;
     }
   | {
       key: string;
@@ -76,11 +80,6 @@ export function POSTerminal({
   const t = useTranslations();
   const [branchId, setBranchId] = useState<string | null>(null);
   const [sourceBranchId, setSourceBranchId] = useState<string | null>(null);
-  /** The store cart items will actually be pulled from — fixed the moment the first item is
-   * added (from that item's own branch when browsing "All Stores"), cleared when the cart empties.
-   * Distinct from `sourceBranchId`, which is just which store's list is currently being searched. */
-  const [activeSourceBranchId, setActiveSourceBranchId] = useState<string | null>(null);
-  const [addItemError, setAddItemError] = useState<string | null>(null);
   const [inventory, setInventory] = useState<POSInventoryItem[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,7 +99,6 @@ export function POSTerminal({
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
   const customerName = customers.find((c) => c.id === customerId)?.name ?? "";
-  const activeSourceBranchName = allStores.find((b) => b.id === activeSourceBranchId)?.name ?? "";
 
   async function loadInventoryFrom(id: string) {
     setLoadingInventory(true);
@@ -115,7 +113,6 @@ export function POSTerminal({
   async function selectBranch(id: string) {
     setBranchId(id);
     setSourceBranchId(ALL_STORES);
-    setActiveSourceBranchId(null);
     setCart([]);
     setSearchQuery("");
     await loadInventoryFrom(ALL_STORES);
@@ -123,8 +120,6 @@ export function POSTerminal({
 
   async function selectSourceBranch(id: string) {
     setSourceBranchId(id);
-    setActiveSourceBranchId(null);
-    setCart([]);
     setSearchQuery("");
     await loadInventoryFrom(id);
   }
@@ -143,19 +138,16 @@ export function POSTerminal({
   );
 
   function addRegularItem(item: POSInventoryItem) {
-    const itemBranchId = item.branchId ?? sourceBranchId ?? branchId;
-    if (activeSourceBranchId && itemBranchId && activeSourceBranchId !== itemBranchId) {
-      const currentName = allStores.find((b) => b.id === activeSourceBranchId)?.name ?? "";
-      setAddItemError(t.sales.pos.differentStoreCartError.replace("{store}", currentName));
-      return;
-    }
-    setAddItemError(null);
-    if (!activeSourceBranchId && itemBranchId) {
-      setActiveSourceBranchId(itemBranchId);
-    }
+    const itemBranchId = item.branchId ?? sourceBranchId ?? branchId ?? "";
+    const itemBranchName =
+      item.branchName ?? allStores.find((b) => b.id === itemBranchId)?.name ?? branchName;
 
     setCart((prev) => {
-      const existing = prev.find((l) => l.type === "regular" && l.partId === item.partId);
+      // Same part from the same store increments; the same part from a different store is its
+      // own line — a cart can freely mix a part sourced from more than one store.
+      const existing = prev.find(
+        (l) => l.type === "regular" && l.partId === item.partId && l.branchId === itemBranchId
+      );
       if (existing) {
         return prev.map((l) =>
           l.key === existing.key && l.type === "regular"
@@ -166,7 +158,7 @@ export function POSTerminal({
       return [
         ...prev,
         {
-          key: `regular-${item.partId}`,
+          key: `regular-${item.partId}-${itemBranchId}`,
           type: "regular",
           partId: item.partId,
           name: item.name,
@@ -174,6 +166,8 @@ export function POSTerminal({
           unitPrice: item.unitPrice,
           quantity: 1,
           maxQuantity: item.quantity,
+          branchId: itemBranchId,
+          branchName: itemBranchName,
         },
       ];
     });
@@ -220,11 +214,7 @@ export function POSTerminal({
   }
 
   function removeItem(key: string) {
-    setCart((prev) => {
-      const next = prev.filter((l) => l.key !== key);
-      if (next.length === 0) setActiveSourceBranchId(null);
-      return next;
-    });
+    setCart((prev) => prev.filter((l) => l.key !== key));
   }
 
   function resetForNewSale() {
@@ -280,7 +270,6 @@ export function POSTerminal({
     startSubmit(async () => {
       const result = await completeSale({
         branchId,
-        sourceBranchId: activeSourceBranchId ?? branchId,
         paymentMethod,
         isCredit,
         customerId,
@@ -291,6 +280,7 @@ export function POSTerminal({
                 partId: l.partId,
                 quantity: l.quantity,
                 unitPrice: l.unitPrice,
+                branchId: l.branchId,
               }
             : {
                 isManualEntry: true as const,
@@ -368,12 +358,7 @@ export function POSTerminal({
               </option>
             ))}
           </Select>
-          {activeSourceBranchId && activeSourceBranchId !== branchId && (
-            <span className="text-xs text-warning">{t.sales.pos.sourceStoreDifferentWarning}</span>
-          )}
         </div>
-
-        {addItemError && <p className="mb-3 text-sm text-danger">{addItemError}</p>}
 
         <div className="mb-3 flex gap-2">
           <div className="relative flex-1">
@@ -441,14 +426,19 @@ export function POSTerminal({
               className="rounded-control border border-border bg-surface-elevated px-3 py-2 text-sm"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 truncate text-primary">
-                  {line.name}
-                  {line.type === "manual" && (
-                    <span className="ml-1.5 align-middle">
-                      <Badge status="warning">Manual</Badge>
-                    </span>
+                <div className="min-w-0">
+                  <p className="truncate text-primary">
+                    {line.name}
+                    {line.type === "manual" && (
+                      <span className="ml-1.5 align-middle">
+                        <Badge status="warning">Manual</Badge>
+                      </span>
+                    )}
+                  </p>
+                  {line.type === "regular" && (
+                    <p className="truncate text-xs text-secondary">{line.branchName}</p>
                   )}
-                </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => removeItem(line.key)}
@@ -585,9 +575,6 @@ export function POSTerminal({
           title={t.sales.pos.confirmTitle}
           lines={[
             { label: t.common.branch, value: branchName },
-            ...(activeSourceBranchId && activeSourceBranchId !== branchId
-              ? [{ label: t.sales.pos.sourceStoreLabel, value: activeSourceBranchName }]
-              : []),
             { label: t.sales.pos.confirmCustomer, value: customerName },
             { label: t.sales.pos.confirmItems, value: String(cart.length) },
             { label: t.sales.pos.confirmPayment, value: PAYMENT_LABEL[paymentMethod] },
@@ -595,9 +582,16 @@ export function POSTerminal({
             { label: t.sales.pos.confirmTotal, value: currency.format(total), emphasis: true },
           ]}
           itemsTable={{
-            headers: [t.common.name, t.sales.pos.qtyLabel, t.sales.pos.priceLabel, t.common.total],
+            headers: [
+              t.common.name,
+              t.sales.pos.sourceStoreLabel,
+              t.sales.pos.qtyLabel,
+              t.sales.pos.priceLabel,
+              t.common.total,
+            ],
             rows: cart.map((l) => [
               l.name,
+              l.type === "regular" ? l.branchName : branchName,
               l.quantity,
               currency.format(l.unitPrice),
               currency.format(l.unitPrice * l.quantity),
