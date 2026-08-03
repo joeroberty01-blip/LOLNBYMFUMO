@@ -1,3 +1,5 @@
+"use client";
+
 import type { PurchaseRow } from "@/lib/data/purchases";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
