@@ -99,6 +99,13 @@ export const en = {
     recordingPurchase: "Recording...",
     noItemsError: "Add at least one item",
     confirmTitle: "Confirm Credit Purchase",
+    customerDebtsTab: "Customer Debts",
+    supplierDebtsTab: "Supplier Debts & Purchases",
+    paymentHistoryTab: "Payment History",
+    paymentType: "Type",
+    recordedBy: "Recorded By",
+    fromCustomer: "From Customer",
+    toSupplier: "To Supplier",
   },
 };
 
@@ -203,5 +210,12 @@ export const sw = {
     recordingPurchase: "Inarekodi...",
     noItemsError: "Ongeza item angalau moja",
     confirmTitle: "Thibitisha Ununuzi wa Deni",
+    customerDebtsTab: "Madeni ya Customers",
+    supplierDebtsTab: "Madeni na Ununuzi wa Suppliers",
+    paymentHistoryTab: "Historia ya Malipo",
+    paymentType: "Aina",
+    recordedBy: "Aliyerekodi",
+    fromCustomer: "Kutoka kwa Customer",
+    toSupplier: "Kwenda kwa Supplier",
   },
 };

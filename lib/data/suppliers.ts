@@ -11,6 +11,29 @@ export type SupplierRow = {
   balance: number;
 };
 
+export type SupplierDebtRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  balance: number;
+};
+
+/** Every supplier currently owed money — the supplier-side mirror of
+ * getCustomersWithDebt (lib/data/reports/customers.ts). */
+export async function getSuppliersWithDebt(): Promise<SupplierDebtRow[]> {
+  const suppliers = await prisma.supplier.findMany({
+    where: { isActive: true, balance: { gt: 0 } },
+    orderBy: { balance: "desc" },
+  });
+
+  return suppliers.map((s) => ({
+    id: s.id,
+    name: s.name,
+    phone: s.phone,
+    balance: s.balance.toNumber(),
+  }));
+}
+
 export async function getSuppliers(page: PageArgs): Promise<Paginated<SupplierRow>> {
   const where = { isActive: true };
   const [rows, total] = await Promise.all([
