@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { creditPurchaseSchema, type CreditPurchaseInput } from "@/lib/validators/purchases";
+import { getPurchaseDetail, type PurchaseDetail } from "@/lib/data/purchases";
 import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true; purchaseId: string } | { success: false; error: string };
@@ -111,9 +112,82 @@ export async function createCreditPurchase(input: CreditPurchaseInput): Promise<
 
     revalidatePath("/dashboard/admin/suppliers");
     revalidatePath("/dashboard/admin/parts");
+    revalidatePath("/dashboard/admin/purchases");
     revalidatePath("/dashboard/admin");
     return { success: true, purchaseId };
   } catch (e) {
     return { success: false, error: (e as Error).message || "Imeshindikana kuandika purchase" };
   }
+}
+
+type SimpleResult = { success: true } | { success: false; error: string };
+
+export async function getPurchaseDetailForView(purchaseId: string): Promise<PurchaseDetail | null> {
+  try {
+    await requireAdmin();
+  } catch {
+    return null;
+  }
+  return getPurchaseDetail(purchaseId);
+}
+
+/**
+ * Fully reverses a credit purchase: takes back each item's quantity from that store's Inventory
+ * and takes the total back off the supplier's balance, then deletes the Purchase (its
+ * PurchaseItems cascade). This is the "delete" action on the Credit Purchases list — it can push
+ * Inventory negative if the stock was already partly sold, which is allowed (same as everywhere
+ * else negative inventory is tolerated in this app).
+ */
+export async function deletePurchase(purchaseId: string): Promise<SimpleResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const purchase = await prisma.purchase.findUnique({
+    where: { id: purchaseId },
+    include: { items: true },
+  });
+  if (!purchase) return { success: false, error: "Purchase haipo" };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of purchase.items) {
+        await tx.inventory.upsert({
+          where: { partId_branchId: { partId: item.partId, branchId: purchase.branchId } },
+          update: { quantity: { decrement: item.quantity } },
+          create: { partId: item.partId, branchId: purchase.branchId, quantity: -item.quantity },
+        });
+      }
+
+      await tx.supplier.update({
+        where: { id: purchase.supplierId },
+        data: { balance: { decrement: purchase.total } },
+      });
+
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "PURCHASE_DELETED",
+        entityType: "Purchase",
+        entityId: purchaseId,
+        metadata: {
+          supplierId: purchase.supplierId,
+          branchId: purchase.branchId,
+          total: purchase.total.toNumber(),
+        },
+      });
+
+      await tx.purchase.delete({ where: { id: purchaseId } });
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kufuta purchase" };
+  }
+
+  revalidatePath("/dashboard/admin/suppliers");
+  revalidatePath("/dashboard/admin/parts");
+  revalidatePath("/dashboard/admin/purchases");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
 }

@@ -16,7 +16,9 @@ export type AuditAction =
   | "EXPENSE_UPDATED"
   | "EXPENSE_DELETED"
   | "USER_CREATED"
-  | "PURCHASE_CREATED";
+  | "PURCHASE_CREATED"
+  | "PURCHASE_UPDATED"
+  | "PURCHASE_DELETED";
 
 export type AuditEntityType =
   | "Sale"

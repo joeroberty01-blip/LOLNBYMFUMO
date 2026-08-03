@@ -1,7 +1,10 @@
+import Link from "next/link";
 import type { SupplierDebtRow } from "@/lib/data/suppliers";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { PaySupplierButton } from "@/components/admin/PaySupplierButton";
+import { ArchiveSupplierButton } from "@/components/admin/ArchiveSupplierButton";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -38,12 +41,25 @@ export function SupplierDebtsTable({
               {currency.format(d.balance)}
             </Td>
             <Td>
-              <PaySupplierButton
-                supplierId={d.id}
-                supplierName={d.name}
-                currentBalance={d.balance}
-                branches={branches}
-              />
+              <div className="flex flex-wrap gap-2">
+                <PaySupplierButton
+                  supplierId={d.id}
+                  supplierName={d.name}
+                  currentBalance={d.balance}
+                  branches={branches}
+                />
+                <Link href={`/dashboard/admin/suppliers/${d.id}`}>
+                  <Button type="button" variant="secondary">
+                    {t.common.view}
+                  </Button>
+                </Link>
+                <Link href={`/dashboard/admin/suppliers/${d.id}/edit`}>
+                  <Button type="button" variant="secondary">
+                    {t.common.edit}
+                  </Button>
+                </Link>
+                <ArchiveSupplierButton supplierId={d.id} />
+              </div>
             </Td>
           </Tr>
         ))}

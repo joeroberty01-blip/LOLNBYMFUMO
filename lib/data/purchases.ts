@@ -46,3 +46,53 @@ export async function getPurchases(page: PageArgs): Promise<Paginated<PurchaseRo
 
   return paginated(mapped, total, page);
 }
+
+export type PurchaseDetail = {
+  id: string;
+  createdAt: Date;
+  dueDate: Date | null;
+  notes: string | null;
+  supplierName: string;
+  branchName: string;
+  total: number;
+  items: { partName: string; partNumber: string; quantity: number; unitCost: number }[];
+};
+
+export async function getPurchaseDetail(id: string): Promise<PurchaseDetail | null> {
+  const purchase = await prisma.purchase.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      createdAt: true,
+      dueDate: true,
+      notes: true,
+      total: true,
+      supplier: { select: { name: true } },
+      branch: { select: { name: true } },
+      items: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+          part: { select: { name: true, partNumber: true } },
+        },
+      },
+    },
+  });
+  if (!purchase) return null;
+
+  return {
+    id: purchase.id,
+    createdAt: purchase.createdAt,
+    dueDate: purchase.dueDate,
+    notes: purchase.notes,
+    supplierName: purchase.supplier.name,
+    branchName: purchase.branch.name,
+    total: purchase.total.toNumber(),
+    items: purchase.items.map((i) => ({
+      partName: i.part.name,
+      partNumber: i.part.partNumber,
+      quantity: i.quantity,
+      unitCost: i.unitPrice.toNumber(),
+    })),
+  };
+}

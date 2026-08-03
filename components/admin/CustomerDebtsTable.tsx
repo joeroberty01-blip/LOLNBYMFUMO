@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { DebtorRow } from "@/lib/data/reports/customers";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
+import { ArchiveCustomerButton } from "@/components/admin/ArchiveCustomerButton";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -48,12 +50,17 @@ export function CustomerDebtsTable({
                   currentBalance={d.balance}
                   branches={branches}
                 />
-                <Link
-                  href={`/dashboard/admin/reports/customers/${d.id}`}
-                  className="text-sm text-accent hover:underline"
-                >
-                  {t.reports.customers.history}
+                <Link href={`/dashboard/admin/customers/${d.id}`}>
+                  <Button type="button" variant="secondary">
+                    {t.common.view}
+                  </Button>
                 </Link>
+                <Link href={`/dashboard/admin/customers/${d.id}/edit`}>
+                  <Button type="button" variant="secondary">
+                    {t.common.edit}
+                  </Button>
+                </Link>
+                <ArchiveCustomerButton customerId={d.id} />
               </div>
             </Td>
           </Tr>
