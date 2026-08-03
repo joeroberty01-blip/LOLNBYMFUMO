@@ -14,6 +14,7 @@ export const en = {
   manualItems: "Manual Items",
   bulkUpload: "Bulk Upload",
   stores: "Stores",
+  creditPurchases: "Credit Purchases",
 };
 
 export const sw = {
@@ -32,4 +33,5 @@ export const sw = {
   manualItems: "Manual Items",
   bulkUpload: "Pakia kwa Wingi",
   stores: "Stores",
+  creditPurchases: "Credit Purchases",
 };

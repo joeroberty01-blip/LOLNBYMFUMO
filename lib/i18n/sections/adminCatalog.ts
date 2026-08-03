@@ -73,6 +73,8 @@ export const en = {
     confirmAndCreate: "Confirm and Create Part",
   },
   purchases: {
+    subtitle: "Record stock bought from suppliers on credit",
+    empty: "No credit purchases recorded yet.",
     newCreditPurchase: "+ New Credit Purchase",
     title: "New Credit Purchase",
     supplierName: "Supplier Name",
@@ -175,6 +177,8 @@ export const sw = {
     confirmAndCreate: "Thibitisha na Unda Part",
   },
   purchases: {
+    subtitle: "Rekodi stock iliyonunuliwa kwa supplier kwa mkopo (deni)",
+    empty: "Hakuna credit purchases zilizorekodiwa bado.",
     newCreditPurchase: "+ Ununuzi Mpya wa Deni",
     title: "Ununuzi Mpya wa Deni (Credit Purchase)",
     supplierName: "Jina la Supplier",
