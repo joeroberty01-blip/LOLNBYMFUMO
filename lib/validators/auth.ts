@@ -60,3 +60,18 @@ export const adminCreateUserSchema = z
     path: ["confirmPassword"],
   });
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+
+/** Used by an admin to edit an existing Admin/Sales Staff account's name/email, and optionally
+ * reset their password. Password fields are left blank to keep the current password unchanged. */
+export const editUserSchema = z
+  .object({
+    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    email,
+    password: z.union([password, z.literal("")]).optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .refine((data) => (data.password || "") === (data.confirmPassword || ""), {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+export type EditUserInput = z.infer<typeof editUserSchema>;

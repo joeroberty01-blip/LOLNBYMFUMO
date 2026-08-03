@@ -6,3 +6,6 @@ export const storeSchema = z.object({
   isSellingPoint: z.coerce.boolean(),
 });
 export type StoreInput = z.infer<typeof storeSchema>;
+
+export const editStoreSchema = storeSchema.pick({ name: true, location: true });
+export type EditStoreInput = z.infer<typeof editStoreSchema>;

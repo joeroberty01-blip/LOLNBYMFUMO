@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { storeSchema, type StoreInput } from "@/lib/validators/branches";
+import { storeSchema, editStoreSchema, type StoreInput, type EditStoreInput } from "@/lib/validators/branches";
 import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -49,6 +49,56 @@ export async function createStore(input: StoreInput): Promise<ActionResult> {
   });
 
   revalidatePath("/dashboard/admin/stores");
+  return { success: true };
+}
+
+/** Renames/relocates a store. Never touches isSellingPoint/isActive — those have their own
+ * dedicated actions below. */
+export async function updateStore(
+  branchId: string,
+  input: EditStoreInput
+): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const parsed = editStoreSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+  }
+
+  const duplicate = await prisma.branch.findFirst({
+    where: { id: { not: branchId }, name: { equals: parsed.data.name, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (duplicate) {
+    return { success: false, error: `Store "${parsed.data.name}" ipo tayari` };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const branch = await tx.branch.update({
+        where: { id: branchId },
+        data: { name: parsed.data.name, location: parsed.data.location },
+        select: { id: true, name: true, location: true },
+      });
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "STORE_UPDATED",
+        entityType: "Branch",
+        entityId: branch.id,
+        metadata: { name: branch.name, location: branch.location },
+      });
+    });
+  } catch {
+    return { success: false, error: "Store haipo" };
+  }
+
+  revalidatePath("/dashboard/admin/stores");
+  revalidatePath("/dashboard/sales/pos");
   return { success: true };
 }
 

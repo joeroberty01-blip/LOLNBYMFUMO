@@ -195,9 +195,16 @@ export function SalesStaffTable({
                 <p className="truncate font-medium text-primary">{a.name}</p>
                 <p className="truncate text-sm text-secondary">{a.email}</p>
               </div>
-              <p className="shrink-0 text-xs text-secondary">
-                {t.adminOps.salesStaff.admins.since} {a.createdAt.toLocaleDateString()}
-              </p>
+              <div className="flex shrink-0 items-center gap-3">
+                <p className="text-xs text-secondary">
+                  {t.adminOps.salesStaff.admins.since} {a.createdAt.toLocaleDateString()}
+                </p>
+                <Link href={`/dashboard/admin/sales-staff/${a.id}/edit`}>
+                  <Button type="button" variant="secondary">
+                    {t.common.edit}
+                  </Button>
+                </Link>
+              </div>
             </Card>
           ))}
         </div>
@@ -222,6 +229,11 @@ export function SalesStaffTable({
             <Link href={`/dashboard/admin/sales-staff/${s.id}`}>
               <Button type="button" variant="secondary">
                 {t.common.view}
+              </Button>
+            </Link>
+            <Link href={`/dashboard/admin/sales-staff/${s.id}/edit`}>
+              <Button type="button" variant="secondary">
+                {t.common.edit}
               </Button>
             </Link>
 

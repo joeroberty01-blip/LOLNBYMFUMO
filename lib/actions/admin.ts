@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { adminCreateUserSchema, type AdminCreateUserInput } from "@/lib/validators/auth";
+import {
+  adminCreateUserSchema,
+  editUserSchema,
+  type AdminCreateUserInput,
+  type EditUserInput,
+} from "@/lib/validators/auth";
 import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -93,6 +98,49 @@ export async function createUserByAdmin(input: AdminCreateUserInput): Promise<Ac
   }
 
   revalidatePath("/dashboard/admin/sales-staff");
+  return { success: true };
+}
+
+export async function updateUser(userId: string, input: EditUserInput): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const parsed = editUserSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  }
+  const { name, email, password } = parsed.data;
+
+  const existingEmail = await prisma.user.findFirst({ where: { email, id: { not: userId } } });
+  if (existingEmail) {
+    return { success: false, error: "This email is already in use" };
+  }
+
+  const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: { name, email, ...(passwordHash ? { passwordHash } : {}) },
+      });
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "USER_UPDATED",
+        entityType: "User",
+        entityId: user.id,
+        metadata: { name, email, passwordChanged: Boolean(passwordHash) },
+      });
+    });
+  } catch {
+    return { success: false, error: "Mtumiaji huyu hayupo tena (huenda ameshafutwa)" };
+  }
+
+  revalidatePath("/dashboard/admin/sales-staff");
+  revalidatePath(`/dashboard/admin/sales-staff/${userId}`);
   return { success: true };
 }
 

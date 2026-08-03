@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { createStore, setStoreSellingPoint, setStoreActive } from "@/lib/actions/branches";
-import { storeSchema } from "@/lib/validators/branches";
+import { createStore, updateStore, setStoreSellingPoint, setStoreActive } from "@/lib/actions/branches";
+import { storeSchema, editStoreSchema } from "@/lib/validators/branches";
 import type { StoreRow } from "@/lib/data/branches";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -18,6 +18,8 @@ export function StoresTable({ stores }: { stores: StoreRow[] }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<StoreRow | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [pendingToggle, setPendingToggle] = useState<StoreRow | null>(null);
   const [pendingArchive, setPendingArchive] = useState<StoreRow | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -33,6 +35,15 @@ export function StoresTable({ stores }: { stores: StoreRow[] }) {
     defaultValues: { name: "", location: "", isSellingPoint: false },
   });
 
+  const {
+    register: registerEdit,
+    handleSubmit: handleEditSubmit,
+    reset: resetEdit,
+    formState: { errors: editErrors, isSubmitting: isEditSubmitting },
+  } = useForm<z.input<typeof editStoreSchema>, unknown, z.output<typeof editStoreSchema>>({
+    resolver: zodResolver(editStoreSchema),
+  });
+
   const onSubmit = handleSubmit(async (data) => {
     setFormError(null);
     const result = await createStore(data);
@@ -42,6 +53,24 @@ export function StoresTable({ stores }: { stores: StoreRow[] }) {
     }
     reset();
     setAddOpen(false);
+    router.refresh();
+  });
+
+  function openEdit(store: StoreRow) {
+    setEditError(null);
+    resetEdit({ name: store.name, location: store.location });
+    setEditing(store);
+  }
+
+  const onEditSubmit = handleEditSubmit(async (data) => {
+    if (!editing) return;
+    setEditError(null);
+    const result = await updateStore(editing.id, data);
+    if (!result.success) {
+      setEditError(result.error);
+      return;
+    }
+    setEditing(null);
     router.refresh();
   });
 
@@ -114,6 +143,9 @@ export function StoresTable({ stores }: { stores: StoreRow[] }) {
               <Td className="text-right tabular-nums">{s.totalStock}</Td>
               <Td>
                 <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => openEdit(s)}>
+                    Edit
+                  </Button>
                   {s.isActive && (
                     <Button type="button" variant="secondary" onClick={() => setPendingToggle(s)}>
                       {s.isSellingPoint ? "Make Warehouse-Only" : "Make Selling Point"}
@@ -163,6 +195,41 @@ export function StoresTable({ stores }: { stores: StoreRow[] }) {
                 </Button>
                 <Button type="submit" variant="primary" disabled={isSubmitting}>
                   {isSubmitting ? "Saving..." : "Add Store"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-card border border-border bg-surface-elevated p-5">
+            <h2 className="mb-4 font-medium text-primary">Edit Store</h2>
+            <form onSubmit={onEditSubmit} className="flex flex-col gap-3">
+              <div>
+                <Label>Name</Label>
+                <Input {...registerEdit("name")} />
+                {editErrors.name && (
+                  <p className="mt-1 text-sm text-danger">{editErrors.name.message}</p>
+                )}
+              </div>
+              <div>
+                <Label>Location</Label>
+                <Input {...registerEdit("location")} />
+                {editErrors.location && (
+                  <p className="mt-1 text-sm text-danger">{editErrors.location.message}</p>
+                )}
+              </div>
+
+              {editError && <p className="text-sm text-danger">{editError}</p>}
+
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" disabled={isEditSubmitting}>
+                  {isEditSubmitting ? "Saving..." : "Save"}
                 </Button>
               </div>
             </form>

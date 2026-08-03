@@ -54,11 +54,18 @@ export default async function SalesStaffDetailPage({
             {staff.email} · Joined {staff.createdAt.toLocaleDateString("sw-TZ")}
           </p>
         </div>
-        <Link href={`/dashboard/admin/sales?userId=${staff.id}`}>
-          <Button type="button" variant="secondary">
-            View Sales
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/dashboard/admin/sales-staff/${staff.id}/edit`}>
+            <Button type="button" variant="secondary">
+              Edit
+            </Button>
+          </Link>
+          <Link href={`/dashboard/admin/sales?userId=${staff.id}`}>
+            <Button type="button" variant="secondary">
+              View Sales
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <p className="mb-3 text-sm text-secondary">Performance — {range.label}</p>
