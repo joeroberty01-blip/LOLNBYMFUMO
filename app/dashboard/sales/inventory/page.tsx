@@ -30,12 +30,7 @@ export default async function SalesInventoryPage({
     <div>
       <h1 className="mb-6 text-xl font-semibold text-primary">{t.nav.inventory}</h1>
 
-      <PartsFilterBar
-        action="/dashboard/sales/inventory"
-        categories={categories}
-        q={q}
-        category={category}
-      />
+      <PartsFilterBar categories={categories} />
 
       <InventoryTable rows={inventory.rows} />
 

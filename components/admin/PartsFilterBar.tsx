@@ -1,27 +1,66 @@
-import { getServerDictionary } from "@/lib/i18n/server";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Input, Select } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
 
 type Props = {
-  action: string;
   categories: string[];
-  q?: string;
-  category?: string;
 };
 
-export async function PartsFilterBar({ action, categories, q, category }: Props) {
-  const { t } = await getServerDictionary();
+/** Live search: the text box updates the URL (and re-renders the Server Component table) a
+ * short beat after the admin stops typing, instead of waiting for a form submit / Enter press. */
+const DEBOUNCE_MS = 300;
+
+export function PartsFilterBar({ categories }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const t = useTranslations();
+
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  function updateParams(updates: Record<string, string | undefined>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    }
+    params.delete("page");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function handleQChange(value: string) {
+    setQ(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updateParams({ q: value }), DEBOUNCE_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   return (
-    <form action={action} method="GET" className="mb-6 flex flex-wrap gap-2">
+    <div className="mb-6 flex flex-wrap gap-2">
       <Input
         type="text"
-        name="q"
         placeholder={t.adminCatalog.parts.searchPlaceholder}
-        defaultValue={q}
+        value={q}
+        onChange={(e) => handleQChange(e.target.value)}
         className="min-w-[200px] flex-1"
       />
-      <Select name="category" defaultValue={category ?? ""} className="w-auto">
+      <Select
+        defaultValue={searchParams.get("category") ?? ""}
+        onChange={(e) => updateParams({ category: e.target.value })}
+        className="w-auto"
+      >
         <option value="">{t.adminCatalog.parts.allCategories}</option>
         {categories.map((c) => (
           <option key={c} value={c}>
@@ -29,9 +68,6 @@ export async function PartsFilterBar({ action, categories, q, category }: Props)
           </option>
         ))}
       </Select>
-      <Button type="submit" variant="secondary">
-        {t.common.search}
-      </Button>
-    </form>
+    </div>
   );
 }

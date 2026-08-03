@@ -51,12 +51,7 @@ export default async function AdminPartsPage({
         </div>
       </div>
 
-      <PartsFilterBar
-        action="/dashboard/admin/parts"
-        categories={categories}
-        q={q}
-        category={category}
-      />
+      <PartsFilterBar categories={categories} />
 
       <PartsTable rows={parts.rows} branches={branches} />
 
