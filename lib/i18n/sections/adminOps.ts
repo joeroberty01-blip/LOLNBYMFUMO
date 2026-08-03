@@ -118,6 +118,18 @@ export const en = {
     title: "All Sales",
     convert: "Convert",
   },
+  auditLogs: {
+    title: "Audit Logs",
+    subtitle: "A record of every important action taken in the system — who did what, and when.",
+    empty: "No audit logs yet.",
+    allActions: "All actions",
+    allEntityTypes: "All types",
+    action: "Action",
+    entityType: "Type",
+    entityId: "Entity ID",
+    performedBy: "Performed By",
+    details: "Details",
+  },
 };
 
 export const sw = {
@@ -239,5 +251,17 @@ export const sw = {
   salesList: {
     title: "Mauzo Yote",
     convert: "Badilisha",
+  },
+  auditLogs: {
+    title: "Audit Logs",
+    subtitle: "Kumbukumbu ya kila kitendo muhimu kilichofanyika kwenye mfumo — nani alifanya nini, na lini.",
+    empty: "Hakuna audit logs bado.",
+    allActions: "Vitendo vyote",
+    allEntityTypes: "Aina zote",
+    action: "Kitendo",
+    entityType: "Aina",
+    entityId: "Entity ID",
+    performedBy: "Aliyefanya",
+    details: "Maelezo",
   },
 };

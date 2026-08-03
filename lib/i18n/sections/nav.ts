@@ -15,6 +15,7 @@ export const en = {
   bulkUpload: "Bulk Upload",
   stores: "Stores",
   creditPurchases: "Credit Purchases",
+  auditLogs: "Audit Logs",
 };
 
 export const sw = {
@@ -34,4 +35,5 @@ export const sw = {
   bulkUpload: "Pakia kwa Wingi",
   stores: "Stores",
   creditPurchases: "Credit Purchases",
+  auditLogs: "Audit Logs",
 };
