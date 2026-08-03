@@ -34,6 +34,28 @@ export async function createPart(input: PartInput): Promise<ActionResult> {
   return { success: true };
 }
 
+type CreatePartResult = { success: true; partId: string } | { success: false; error: string };
+
+/** Same as createPart, but returns the new id — used where the caller needs to immediately
+ * reference the part it just created, e.g. selecting it in a Credit Purchase item row. */
+export async function createPartQuick(input: PartInput): Promise<CreatePartResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const parsed = partSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+  }
+
+  const part = await prisma.part.create({ data: parsed.data });
+  revalidatePath("/dashboard/admin/parts");
+  revalidatePath("/dashboard/sales/inventory");
+  return { success: true, partId: part.id };
+}
+
 export async function updatePart(partId: string, input: PartInput): Promise<ActionResult> {
   try {
     await requireAdmin();

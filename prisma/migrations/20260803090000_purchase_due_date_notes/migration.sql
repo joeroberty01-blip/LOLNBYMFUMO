@@ -1,0 +1,2 @@
+ALTER TABLE "Purchase" ADD COLUMN "dueDate" TIMESTAMP(3);
+ALTER TABLE "Purchase" ADD COLUMN "notes" TEXT;

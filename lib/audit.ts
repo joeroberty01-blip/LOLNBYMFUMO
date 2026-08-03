@@ -15,7 +15,8 @@ export type AuditAction =
   | "EXPENSE_CREATED"
   | "EXPENSE_UPDATED"
   | "EXPENSE_DELETED"
-  | "USER_CREATED";
+  | "USER_CREATED"
+  | "PURCHASE_CREATED";
 
 export type AuditEntityType =
   | "Sale"
@@ -25,7 +26,8 @@ export type AuditEntityType =
   | "CustomerPayment"
   | "Expense"
   | "Branch"
-  | "User";
+  | "User"
+  | "Purchase";
 
 /**
  * Writes one audit log row inside the same transaction as the operation it's recording, so the

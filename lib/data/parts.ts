@@ -18,6 +18,25 @@ function buildWhere(filters: PartFilters): Prisma.PartWhereInput {
   return where;
 }
 
+export type PartLite = {
+  id: string;
+  partNumber: string;
+  name: string;
+  costPrice: number;
+};
+
+/** Full unpaginated list of active parts (id/partNumber/name/costPrice only) — for client-side
+ * search pickers, e.g. the Credit Purchase item picker, where the admin needs to find any part
+ * by typing rather than paging through the catalog. */
+export async function getAllActivePartsLite(): Promise<PartLite[]> {
+  const parts = await prisma.part.findMany({
+    where: { isActive: true },
+    select: { id: true, partNumber: true, name: true, costPrice: true },
+    orderBy: { name: "asc" },
+  });
+  return parts.map((p) => ({ ...p, costPrice: p.costPrice.toNumber() }));
+}
+
 export type AdminPartRow = {
   partId: string;
   name: string;
