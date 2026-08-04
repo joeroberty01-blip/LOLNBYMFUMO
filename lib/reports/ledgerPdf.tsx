@@ -1,7 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import type { LedgerReport } from "@/lib/data/reports/ledger";
 
-const BLUE = "#2563eb";
 const RED = "#dc2626";
 const BLACK = "#000000";
 const GRAY = "#555555";
@@ -124,7 +123,7 @@ function LedgerPdfDocument({ ledger }: { ledger: LedgerReport }) {
               return (
                 <Row
                   key={entry.id}
-                  color={isSale ? BLUE : RED}
+                  color={isSale ? BLACK : RED}
                   amountColor={isSale ? BLACK : RED}
                   indent={12}
                   cells={[
@@ -177,7 +176,7 @@ function LedgerPdfDocument({ ledger }: { ledger: LedgerReport }) {
               fontWeight: 700,
               flex: COLS.amount,
               textAlign: "right",
-              color: ledger.netProfit < 0 ? RED : BLUE,
+              color: ledger.netProfit < 0 ? RED : BLACK,
             }}
           >
             {fmt(ledger.netProfit)}

@@ -122,7 +122,7 @@ export default async function ReportsPage({
                     {section.entries.map((entry) => (
                       <tr
                         key={entry.id}
-                        className={entry.type === "EXPENSE" ? "text-danger" : "text-accent"}
+                        className={entry.type === "EXPENSE" ? "text-danger" : "text-primary"}
                       >
                         <td className="px-1 py-0.5 pl-4 whitespace-nowrap">
                           {entry.type === "SALE" ? t.reports.ledger.salesReceipt : t.reports.ledger.check}
@@ -132,11 +132,7 @@ export default async function ReportsPage({
                         <td className="px-1 py-0.5">{entry.name || ""}</td>
                         <td className="px-1 py-0.5">{entry.memo || ""}</td>
                         <td className="px-1 py-0.5">{entry.split}</td>
-                        <td
-                          className={`px-1 py-0.5 text-right tabular-nums ${
-                            entry.type === "SALE" ? "text-primary" : ""
-                          }`}
-                        >
+                        <td className="px-1 py-0.5 text-right tabular-nums">
                           {formatSigned(entry.amount)}
                         </td>
                       </tr>
@@ -180,7 +176,7 @@ export default async function ReportsPage({
                   </td>
                   <td
                     className={`px-1 pt-1 text-right tabular-nums ${
-                      ledger.netProfit < 0 ? "text-danger" : "text-accent"
+                      ledger.netProfit < 0 ? "text-danger" : "text-primary"
                     }`}
                   >
                     {formatSigned(ledger.netProfit)}
