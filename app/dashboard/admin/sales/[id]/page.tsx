@@ -44,11 +44,20 @@ export default async function SaleDetailPage({
           </div>
           <p className="text-sm text-secondary">{sale.createdAt.toLocaleString("sw-TZ")}</p>
         </div>
-        <Link href={`/dashboard/sales/receipt/${sale.id}`}>
-          <Button type="button" variant="secondary">
-            Receipt
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          {sale.status !== "VOIDED" && (
+            <Link href={`/dashboard/admin/sales/${sale.id}/edit`}>
+              <Button type="button" variant="secondary">
+                Edit
+              </Button>
+            </Link>
+          )}
+          <Link href={`/dashboard/sales/receipt/${sale.id}`}>
+            <Button type="button" variant="secondary">
+              Receipt
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

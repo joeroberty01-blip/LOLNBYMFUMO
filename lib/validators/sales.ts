@@ -48,6 +48,24 @@ export const completeSaleSchema = z.object({
 });
 export type CompleteSaleInput = z.infer<typeof completeSaleSchema>;
 
+/** Editing an existing sale is deliberately narrower than creating one: the part/branch on each
+ * line stays fixed (only quantity/unitPrice can change), and no items can be added or removed —
+ * changing which parts were sold after the fact is exactly what void + a new sale is for. */
+export const editSaleItemSchema = z.object({
+  itemId: z.string().min(1),
+  quantity: z.coerce.number().int().positive("Weka quantity zaidi ya 0"),
+  unitPrice: z.coerce.number().positive("Weka bei zaidi ya 0"),
+});
+
+export const editSaleSchema = z.object({
+  createdAt: z.string().min(1, "Chagua tarehe na muda"),
+  customerId: z.string().min(1, "Chagua customer"),
+  paymentMethod: z.enum(paymentMethods),
+  isCredit: z.boolean(),
+  items: z.array(editSaleItemSchema).min(1),
+});
+export type EditSaleInput = z.infer<typeof editSaleSchema>;
+
 export const manualItemFormSchema = z.object({
   manualItemName: z.string().trim().min(1, "Enter the product name"),
   manualPartNumber: z

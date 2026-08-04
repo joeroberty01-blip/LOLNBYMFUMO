@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { completeSaleSchema, type CompleteSaleInput } from "@/lib/validators/sales";
+import {
+  completeSaleSchema,
+  editSaleSchema,
+  type CompleteSaleInput,
+  type EditSaleInput,
+} from "@/lib/validators/sales";
 import {
   getBranchInventoryForPOS,
   getAllStoresInventoryForPOS,
@@ -207,6 +212,111 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
+}
+
+/**
+ * Edits a sale's date, customer, payment method, credit flag, and each existing line's
+ * quantity/unit price. Reverses the old inventory/customer-balance effects for whatever changed
+ * and reapplies the new ones, inside one transaction — same reverse-then-reapply shape as
+ * updatePurchase. Cannot edit a voided sale (void it and record a new one instead), and cannot
+ * add/remove/re-part a line (that's also a void + new sale).
+ */
+export async function updateSale(saleId: string, input: EditSaleInput): Promise<ActionResult> {
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return { success: false, error: "You are not authorized to do this" };
+  }
+
+  const parsed = editSaleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  }
+  const { createdAt, customerId, paymentMethod, isCredit, items } = parsed.data;
+
+  const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
+  if (!sale) return { success: false, error: "Sale not found" };
+  if (sale.status === "VOIDED") {
+    return { success: false, error: "Cannot edit a voided sale" };
+  }
+
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer) return { success: false, error: "Customer not found" };
+
+  const itemMap = new Map(sale.items.map((i) => [i.id, i]));
+  if (items.length !== sale.items.length || items.some((it) => !itemMap.has(it.itemId))) {
+    return { success: false, error: "Item mismatch — reload the page and try again" };
+  }
+
+  const newTotal = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const parsedDate = new Date(createdAt);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return { success: false, error: "Invalid date" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const it of items) {
+        const existing = itemMap.get(it.itemId)!;
+        if (!existing.isManualEntry && existing.partId) {
+          const delta = it.quantity - existing.quantity;
+          if (delta !== 0) {
+            const branchId = existing.sourceBranchId ?? sale.branchId;
+            await tx.inventory.upsert({
+              where: { partId_branchId: { partId: existing.partId, branchId } },
+              update: { quantity: { decrement: delta } },
+              create: { partId: existing.partId, branchId, quantity: -delta },
+            });
+          }
+        }
+        await tx.saleItem.update({
+          where: { id: it.itemId },
+          data: { quantity: it.quantity, unitPrice: it.unitPrice },
+        });
+      }
+
+      if (sale.isCredit && sale.customerId) {
+        await tx.customer.update({
+          where: { id: sale.customerId },
+          data: { balance: { decrement: sale.total } },
+        });
+      }
+      if (isCredit) {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { balance: { increment: newTotal } },
+        });
+      }
+
+      await tx.sale.update({
+        where: { id: saleId },
+        data: { createdAt: parsedDate, customerId, paymentMethod, isCredit, total: newTotal },
+      });
+
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "SALE_UPDATED",
+        entityType: "Sale",
+        entityId: saleId,
+        metadata: {
+          previousTotal: sale.total.toNumber(),
+          total: newTotal,
+          previousCustomerId: sale.customerId,
+          customerId,
+          previousIsCredit: sale.isCredit,
+          isCredit,
+        },
+      });
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kuhariri sale" };
+  }
+
+  revalidatePath("/dashboard/sales/history");
+  revalidatePath("/dashboard/admin/sales");
+  revalidatePath(`/dashboard/admin/sales/${saleId}`);
+  revalidatePath("/dashboard/admin/customers");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
 }
 
 export async function voidSale(saleId: string): Promise<ActionResult> {

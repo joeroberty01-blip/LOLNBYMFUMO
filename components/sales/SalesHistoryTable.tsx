@@ -120,6 +120,13 @@ export function SalesHistoryTable({
                         </Button>
                       </Link>
                     )}
+                    {isAdmin && row.status !== "VOIDED" && (
+                      <Link href={`/dashboard/admin/sales/${row.id}/edit`}>
+                        <Button type="button" variant="secondary">
+                          {t.common.edit}
+                        </Button>
+                      </Link>
+                    )}
                     <Link href={`/dashboard/sales/receipt/${row.id}`}>
                       <Button type="button" variant="secondary">
                         {t.sales.receipt.viewReceipt}

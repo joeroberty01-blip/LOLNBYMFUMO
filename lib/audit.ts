@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 
 export type AuditAction =
   | "SALE_COMPLETED"
+  | "SALE_UPDATED"
   | "SALE_VOIDED"
   | "STOCK_ADJUSTED"
   | "MANUAL_ITEM_CONVERTED"
