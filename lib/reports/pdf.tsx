@@ -1,15 +1,15 @@
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
-  page: { padding: 32, fontSize: 10, fontFamily: "Helvetica" },
-  title: { fontSize: 18, fontWeight: 700, marginBottom: 2 },
-  subtitle: { fontSize: 10, color: "#555555", marginBottom: 2 },
-  generatedAt: { fontSize: 8, color: "#888888", marginBottom: 16 },
-  summaryRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16, gap: 16 },
-  summaryItem: { marginRight: 24, marginBottom: 8 },
-  summaryLabel: { fontSize: 8, color: "#555555" },
-  summaryValue: { fontSize: 13, fontWeight: 700 },
-  tableTitle: { fontSize: 12, fontWeight: 700, marginTop: 12, marginBottom: 6 },
+  page: { padding: 24, fontSize: 8, fontFamily: "Helvetica" },
+  title: { fontSize: 16, fontWeight: 700, marginBottom: 2 },
+  subtitle: { fontSize: 9, color: "#555555", marginBottom: 2 },
+  generatedAt: { fontSize: 7, color: "#888888", marginBottom: 12 },
+  summaryRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12, gap: 12 },
+  summaryItem: { marginRight: 20, marginBottom: 6 },
+  summaryLabel: { fontSize: 7, color: "#555555" },
+  summaryValue: { fontSize: 11, fontWeight: 700 },
+  tableTitle: { fontSize: 10, fontWeight: 700, marginTop: 8, marginBottom: 4 },
   table: { display: "flex", width: "auto" },
   tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#dddddd" },
   tableHeaderRow: {
@@ -18,8 +18,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#000000",
     backgroundColor: "#f2f2f2",
   },
-  tableCell: { padding: 4, flex: 1, fontSize: 9 },
-  tableHeaderCell: { padding: 4, flex: 1, fontSize: 9, fontWeight: 700 },
+  tableCell: { padding: 2, flex: 1, fontSize: 7 },
+  tableHeaderCell: { padding: 2, flex: 1, fontSize: 7, fontWeight: 700 },
 });
 
 export type PdfTable = {

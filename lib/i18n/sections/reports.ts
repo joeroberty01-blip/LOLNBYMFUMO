@@ -7,6 +7,8 @@ export const en = {
   },
   ledger: {
     title: "Report",
+    subtitle: "Account QuickReport",
+    groupTitle: "CASH AND BANK BALANCES",
     otherReports: "Other Reports",
     totalPrefix: "Total",
     totalSales: "Total Sales",
@@ -158,6 +160,8 @@ export const sw = {
     split: "Split",
     salesReceipt: "Sales Receipt",
     check: "Check",
+    subtitle: "Account QuickReport",
+    groupTitle: "CASH AND BANK BALANCES",
   },
   sales: {
     title: "Sales Report",

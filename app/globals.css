@@ -142,4 +142,16 @@ body {
   thead {
     display: table-header-group;
   }
+
+  /* The ledger report is long (every sale + expense in the period) — shrink it so a normal
+     month fits on one printed page instead of spilling across many. */
+  .ledger-report {
+    font-size: 7px !important;
+    padding: 8px !important;
+  }
+
+  .ledger-report th,
+  .ledger-report td {
+    padding: 1px 3px !important;
+  }
 }
