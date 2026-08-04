@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { creditPurchaseSchema, type CreditPurchaseInput } from "@/lib/validators/purchases";
+import {
+  creditPurchaseSchema,
+  editPurchaseSchema,
+  type CreditPurchaseInput,
+  type EditPurchaseInput,
+} from "@/lib/validators/purchases";
 import { getPurchaseDetail, type PurchaseDetail } from "@/lib/data/purchases";
 import { logAudit } from "@/lib/audit";
 
@@ -129,6 +134,102 @@ export async function getPurchaseDetailForView(purchaseId: string): Promise<Purc
     return null;
   }
   return getPurchaseDetail(purchaseId);
+}
+
+/**
+ * Edits a purchase's due date, notes, and items. Supplier and branch cannot be changed here (see
+ * editPurchaseSchema). Reverses the purchase's old inventory/supplier-balance effects and
+ * reapplies the new ones inside one transaction, then swaps out the PurchaseItems — same
+ * reverse-then-reapply shape as createCreditPurchase + deletePurchase combined.
+ */
+export async function updatePurchase(
+  purchaseId: string,
+  input: EditPurchaseInput
+): Promise<SimpleResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const parsed = editPurchaseSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+  }
+  const { dueDate, notes, items } = parsed.data;
+
+  const purchase = await prisma.purchase.findUnique({ where: { id: purchaseId }, include: { items: true } });
+  if (!purchase) return { success: false, error: "Purchase haipo" };
+
+  const partIds = items.map((i) => i.partId);
+  const parts = await prisma.part.findMany({ where: { id: { in: partIds } }, select: { id: true } });
+  if (parts.length !== new Set(partIds).size) {
+    return { success: false, error: "Baadhi ya products hazipo tena" };
+  }
+
+  const newTotal = items.reduce((sum, it) => sum + it.quantity * it.unitCost, 0);
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of purchase.items) {
+        await tx.inventory.upsert({
+          where: { partId_branchId: { partId: item.partId, branchId: purchase.branchId } },
+          update: { quantity: { decrement: item.quantity } },
+          create: { partId: item.partId, branchId: purchase.branchId, quantity: -item.quantity },
+        });
+      }
+      await tx.supplier.update({
+        where: { id: purchase.supplierId },
+        data: { balance: { decrement: purchase.total } },
+      });
+
+      await tx.purchaseItem.deleteMany({ where: { purchaseId } });
+      await tx.purchase.update({
+        where: { id: purchaseId },
+        data: {
+          total: newTotal,
+          dueDate: dueDate ? new Date(`${dueDate}T00:00:00`) : null,
+          notes: notes ?? null,
+          items: {
+            create: items.map((it) => ({
+              partId: it.partId,
+              quantity: it.quantity,
+              unitPrice: it.unitCost,
+            })),
+          },
+        },
+      });
+
+      for (const item of items) {
+        await tx.inventory.upsert({
+          where: { partId_branchId: { partId: item.partId, branchId: purchase.branchId } },
+          update: { quantity: { increment: item.quantity } },
+          create: { partId: item.partId, branchId: purchase.branchId, quantity: item.quantity },
+        });
+      }
+      await tx.supplier.update({
+        where: { id: purchase.supplierId },
+        data: { balance: { increment: newTotal } },
+      });
+
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "PURCHASE_UPDATED",
+        entityType: "Purchase",
+        entityId: purchaseId,
+        metadata: { supplierId: purchase.supplierId, branchId: purchase.branchId, total: newTotal },
+      });
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kuhariri purchase" };
+  }
+
+  revalidatePath("/dashboard/admin/suppliers");
+  revalidatePath("/dashboard/admin/parts");
+  revalidatePath("/dashboard/admin/purchases");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
 }
 
 /**

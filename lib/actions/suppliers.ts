@@ -137,3 +137,46 @@ export async function recordSupplierPayment(input: RecordPaymentInput): Promise<
   revalidatePath("/dashboard/admin");
   return { success: true };
 }
+
+/**
+ * Reverses a recorded supplier payment: puts the amount back on the supplier's balance, deletes
+ * the auto-generated Expense it created (see recordSupplierPayment), and deletes the
+ * SupplierPayment row itself.
+ */
+export async function deleteSupplierPayment(paymentId: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const payment = await prisma.supplierPayment.findUnique({ where: { id: paymentId } });
+  if (!payment) return { success: false, error: "Malipo haya hayapo" };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.supplier.update({
+        where: { id: payment.supplierId },
+        data: { balance: { increment: payment.amount } },
+      });
+      await tx.expense.deleteMany({ where: { relatedSupplierPaymentId: paymentId } });
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "SUPPLIER_PAYMENT_DELETED",
+        entityType: "SupplierPayment",
+        entityId: paymentId,
+        metadata: { supplierId: payment.supplierId, amount: payment.amount.toNumber() },
+      });
+      await tx.supplierPayment.delete({ where: { id: paymentId } });
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kufuta malipo" };
+  }
+
+  revalidatePath("/dashboard/admin/suppliers");
+  revalidatePath("/dashboard/admin/expenses");
+  revalidatePath("/dashboard/admin/purchases");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}

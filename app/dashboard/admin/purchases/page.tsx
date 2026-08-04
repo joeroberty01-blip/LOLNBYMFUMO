@@ -95,7 +95,7 @@ export default async function CreditPurchasesPage({
             <h2 className="mb-3 text-sm font-semibold text-primary">
               {t.adminCatalog.purchases.title}
             </h2>
-            <PurchasesTable rows={purchases.rows} />
+            <PurchasesTable rows={purchases.rows} parts={parts} />
             <Pagination
               baseHref="/dashboard/admin/purchases"
               params={{ pageSize, tab: "suppliers" }}

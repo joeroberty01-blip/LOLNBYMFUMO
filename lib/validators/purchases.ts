@@ -24,3 +24,13 @@ export const creditPurchaseSchema = z.object({
   items: z.array(purchaseItemSchema).min(1, "Ongeza item angalau moja"),
 });
 export type CreditPurchaseInput = z.infer<typeof creditPurchaseSchema>;
+
+/** Editing a purchase only touches its due date, notes, and items — supplier and branch stay
+ * fixed (changing either would mean reversing effects against one party/store and reapplying
+ * against another, which is exactly what Delete + a new Credit Purchase already does). */
+export const editPurchaseSchema = z.object({
+  dueDate: optionalText,
+  notes: optionalText,
+  items: z.array(purchaseItemSchema).min(1, "Ongeza item angalau moja"),
+});
+export type EditPurchaseInput = z.infer<typeof editPurchaseSchema>;

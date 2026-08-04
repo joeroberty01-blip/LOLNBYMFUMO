@@ -3,19 +3,22 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PurchaseRow } from "@/lib/data/purchases";
+import type { PartLite } from "@/lib/data/parts";
 import { deletePurchase } from "@/lib/actions/purchases";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PurchaseDetailModal } from "@/components/admin/PurchaseDetailModal";
+import { EditPurchaseModal } from "@/components/admin/EditPurchaseModal";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
-export function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
+export function PurchasesTable({ rows, parts }: { rows: PurchaseRow[]; parts: PartLite[] }) {
   const t = useTranslations();
   const router = useRouter();
   const [viewing, setViewing] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +77,9 @@ export function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
                   <Button type="button" variant="secondary" onClick={() => setViewing(r.id)}>
                     {t.common.view}
                   </Button>
+                  <Button type="button" variant="secondary" onClick={() => setEditingId(r.id)}>
+                    {t.common.edit}
+                  </Button>
                   <Button
                     type="button"
                     variant="danger"
@@ -91,6 +97,14 @@ export function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
 
       {viewing && (
         <PurchaseDetailModal purchaseId={viewing} onClose={() => setViewing(null)} />
+      )}
+
+      {editingId && (
+        <EditPurchaseModal
+          purchaseId={editingId}
+          parts={parts}
+          onClose={() => setEditingId(null)}
+        />
       )}
     </>
   );

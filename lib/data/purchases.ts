@@ -52,10 +52,17 @@ export type PurchaseDetail = {
   createdAt: Date;
   dueDate: Date | null;
   notes: string | null;
+  branchId: string;
   supplierName: string;
   branchName: string;
   total: number;
-  items: { partName: string; partNumber: string; quantity: number; unitCost: number }[];
+  items: {
+    partId: string;
+    partName: string;
+    partNumber: string;
+    quantity: number;
+    unitCost: number;
+  }[];
 };
 
 export async function getPurchaseDetail(id: string): Promise<PurchaseDetail | null> {
@@ -67,13 +74,14 @@ export async function getPurchaseDetail(id: string): Promise<PurchaseDetail | nu
       dueDate: true,
       notes: true,
       total: true,
+      branchId: true,
       supplier: { select: { name: true } },
       branch: { select: { name: true } },
       items: {
         select: {
           quantity: true,
           unitPrice: true,
-          part: { select: { name: true, partNumber: true } },
+          part: { select: { id: true, name: true, partNumber: true } },
         },
       },
     },
@@ -85,10 +93,12 @@ export async function getPurchaseDetail(id: string): Promise<PurchaseDetail | nu
     createdAt: purchase.createdAt,
     dueDate: purchase.dueDate,
     notes: purchase.notes,
+    branchId: purchase.branchId,
     supplierName: purchase.supplier.name,
     branchName: purchase.branch.name,
     total: purchase.total.toNumber(),
     items: purchase.items.map((i) => ({
+      partId: i.part.id,
       partName: i.part.name,
       partNumber: i.part.partNumber,
       quantity: i.quantity,

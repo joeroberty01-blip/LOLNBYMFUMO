@@ -193,3 +193,45 @@ export async function recordCustomerPayment(input: RecordCustomerPaymentInput): 
   revalidatePath("/dashboard/admin");
   return { success: true };
 }
+
+/**
+ * Reverses a recorded customer payment: puts the amount back on the customer's balance and
+ * deletes the CustomerPayment row. No Expense to undo here — recordCustomerPayment never
+ * creates one (see its own comment).
+ */
+export async function deleteCustomerPayment(paymentId: string): Promise<SimpleResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const payment = await prisma.customerPayment.findUnique({ where: { id: paymentId } });
+  if (!payment) return { success: false, error: "Malipo haya hayapo" };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.customer.update({
+        where: { id: payment.customerId },
+        data: { balance: { increment: payment.amount } },
+      });
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "CUSTOMER_PAYMENT_DELETED",
+        entityType: "CustomerPayment",
+        entityId: paymentId,
+        metadata: { customerId: payment.customerId, amount: payment.amount.toNumber() },
+      });
+      await tx.customerPayment.delete({ where: { id: paymentId } });
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kufuta malipo" };
+  }
+
+  revalidatePath("/dashboard/admin/customers");
+  revalidatePath(`/dashboard/admin/customers/${payment.customerId}`);
+  revalidatePath("/dashboard/admin/purchases");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
