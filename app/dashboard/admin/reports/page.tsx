@@ -5,7 +5,7 @@ import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getLedgerReport } from "@/lib/data/reports/ledger";
 import { getBranches } from "@/lib/data/branches";
 import { ReportControls } from "@/components/reports/ReportControls";
-import { ListToolbar } from "@/components/ui/ListToolbar";
+import { LedgerActions } from "@/components/reports/LedgerActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getServerDictionary } from "@/lib/i18n/server";
 
@@ -46,14 +46,6 @@ export default async function ReportsPage({
     getBranches(),
   ]);
 
-  const csvRows: (string | number)[][] = [];
-  for (const section of ledger.sections) {
-    for (const entry of section.entries) {
-      csvRows.push([section.label, entry.date.toLocaleDateString("sw-TZ"), entry.label, entry.amount]);
-    }
-    csvRows.push([section.label, "", `${t.reports.ledger.totalPrefix} ${section.label}`, section.total]);
-  }
-
   return (
     <div>
       <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.ledger.title}</h1>
@@ -64,7 +56,7 @@ export default async function ReportsPage({
         <Link href="/dashboard/admin/reports/sales" className="text-accent hover:underline">
           {t.reports.sales.title}
         </Link>
-        <Link href="/dashboard/admin/reports/inventory" className="text-accent hover:underline">
+        <Link href="/dashboard/admin/parts?tab=report" className="text-accent hover:underline">
           {t.reports.inventory.title}
         </Link>
         <Link href="/dashboard/admin/reports/staff" className="text-accent hover:underline">
@@ -77,11 +69,7 @@ export default async function ReportsPage({
 
       <ReportControls branches={branches} />
 
-      <ListToolbar
-        filename="report"
-        headers={["Account", "Date", "Description", "Amount"]}
-        rows={csvRows}
-      />
+      <LedgerActions />
 
       {ledger.sections.length === 0 ? (
         <EmptyState title={t.reports.ledger.empty} />

@@ -1,27 +1,48 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { List, LineChart } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getPartsForAdminTable, getPartCategories } from "@/lib/data/parts";
 import { getBranches } from "@/lib/data/branches";
 import { PartsFilterBar } from "@/components/admin/PartsFilterBar";
 import { PartsTable } from "@/components/admin/PartsTable";
+import { PartsReportTab } from "@/components/admin/PartsReportTab";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
+import { Tabs } from "@/components/ui/Tabs";
 import { parsePageParams } from "@/lib/pagination";
+import type { Period } from "@/lib/dateRanges";
+
+type SearchParams = {
+  q?: string;
+  category?: string;
+  page?: string;
+  pageSize?: string;
+  tab?: string;
+  period?: Period;
+  date?: string;
+  weekOf?: string;
+  month?: string;
+  year?: string;
+  from?: string;
+  to?: string;
+};
 
 export default async function AdminPartsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; page?: string; pageSize?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const { q, category, page: pageParam, pageSize } = await searchParams;
+  const sp = await searchParams;
+  const { q, category, page: pageParam, pageSize, tab } = sp;
+  const activeTab = tab === "report" ? "report" : "list";
   const { t } = await getServerDictionary();
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
 
@@ -52,32 +73,46 @@ export default async function AdminPartsPage({
         </div>
       </div>
 
-      <PartsFilterBar categories={categories} />
-
-      <ListToolbar
-        filename="parts"
-        headers={["Part Number", "Name", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
-        rows={parts.rows.map((p) => [
-          p.partNumber,
-          p.name,
-          p.branchName,
-          p.quantity,
-          p.costPrice,
-          p.unitPrice,
-          p.lowStockThreshold,
-        ])}
+      <Tabs
+        defaultValue="list"
+        tabs={[
+          { value: "list", label: t.nav.parts, icon: <List size={15} /> },
+          { value: "report", label: t.reports.inventory.title, icon: <LineChart size={15} /> },
+        ]}
       />
 
-      <PartsTable rows={parts.rows} branches={branches} />
+      {activeTab === "list" && (
+        <>
+          <PartsFilterBar categories={categories} />
 
-      <Pagination
-        baseHref="/dashboard/admin/parts"
-        params={{ q, category, pageSize }}
-        page={parts.page}
-        pageSize={parts.pageSize}
-        total={parts.total}
-        totalPages={parts.totalPages}
-      />
+          <ListToolbar
+            filename="parts"
+            headers={["Part Number", "Name", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
+            rows={parts.rows.map((p) => [
+              p.partNumber,
+              p.name,
+              p.branchName,
+              p.quantity,
+              p.costPrice,
+              p.unitPrice,
+              p.lowStockThreshold,
+            ])}
+          />
+
+          <PartsTable rows={parts.rows} branches={branches} />
+
+          <Pagination
+            baseHref="/dashboard/admin/parts"
+            params={{ q, category, pageSize, tab: "list" }}
+            page={parts.page}
+            pageSize={parts.pageSize}
+            total={parts.total}
+            totalPages={parts.totalPages}
+          />
+        </>
+      )}
+
+      {activeTab === "report" && <PartsReportTab sp={sp} t={t} />}
     </div>
   );
 }

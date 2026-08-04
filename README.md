@@ -252,9 +252,9 @@ POS inventory (`lib/data/sales.ts`) haisomi hata `costPrice`.
 
 | Route | Nani | Maelezo |
 |---|---|---|
-| `/dashboard/admin/reports` | Admin | Reports hub (viungo vya ripoti 4) |
+| `/dashboard/admin/reports` | Admin | Report ya ledger (grouped by payment method, sales vs expenses, net profit) + viungo vya ripoti nyingine |
 | `/dashboard/admin/reports/sales` | Admin | Mwenendo wa mauzo (chart), payment breakdown, credit vs cash |
-| `/dashboard/admin/reports/inventory` | Admin | Top selling, slow-moving, low stock, stock adjustments, value by branch |
+| `/dashboard/admin/parts?tab=report` | Admin | Top selling, slow-moving, low stock, stock adjustments, value by branch (Inventory Report tab kwenye Parts page) |
 | `/dashboard/admin/reports/staff` | Admin | Ranking ya sales staff kwa kipindi |
 | `/dashboard/admin/reports/customers` | Admin | Nani ana deni + historia ya credit sales (`/reports/customers/[id]`) |
 | `/dashboard/sales/my-performance` | Sales Staff | Ripoti yake binafsi pekee |

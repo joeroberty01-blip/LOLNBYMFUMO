@@ -12,6 +12,7 @@ import {
 import { getStaffPerformance, getMyPerformance } from "@/lib/data/reports/staff";
 import { getCustomersWithDebt } from "@/lib/data/reports/customers";
 import { getFinancialSummary } from "@/lib/accounting";
+import { getLedgerReport } from "@/lib/data/reports/ledger";
 import { renderReportPdf, type PdfTable } from "@/lib/reports/pdf";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -58,6 +59,37 @@ export async function buildReportPdfBuffer(
   }
 
   if (session.user.role !== "ADMIN") return { error: "Huna ruhusa" };
+
+  if (reportType === "ledger") {
+    const ledger = await getLedgerReport(range, { branchId: params.branchId });
+
+    const tables: PdfTable[] = ledger.sections.map((section) => ({
+      title: section.label,
+      columns: ["Tarehe", "Maelezo", "Kiasi"],
+      rows: [
+        ...section.entries.map((e) => [
+          e.date.toLocaleDateString("sw-TZ"),
+          e.label,
+          currency.format(e.amount),
+        ]),
+        [`Total ${section.label}`, "", currency.format(section.total)],
+      ],
+    }));
+
+    const title = "Report";
+    const buffer = await renderReportPdf({
+      title,
+      subtitle: range.label,
+      generatedAt: new Date().toLocaleString("sw-TZ"),
+      summary: [
+        { label: "Total Sales", value: currency.format(ledger.totalSales) },
+        { label: "Total Expenses", value: `-${currency.format(ledger.totalExpenses)}` },
+        { label: "Net Profit", value: currency.format(ledger.netProfit) },
+      ],
+      tables,
+    });
+    return { buffer, filename: "report.pdf", title };
+  }
 
   if (reportType === "sales") {
     const filters = {

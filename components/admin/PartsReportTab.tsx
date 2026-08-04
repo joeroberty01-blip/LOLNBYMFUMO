@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import {
   getTopSellingParts,
@@ -10,7 +8,7 @@ import {
 } from "@/lib/data/reports/inventory";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { ReportActions } from "@/components/reports/ReportActions";
-import { getServerDictionary } from "@/lib/i18n/server";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -26,19 +24,13 @@ type SearchParams = {
   to?: string;
 };
 
-export default async function InventoryReportPage({
-  searchParams,
+export async function PartsReportTab({
+  sp,
+  t,
 }: {
-  searchParams: Promise<SearchParams>;
+  sp: SearchParams;
+  t: Dictionary;
 }) {
-  const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
-    redirect("/login/admin");
-  }
-
-  const { t } = await getServerDictionary();
-
-  const sp = await searchParams;
   const range = getDateRange({ period: sp.period || "daily", ...sp });
 
   // Sequential (not Promise.all) — the local Prisma Postgres dev server has been unreliable
@@ -51,7 +43,6 @@ export default async function InventoryReportPage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.inventory.title}</h1>
       <p className="mb-6 text-sm text-secondary">{range.label}</p>
 
       <ReportActions reportType="inventory" title={t.reports.inventory.title} />
