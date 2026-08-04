@@ -80,13 +80,34 @@ export default async function ReportsPage({
               <h2 className="mb-2 text-sm font-semibold text-primary">{section.label}</h2>
               <div className="overflow-x-auto rounded-card border border-border bg-surface">
                 <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-secondary">
+                      <th className="px-4 py-2 font-medium">{t.reports.ledger.type}</th>
+                      <th className="px-4 py-2 font-medium">{t.common.date}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.ledger.num}</th>
+                      <th className="px-4 py-2 font-medium">{t.common.name}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.ledger.memo}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.ledger.split}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t.common.amount}</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {section.entries.map((entry) => (
                       <tr key={entry.id} className="border-b border-border last:border-0">
+                        <td
+                          className={`px-4 py-2 whitespace-nowrap ${
+                            entry.type === "SALE" ? "text-accent" : "text-danger"
+                          }`}
+                        >
+                          {entry.type === "SALE" ? t.reports.ledger.salesReceipt : t.reports.ledger.check}
+                        </td>
                         <td className="px-4 py-2 whitespace-nowrap text-secondary">
                           {entry.date.toLocaleDateString("sw-TZ")}
                         </td>
-                        <td className="px-4 py-2 text-primary">{entry.label}</td>
+                        <td className="px-4 py-2 text-secondary">{entry.num || "—"}</td>
+                        <td className="px-4 py-2 text-primary">{entry.name || "—"}</td>
+                        <td className="px-4 py-2 text-secondary">{entry.memo || "—"}</td>
+                        <td className="px-4 py-2 text-secondary">{entry.split}</td>
                         <td
                           className={`px-4 py-2 text-right tabular-nums ${
                             entry.amount < 0 ? "text-danger" : "text-primary"
@@ -97,7 +118,7 @@ export default async function ReportsPage({
                       </tr>
                     ))}
                     <tr className="border-t border-border font-semibold">
-                      <td className="px-4 py-2" colSpan={2}>
+                      <td className="px-4 py-2" colSpan={6}>
                         {t.reports.ledger.totalPrefix} {section.label}
                       </td>
                       <td

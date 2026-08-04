@@ -65,14 +65,17 @@ export async function buildReportPdfBuffer(
 
     const tables: PdfTable[] = ledger.sections.map((section) => ({
       title: section.label,
-      columns: ["Tarehe", "Maelezo", "Kiasi"],
+      columns: ["Type", "Tarehe", "Num", "Jina", "Memo", "Kiasi"],
       rows: [
         ...section.entries.map((e) => [
+          e.type === "SALE" ? "Sales Receipt" : "Check",
           e.date.toLocaleDateString("sw-TZ"),
-          e.label,
+          e.num || "-",
+          e.name || "-",
+          e.memo || "-",
           currency.format(e.amount),
         ]),
-        [`Total ${section.label}`, "", currency.format(section.total)],
+        [`Total ${section.label}`, "", "", "", "", currency.format(section.total)],
       ],
     }));
 

@@ -24,8 +24,16 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 export type LedgerEntry = {
   id: string;
+  type: "SALE" | "EXPENSE";
   date: Date;
-  label: string;
+  /** Invoice number for a sale; blank for an expense. */
+  num: string;
+  /** Customer name for a sale; payee/description for an expense. */
+  name: string;
+  /** Item names for a sale; expense category for an expense. */
+  memo: string;
+  /** Secondary classification, QuickBooks-"Split"-style. */
+  split: string;
   /** Signed: positive for a sale receipt, negative for an expense. */
   amount: number;
 };
@@ -79,6 +87,13 @@ export async function getLedgerReport(
       total: true,
       paymentMethod: true,
       customer: { select: { name: true } },
+      items: {
+        select: {
+          isManualEntry: true,
+          manualItemName: true,
+          part: { select: { name: true } },
+        },
+      },
     },
   });
   const expenses = await prisma.expense.findMany({
@@ -99,10 +114,15 @@ export async function getLedgerReport(
 
   for (const s of sales) {
     const entries = byMethod.get(s.paymentMethod) ?? [];
+    const itemNames = s.items.map((i) => (i.isManualEntry ? i.manualItemName : i.part?.name) ?? "").filter(Boolean);
     entries.push({
       id: s.id,
+      type: "SALE",
       date: s.createdAt,
-      label: `Sales Receipt #${s.invoiceNumber}${s.customer ? ` — ${s.customer.name}` : ""}`,
+      num: String(s.invoiceNumber),
+      name: s.customer?.name ?? "",
+      memo: itemNames.join(", "),
+      split: "-SPLIT-",
       amount: s.total.toNumber(),
     });
     byMethod.set(s.paymentMethod, entries);
@@ -110,11 +130,15 @@ export async function getLedgerReport(
 
   for (const e of expenses) {
     const entries = byMethod.get(e.paymentMethod) ?? [];
-    const label = CATEGORY_LABEL[e.category] ?? e.category;
+    const categoryLabel = CATEGORY_LABEL[e.category] ?? e.category;
     entries.push({
       id: e.id,
+      type: "EXPENSE",
       date: e.createdAt,
-      label: e.description ? `${label} — ${e.description}` : label,
+      num: "",
+      name: e.description ?? categoryLabel,
+      memo: categoryLabel,
+      split: categoryLabel,
       amount: -e.amount.toNumber(),
     });
     byMethod.set(e.paymentMethod, entries);
