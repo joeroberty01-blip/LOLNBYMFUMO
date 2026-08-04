@@ -5,6 +5,15 @@ export const en = {
     staffDesc: "Sales staff ranking for the period",
     customersDesc: "Who owes debt, and credit sales history",
   },
+  ledger: {
+    title: "Report",
+    otherReports: "Other Reports",
+    totalPrefix: "Total",
+    totalSales: "Total Sales",
+    totalExpenses: "Total Expenses",
+    netProfit: "NET PROFIT",
+    empty: "No sales or expenses for this period.",
+  },
   sales: {
     title: "Sales Report",
     totalSales: "Total Sales",
@@ -128,6 +137,15 @@ export const sw = {
     inventoryDesc: "Top selling, slow-moving, low stock, stock adjustments",
     staffDesc: "Ranking ya sales staff kwa kipindi",
     customersDesc: "Nani ana deni, na historia ya credit sales",
+  },
+  ledger: {
+    title: "Report",
+    otherReports: "Ripoti Nyingine",
+    totalPrefix: "Total",
+    totalSales: "Total Sales",
+    totalExpenses: "Total Expenses",
+    netProfit: "NET PROFIT",
+    empty: "Hakuna mauzo au expenses kwa kipindi hiki.",
   },
   sales: {
     title: "Sales Report",
