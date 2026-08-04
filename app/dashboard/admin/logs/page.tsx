@@ -5,6 +5,7 @@ import { AuditLogFilterBar } from "@/components/admin/AuditLogFilterBar";
 import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 type SearchParams = {
@@ -46,6 +47,19 @@ export default async function AuditLogsPage({
         actions={options.actions}
         entityTypes={options.entityTypes}
         values={filters}
+      />
+
+      <ListToolbar
+        filename="audit-logs"
+        headers={["Date", "Action", "Type", "Entity ID", "Performed By", "Details"]}
+        rows={logs.rows.map((r) => [
+          r.createdAt.toLocaleString("sw-TZ"),
+          r.action,
+          r.entityType,
+          r.entityId,
+          r.userName,
+          r.metadata ? JSON.stringify(r.metadata) : "",
+        ])}
       />
 
       <AuditLogsTable rows={logs.rows} t={t} />

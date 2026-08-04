@@ -7,6 +7,7 @@ import { SuppliersTable } from "@/components/admin/SuppliersTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 export default async function SuppliersPage({
@@ -37,6 +38,12 @@ export default async function SuppliersPage({
           </Button>
         </Link>
       </div>
+
+      <ListToolbar
+        filename="suppliers"
+        headers={["Name", "Phone", "Email", "Address", "Balance"]}
+        rows={suppliers.rows.map((s) => [s.name, s.phone ?? "", s.email ?? "", s.address ?? "", s.balance])}
+      />
 
       <SuppliersTable suppliers={suppliers.rows} branches={branches} />
 

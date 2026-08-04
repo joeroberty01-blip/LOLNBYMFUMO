@@ -43,6 +43,8 @@ export const en = {
   saving: "Saving...",
   saved: "Saved.",
   error: "Something went wrong.",
+  print: "Print",
+  downloadCsv: "Download CSV",
   pagination: {
     label: "Pagination",
     showing: "Showing",
@@ -97,6 +99,8 @@ export const sw = {
   saving: "Inahifadhi...",
   saved: "Imehifadhiwa.",
   error: "Hitilafu imetokea.",
+  print: "Chapisha",
+  downloadCsv: "Pakua CSV",
   pagination: {
     label: "Kurasa",
     showing: "Inaonyesha",

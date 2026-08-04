@@ -9,6 +9,7 @@ import { SalesHistoryTable } from "@/components/sales/SalesHistoryTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 type SearchParams = {
@@ -57,6 +58,22 @@ export default async function AdminSalesPage({
         branches={branches}
         staff={staff}
         values={filters}
+      />
+
+      <ListToolbar
+        filename="sales"
+        headers={["Invoice #", "Date", "Branch", "Seller", "Customer", "Payment Method", "Credit", "Status", "Total"]}
+        rows={sales.rows.map((s) => [
+          s.invoiceNumber,
+          s.createdAt.toLocaleString("sw-TZ"),
+          s.branchName,
+          s.sellerName,
+          s.customerName ?? "",
+          s.paymentMethod,
+          s.isCredit ? "Yes" : "No",
+          s.status,
+          s.total,
+        ])}
       />
 
       <SalesHistoryTable

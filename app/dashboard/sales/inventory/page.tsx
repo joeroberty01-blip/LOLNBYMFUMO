@@ -5,6 +5,7 @@ import { PartsFilterBar } from "@/components/admin/PartsFilterBar";
 import { InventoryTable } from "@/components/sales/InventoryTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 export default async function SalesInventoryPage({
@@ -31,6 +32,12 @@ export default async function SalesInventoryPage({
       <h1 className="mb-6 text-xl font-semibold text-primary">{t.nav.inventory}</h1>
 
       <PartsFilterBar categories={categories} />
+
+      <ListToolbar
+        filename="inventory"
+        headers={["Part Number", "Name", "Branch", "Quantity", "Unit Price"]}
+        rows={inventory.rows.map((p) => [p.partNumber, p.name, p.branchName, p.quantity, p.unitPrice])}
+      />
 
       <InventoryTable rows={inventory.rows} />
 

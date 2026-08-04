@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ArchiveCustomerButton } from "@/components/admin/ArchiveCustomerButton";
 import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -39,6 +40,12 @@ export default async function AdminCustomersPage({
           </Button>
         </Link>
       </div>
+
+      <ListToolbar
+        filename="customers"
+        headers={["Name", "Phone", "Email", "Credit Limit", "Balance"]}
+        rows={customers.rows.map((c) => [c.name, c.phone ?? "", c.email ?? "", c.creditLimit, c.balance])}
+      />
 
       {customers.rows.length === 0 ? (
         <EmptyState title={t.adminCatalog.customers.empty} />

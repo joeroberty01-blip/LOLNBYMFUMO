@@ -8,6 +8,7 @@ import { PartsTable } from "@/components/admin/PartsTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 export default async function AdminPartsPage({
@@ -52,6 +53,20 @@ export default async function AdminPartsPage({
       </div>
 
       <PartsFilterBar categories={categories} />
+
+      <ListToolbar
+        filename="parts"
+        headers={["Part Number", "Name", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
+        rows={parts.rows.map((p) => [
+          p.partNumber,
+          p.name,
+          p.branchName,
+          p.quantity,
+          p.costPrice,
+          p.unitPrice,
+          p.lowStockThreshold,
+        ])}
+      />
 
       <PartsTable rows={parts.rows} branches={branches} />
 

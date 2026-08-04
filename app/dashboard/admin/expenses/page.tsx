@@ -10,6 +10,7 @@ import { ExpensesTable } from "@/components/admin/ExpensesTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -77,6 +78,20 @@ export default async function ExpensesPage({
           accent="secondary"
         />
       </div>
+
+      <ListToolbar
+        filename="expenses"
+        headers={["Date", "Category", "Description", "Amount", "Payment Method", "Branch", "Recorded By"]}
+        rows={expenses.rows.map((e) => [
+          e.createdAt.toLocaleDateString("sw-TZ"),
+          CATEGORY_LABEL[e.category] ?? e.category,
+          e.description ?? "",
+          e.amount,
+          e.paymentMethod,
+          e.branchName ?? "",
+          e.userName,
+        ])}
+      />
 
       <ExpensesTable rows={expenses.rows} branches={branches} />
 

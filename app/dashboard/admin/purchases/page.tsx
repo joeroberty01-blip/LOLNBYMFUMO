@@ -15,6 +15,7 @@ import { CreditPurchaseButton } from "@/components/admin/CreditPurchaseButton";
 import { Tabs } from "@/components/ui/Tabs";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 type TabValue = "customers" | "suppliers" | "history";
@@ -84,17 +85,42 @@ export default async function CreditPurchasesPage({
       />
 
       {activeTab === "customers" && (
-        <CustomerDebtsTable debtors={customerDebtors} branches={branches} t={t} />
+        <>
+          <ListToolbar
+            filename="customer-debts"
+            headers={["Name", "Phone", "Balance", "Credit Limit"]}
+            rows={customerDebtors.map((d) => [d.name, d.phone ?? "", d.balance, d.creditLimit])}
+          />
+          <CustomerDebtsTable debtors={customerDebtors} branches={branches} t={t} />
+        </>
       )}
 
       {activeTab === "suppliers" && (
         <div className="flex flex-col gap-8">
+          <ListToolbar
+            filename="supplier-debts"
+            headers={["Name", "Phone", "Balance"]}
+            rows={supplierDebtors.map((d) => [d.name, d.phone ?? "", d.balance])}
+          />
           <SupplierDebtsTable debtors={supplierDebtors} branches={branches} t={t} />
 
           <div>
             <h2 className="mb-3 text-sm font-semibold text-primary">
               {t.adminCatalog.purchases.title}
             </h2>
+            <ListToolbar
+              filename="purchases"
+              headers={["Date", "Supplier", "Branch", "Items", "Total", "Due Date", "Notes"]}
+              rows={purchases.rows.map((p) => [
+                p.createdAt.toLocaleDateString("sw-TZ"),
+                p.supplierName,
+                p.branchName,
+                p.itemCount,
+                p.total,
+                p.dueDate ? p.dueDate.toLocaleDateString("sw-TZ") : "",
+                p.notes ?? "",
+              ])}
+            />
             <PurchasesTable rows={purchases.rows} parts={parts} />
             <Pagination
               baseHref="/dashboard/admin/purchases"
@@ -108,7 +134,24 @@ export default async function CreditPurchasesPage({
         </div>
       )}
 
-      {activeTab === "history" && <PaymentHistoryTable rows={paymentHistory} t={t} />}
+      {activeTab === "history" && (
+        <>
+          <ListToolbar
+            filename="payment-history"
+            headers={["Date", "Type", "Party", "Amount", "Payment Method", "Branch", "Recorded By"]}
+            rows={paymentHistory.map((p) => [
+              p.createdAt.toLocaleDateString("sw-TZ"),
+              p.type,
+              p.partyName,
+              p.amount,
+              p.paymentMethod,
+              p.branchName ?? "",
+              p.userName,
+            ])}
+          />
+          <PaymentHistoryTable rows={paymentHistory} t={t} />
+        </>
+      )}
     </div>
   );
 }

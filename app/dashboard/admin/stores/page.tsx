@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getStoresForAdmin } from "@/lib/data/branches";
 import { StoresTable } from "@/components/admin/StoresTable";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 
 export default async function StoresPage() {
   const session = await auth();
@@ -20,6 +21,19 @@ export default async function StoresPage() {
           picker; warehouse-only stores hold inventory but are not offered for direct checkout.
         </p>
       </div>
+
+      <ListToolbar
+        filename="stores"
+        headers={["Name", "Location", "Selling Point", "Status", "Parts", "Total Stock"]}
+        rows={stores.map((s) => [
+          s.name,
+          s.location,
+          s.isSellingPoint ? "Yes" : "No",
+          s.isActive ? "Active" : "Archived",
+          s.partCount,
+          s.totalStock,
+        ])}
+      />
 
       <StoresTable stores={stores} />
     </div>

@@ -5,6 +5,7 @@ import { getBranches } from "@/lib/data/branches";
 import { SalesFilterBar } from "@/components/sales/SalesFilterBar";
 import { SalesHistoryTable } from "@/components/sales/SalesHistoryTable";
 import { Pagination } from "@/components/ui/Pagination";
+import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
 type SearchParams = {
@@ -41,6 +42,21 @@ export default async function SalesHistoryPage({
       <h1 className="mb-6 text-xl font-semibold text-primary">Sales History</h1>
 
       <SalesFilterBar action="/dashboard/sales/history" branches={branches} values={filters} />
+
+      <ListToolbar
+        filename="sales-history"
+        headers={["Invoice #", "Date", "Branch", "Customer", "Payment Method", "Credit", "Status", "Total"]}
+        rows={sales.rows.map((s) => [
+          s.invoiceNumber,
+          s.createdAt.toLocaleString("sw-TZ"),
+          s.branchName,
+          s.customerName ?? "",
+          s.paymentMethod,
+          s.isCredit ? "Yes" : "No",
+          s.status,
+          s.total,
+        ])}
+      />
 
       <SalesHistoryTable
         rows={sales.rows}
