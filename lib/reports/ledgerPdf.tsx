@@ -18,9 +18,6 @@ const COLS = {
 
 const styles = StyleSheet.create({
   page: { padding: 24, fontSize: 7, fontFamily: "Helvetica", color: BLACK },
-  business: { fontSize: 11, fontWeight: 700, textAlign: "center", marginBottom: 1 },
-  subtitle: { fontSize: 9, fontWeight: 700, textAlign: "center", marginBottom: 1 },
-  dateRange: { fontSize: 7, color: GRAY, textAlign: "center", marginBottom: 10 },
   headerRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -94,13 +91,7 @@ function Row({
   );
 }
 
-function LedgerPdfDocument({
-  ledger,
-  dateRangeLabel,
-}: {
-  ledger: LedgerReport;
-  dateRangeLabel: string;
-}) {
+function LedgerPdfDocument({ ledger }: { ledger: LedgerReport }) {
   const currency = new Intl.NumberFormat("sw-TZ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -110,10 +101,6 @@ function LedgerPdfDocument({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.business}>LOLNBY GENERAL ENTERPRISES</Text>
-        <Text style={styles.subtitle}>Account QuickReport</Text>
-        <Text style={styles.dateRange}>{dateRangeLabel}</Text>
-
         <View style={styles.headerRow}>
           <Text style={{ ...styles.headerCell, flex: COLS.type }}>Type</Text>
           <Text style={{ ...styles.headerCell, flex: COLS.date }}>Date</Text>
@@ -201,6 +188,6 @@ function LedgerPdfDocument({
   );
 }
 
-export async function renderLedgerPdf(ledger: LedgerReport, dateRangeLabel: string): Promise<Buffer> {
-  return renderToBuffer(<LedgerPdfDocument ledger={ledger} dateRangeLabel={dateRangeLabel} />);
+export async function renderLedgerPdf(ledger: LedgerReport): Promise<Buffer> {
+  return renderToBuffer(<LedgerPdfDocument ledger={ledger} />);
 }

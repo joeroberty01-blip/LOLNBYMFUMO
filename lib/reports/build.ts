@@ -64,7 +64,7 @@ export async function buildReportPdfBuffer(
   if (reportType === "ledger") {
     const ledger = await getLedgerReport(range, { branchId: params.branchId });
     const title = "Report";
-    const buffer = await renderLedgerPdf(ledger, range.label);
+    const buffer = await renderLedgerPdf(ledger);
     return { buffer, filename: "report.pdf", title };
   }
 
