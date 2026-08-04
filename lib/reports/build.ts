@@ -14,6 +14,7 @@ import { getCustomersWithDebt } from "@/lib/data/reports/customers";
 import { getFinancialSummary } from "@/lib/accounting";
 import { getLedgerReport } from "@/lib/data/reports/ledger";
 import { renderReportPdf, type PdfTable } from "@/lib/reports/pdf";
+import { renderLedgerPdf } from "@/lib/reports/ledgerPdf";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -62,35 +63,8 @@ export async function buildReportPdfBuffer(
 
   if (reportType === "ledger") {
     const ledger = await getLedgerReport(range, { branchId: params.branchId });
-
-    const tables: PdfTable[] = ledger.sections.map((section) => ({
-      title: section.label,
-      columns: ["Type", "Tarehe", "Num", "Jina", "Memo", "Kiasi"],
-      rows: [
-        ...section.entries.map((e) => [
-          e.type === "SALE" ? "Sales Receipt" : "Check",
-          e.date.toLocaleDateString("sw-TZ"),
-          e.num || "-",
-          e.name || "-",
-          e.memo || "-",
-          currency.format(e.amount),
-        ]),
-        [`Total ${section.label}`, "", "", "", "", currency.format(section.total)],
-      ],
-    }));
-
     const title = "Report";
-    const buffer = await renderReportPdf({
-      title,
-      subtitle: range.label,
-      generatedAt: new Date().toLocaleString("sw-TZ"),
-      summary: [
-        { label: "Total Sales", value: currency.format(ledger.totalSales) },
-        { label: "Total Expenses", value: `-${currency.format(ledger.totalExpenses)}` },
-        { label: "Net Profit", value: currency.format(ledger.netProfit) },
-      ],
-      tables,
-    });
+    const buffer = await renderLedgerPdf(ledger, range.label);
     return { buffer, filename: "report.pdf", title };
   }
 

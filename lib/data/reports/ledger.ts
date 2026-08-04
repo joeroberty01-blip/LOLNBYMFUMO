@@ -8,7 +8,17 @@ const METHOD_LABEL: Record<string, string> = {
   BANK_CRDB: "CRDB Bank",
   CASH: "Cash in Hand",
   TIGO_LIPA: "Tigo Lipa",
-  VODA_LIPA: "M-Pesa / Voda Lipa",
+  VODA_LIPA: "M-Pesa Lipa",
+};
+
+/** Cosmetic account-code-style prefixes only, matching the reference report's numbering
+ * convention — this app has no real chart of accounts, these are just display labels. */
+const METHOD_CODE: Record<string, string> = {
+  BANK_NMB: "10200",
+  BANK_CRDB: "10201",
+  CASH: "10300",
+  TIGO_LIPA: "10400",
+  VODA_LIPA: "10500",
 };
 
 const METHOD_ORDER = ["BANK_NMB", "BANK_CRDB", "CASH", "TIGO_LIPA", "VODA_LIPA"];
@@ -40,6 +50,7 @@ export type LedgerEntry = {
 
 export type LedgerSection = {
   method: string;
+  code: string;
   label: string;
   entries: LedgerEntry[];
   total: number;
@@ -148,6 +159,7 @@ export async function getLedgerReport(
     const entries = (byMethod.get(method) ?? []).sort((a, b) => a.date.getTime() - b.date.getTime());
     return {
       method,
+      code: METHOD_CODE[method] ?? "",
       label: METHOD_LABEL[method] ?? method,
       entries,
       total: entries.reduce((sum, e) => sum + e.amount, 0),
