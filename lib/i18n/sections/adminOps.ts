@@ -129,6 +129,8 @@ export const en = {
     entityId: "Entity ID",
     performedBy: "Performed By",
     details: "Details",
+    undo: "Undo",
+    confirmUndo: "Undo this action? This reverses its effects (stock, balances, records).",
   },
 };
 
@@ -263,5 +265,7 @@ export const sw = {
     entityId: "Entity ID",
     performedBy: "Aliyefanya",
     details: "Maelezo",
+    undo: "Undo",
+    confirmUndo: "Ondoa kitendo hiki? Hii inarudisha nyuma athari zake (stock, balance, records).",
   },
 };
