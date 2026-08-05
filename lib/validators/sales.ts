@@ -48,23 +48,49 @@ export const completeSaleSchema = z.object({
 });
 export type CompleteSaleInput = z.infer<typeof completeSaleSchema>;
 
-/** Editing an existing sale is deliberately narrower than creating one: the part/branch on each
- * line stays fixed (only quantity/unitPrice can change), and no items can be added or removed —
- * changing which parts were sold after the fact is exactly what void + a new sale is for. */
-export const editSaleItemSchema = z.object({
-  itemId: z.string().min(1),
+/** Full invoice edit: every field, including which part/product each line is (re-parting) and
+ * adding/removing lines entirely — `itemId` (present only on a line that already existed) is
+ * how updateSale tells "this line changed" apart from "this is a brand-new line"; any existing
+ * line whose itemId is missing from the submitted array is treated as removed. */
+const editRegularItemSchema = z.object({
+  itemId: z.string().optional(),
+  isManualEntry: z.literal(false),
+  partId: z.string().min(1),
   quantity: z.coerce.number().int().positive("Weka quantity zaidi ya 0"),
   unitPrice: z.coerce.number().positive("Weka bei zaidi ya 0"),
+  branchId: z.string().min(1).optional(),
 });
+
+const editManualItemSchema = z.object({
+  itemId: z.string().optional(),
+  isManualEntry: z.literal(true),
+  manualItemName: z.string().trim().min(1, "Enter the product name"),
+  manualPartNumber: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : undefined)),
+  quantity: z.coerce.number().int().positive("Weka quantity zaidi ya 0"),
+  unitPrice: z.coerce.number().positive("Weka bei zaidi ya 0"),
+  manualCostPrice: z.coerce.number().positive("Enter a buying price greater than 0"),
+});
+
+export const editSaleItemSchema = z.discriminatedUnion("isManualEntry", [
+  editRegularItemSchema,
+  editManualItemSchema,
+]);
 
 export const editSaleSchema = z.object({
   createdAt: z.string().min(1, "Chagua tarehe na muda"),
+  branchId: z.string().min(1, "Chagua branch"),
   customerId: z.string().min(1, "Chagua customer"),
   paymentMethod: z.enum(paymentMethods),
   isCredit: z.boolean(),
-  items: z.array(editSaleItemSchema).min(1),
+  items: z.array(editSaleItemSchema).min(1, "Ongeza item angalau moja"),
 });
 export type EditSaleInput = z.infer<typeof editSaleSchema>;
+export type EditSaleItemInput = z.infer<typeof editSaleItemSchema>;
 
 export const manualItemFormSchema = z.object({
   manualItemName: z.string().trim().min(1, "Enter the product name"),

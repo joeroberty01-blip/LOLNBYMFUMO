@@ -215,11 +215,12 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
 }
 
 /**
- * Edits a sale's date, customer, payment method, credit flag, and each existing line's
- * quantity/unit price. Reverses the old inventory/customer-balance effects for whatever changed
- * and reapplies the new ones, inside one transaction — same reverse-then-reapply shape as
- * updatePurchase. Cannot edit a voided sale (void it and record a new one instead), and cannot
- * add/remove/re-part a line (that's also a void + new sale).
+ * Full invoice edit: date, branch, customer, payment method, credit flag, and the entire item
+ * list — including re-parting an existing line, adding new lines, and removing lines. Reverses
+ * every old line's stock effect, deletes all old SaleItems, then validates and applies the new
+ * item list from scratch — same reverse-then-reapply-everything shape as updatePurchase, chosen
+ * over a line-by-line diff because it's simpler to reason about and handles add/remove/re-part
+ * uniformly. Cannot edit a voided sale (void it and record a new one instead).
  */
 export async function updateSale(saleId: string, input: EditSaleInput): Promise<ActionResult> {
   const session = await auth();
@@ -231,7 +232,12 @@ export async function updateSale(saleId: string, input: EditSaleInput): Promise<
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   }
-  const { createdAt, customerId, paymentMethod, isCredit, items } = parsed.data;
+  const { createdAt, branchId, customerId, paymentMethod, isCredit, items } = parsed.data;
+
+  const parsedDate = new Date(createdAt);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return { success: false, error: "Invalid date" };
+  }
 
   const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
   if (!sale) return { success: false, error: "Sale not found" };
@@ -242,35 +248,76 @@ export async function updateSale(saleId: string, input: EditSaleInput): Promise<
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer) return { success: false, error: "Customer not found" };
 
-  const itemMap = new Map(sale.items.map((i) => [i.id, i]));
-  if (items.length !== sale.items.length || items.some((it) => !itemMap.has(it.itemId))) {
-    return { success: false, error: "Item mismatch — reload the page and try again" };
+  const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+  if (!branch) return { success: false, error: "Branch not found" };
+
+  const partIds = items.flatMap((it) => (it.isManualEntry ? [] : [it.partId]));
+  if (partIds.length > 0) {
+    const parts = await prisma.part.findMany({
+      where: { id: { in: partIds } },
+      select: { id: true },
+    });
+    if (parts.length !== new Set(partIds).size) {
+      return { success: false, error: "Some products no longer exist" };
+    }
   }
 
   const newTotal = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
-  const parsedDate = new Date(createdAt);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return { success: false, error: "Invalid date" };
-  }
 
   try {
     await prisma.$transaction(async (tx) => {
-      for (const it of items) {
-        const existing = itemMap.get(it.itemId)!;
-        if (!existing.isManualEntry && existing.partId) {
-          const delta = it.quantity - existing.quantity;
-          if (delta !== 0) {
-            const branchId = existing.sourceBranchId ?? sale.branchId;
-            await tx.inventory.upsert({
-              where: { partId_branchId: { partId: existing.partId, branchId } },
-              update: { quantity: { decrement: delta } },
-              create: { partId: existing.partId, branchId, quantity: -delta },
-            });
-          }
+      for (const old of sale.items) {
+        if (!old.isManualEntry && old.partId) {
+          const oldBranchId = old.sourceBranchId ?? sale.branchId;
+          await tx.inventory.upsert({
+            where: { partId_branchId: { partId: old.partId, branchId: oldBranchId } },
+            update: { quantity: { increment: old.quantity } },
+            create: { partId: old.partId, branchId: oldBranchId, quantity: old.quantity },
+          });
         }
-        await tx.saleItem.update({
-          where: { id: it.itemId },
-          data: { quantity: it.quantity, unitPrice: it.unitPrice },
+      }
+
+      await tx.saleItem.deleteMany({ where: { saleId } });
+
+      for (const it of items) {
+        if (it.isManualEntry) {
+          await tx.saleItem.create({
+            data: {
+              saleId,
+              quantity: it.quantity,
+              unitPrice: it.unitPrice,
+              isManualEntry: true,
+              manualItemName: it.manualItemName,
+              manualPartNumber: it.manualPartNumber ?? null,
+              manualCostPrice: it.manualCostPrice,
+            },
+          });
+          continue;
+        }
+
+        const itemBranchId = it.branchId ?? branchId;
+        const inv = await tx.inventory.findUnique({
+          where: { partId_branchId: { partId: it.partId, branchId: itemBranchId } },
+        });
+        if (!inv || inv.quantity < it.quantity) {
+          const part = await tx.part.findUnique({ where: { id: it.partId } });
+          throw new Error(
+            `Insufficient stock for ${part?.name ?? "this part"} (available: ${inv?.quantity ?? 0})`
+          );
+        }
+        await tx.inventory.update({
+          where: { partId_branchId: { partId: it.partId, branchId: itemBranchId } },
+          data: { quantity: { decrement: it.quantity } },
+        });
+        await tx.saleItem.create({
+          data: {
+            saleId,
+            partId: it.partId,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            isManualEntry: false,
+            sourceBranchId: itemBranchId,
+          },
         });
       }
 
@@ -289,7 +336,7 @@ export async function updateSale(saleId: string, input: EditSaleInput): Promise<
 
       await tx.sale.update({
         where: { id: saleId },
-        data: { createdAt: parsedDate, customerId, paymentMethod, isCredit, total: newTotal },
+        data: { createdAt: parsedDate, branchId, customerId, paymentMethod, isCredit, total: newTotal },
       });
 
       await logAudit(tx, {
@@ -304,6 +351,7 @@ export async function updateSale(saleId: string, input: EditSaleInput): Promise<
           customerId,
           previousIsCredit: sale.isCredit,
           isCredit,
+          itemCount: items.length,
         },
       });
     });
@@ -316,6 +364,7 @@ export async function updateSale(saleId: string, input: EditSaleInput): Promise<
   revalidatePath(`/dashboard/admin/sales/${saleId}`);
   revalidatePath("/dashboard/admin/customers");
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/sales/inventory");
   return { success: true };
 }
 

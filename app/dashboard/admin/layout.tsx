@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { t } = await getServerDictionary();
 
   return (
-    <div className="flex min-h-screen bg-page text-primary">
+    <div className="flex h-screen overflow-hidden bg-page text-primary">
       <Sidebar isAdmin />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar userName={session.user.name ?? ""} userRole={t.adminOps.topbar.adminRole} />

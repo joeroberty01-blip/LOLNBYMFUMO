@@ -3,6 +3,8 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getSaleWithItems } from "@/lib/data/sales";
 import { getCustomersForPOS } from "@/lib/data/customers";
+import { getAllActivePartsLite } from "@/lib/data/parts";
+import { getBranches } from "@/lib/data/branches";
 import { EditSaleForm } from "@/components/admin/EditSaleForm";
 
 export default async function EditSalePage({
@@ -16,7 +18,12 @@ export default async function EditSalePage({
   }
 
   const { id } = await params;
-  const [sale, customers] = await Promise.all([getSaleWithItems(id), getCustomersForPOS()]);
+  const [sale, customers, parts, branches] = await Promise.all([
+    getSaleWithItems(id),
+    getCustomersForPOS(),
+    getAllActivePartsLite(),
+    getBranches(),
+  ]);
   if (!sale) notFound();
 
   const backHref = `/dashboard/admin/sales/${sale.id}`;
@@ -37,20 +44,28 @@ export default async function EditSalePage({
         saleId={sale.id}
         backHref={backHref}
         customers={customers}
+        parts={parts}
+        branches={branches}
         defaultValues={{
           createdAt: sale.createdAt,
+          branchId: sale.branchId,
           customerId: sale.customerId ?? "",
           paymentMethod: sale.paymentMethod,
           isCredit: sale.isCredit,
         }}
         items={sale.items.map((item) => ({
+          key: item.id,
           itemId: item.id,
+          isManualEntry: item.isManualEntry,
+          partId: item.partId ?? "",
           label: item.isManualEntry ? (item.manualItemName ?? "Manual item") : (item.part?.name ?? "Part"),
           partNumber: item.isManualEntry
-            ? (item.manualPartNumber ?? "—")
-            : (item.part?.partNumber ?? "—"),
+            ? (item.manualPartNumber ?? "")
+            : (item.part?.partNumber ?? ""),
           quantity: item.quantity,
           unitPrice: item.unitPrice.toNumber(),
+          manualCostPrice: item.manualCostPrice?.toNumber() ?? 0,
+          branchId: item.sourceBranchId ?? sale.branchId,
         }))}
       />
     </div>

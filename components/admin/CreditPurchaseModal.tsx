@@ -93,7 +93,7 @@ export function CreditPurchaseModal({
   }
 
   function handleNewProduct(part: { id: string; partNumber: string; name: string; costPrice: number }) {
-    setParts((prev) => [...prev, part]);
+    setParts((prev) => [...prev, { ...part, unitPrice: 0 }]);
     setNewProductOpen(false);
     setItems((prev) => [
       ...prev,

@@ -23,18 +23,23 @@ export type PartLite = {
   partNumber: string;
   name: string;
   costPrice: number;
+  unitPrice: number;
 };
 
-/** Full unpaginated list of active parts (id/partNumber/name/costPrice only) — for client-side
- * search pickers, e.g. the Credit Purchase item picker, where the admin needs to find any part
- * by typing rather than paging through the catalog. */
+/** Full unpaginated list of active parts (id/partNumber/name/costPrice/unitPrice only) — for
+ * client-side search pickers, e.g. the Credit Purchase item picker and the Sale item editor,
+ * where the admin needs to find any part by typing rather than paging through the catalog. */
 export async function getAllActivePartsLite(): Promise<PartLite[]> {
   const parts = await prisma.part.findMany({
     where: { isActive: true },
-    select: { id: true, partNumber: true, name: true, costPrice: true },
+    select: { id: true, partNumber: true, name: true, costPrice: true, unitPrice: true },
     orderBy: { name: "asc" },
   });
-  return parts.map((p) => ({ ...p, costPrice: p.costPrice.toNumber() }));
+  return parts.map((p) => ({
+    ...p,
+    costPrice: p.costPrice.toNumber(),
+    unitPrice: p.unitPrice.toNumber(),
+  }));
 }
 
 export type AdminPartRow = {
