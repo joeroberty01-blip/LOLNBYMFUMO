@@ -65,8 +65,14 @@ export async function getSalesReport(
   for (const s of sales) {
     const amt = s.total.toNumber();
     totalSales += amt;
-    if (s.isCredit) creditTotal += amt;
-    else cashTotal += amt;
+    if (s.isCredit) {
+      // Credit sales carry a paymentMethod value, but it's a placeholder — no cash actually
+      // moved through that method yet, so folding it into the per-method breakdown would
+      // overstate that method's cash total. creditTotal (below) is where these belong.
+      creditTotal += amt;
+      continue;
+    }
+    cashTotal += amt;
     const existing = byMethod.get(s.paymentMethod) ?? { total: 0, count: 0 };
     existing.total += amt;
     existing.count += 1;

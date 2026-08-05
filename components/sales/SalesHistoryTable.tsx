@@ -93,8 +93,9 @@ export function SalesHistoryTable({
                 {showSeller && <Td>{row.sellerName}</Td>}
                 <Td>{row.customerName ?? "—"}</Td>
                 <Td>
-                  {PAYMENT_LABEL[row.paymentMethod] ?? row.paymentMethod}
-                  {row.isCredit ? ` (${t.sales.historyTable.creditSuffix})` : ""}
+                  {row.isCredit
+                    ? t.sales.historyTable.creditSuffix
+                    : (PAYMENT_LABEL[row.paymentMethod] ?? row.paymentMethod)}
                 </Td>
                 <Td className="text-right tabular-nums">
                   {currency.format(row.total)}

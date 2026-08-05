@@ -58,8 +58,9 @@ export function ReceiptView({
         <div className="flex justify-between">
           <span className="text-secondary">{t.sales.receipt.payment}</span>
           <span className="text-primary">
-            {PAYMENT_LABEL[receipt.paymentMethod] ?? receipt.paymentMethod}
-            {receipt.isCredit ? ` (${t.sales.receipt.credit})` : ""}
+            {receipt.isCredit
+              ? t.sales.receipt.credit
+              : (PAYMENT_LABEL[receipt.paymentMethod] ?? receipt.paymentMethod)}
           </span>
         </div>
       </div>

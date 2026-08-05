@@ -82,8 +82,7 @@ export default async function SaleDetailPage({
         <Card className="p-4">
           <p className="text-sm text-secondary">Payment</p>
           <p className="font-medium text-primary">
-            {PAYMENT_LABEL[sale.paymentMethod] ?? sale.paymentMethod}
-            {sale.isCredit ? " (Credit)" : ""}
+            {sale.isCredit ? "Credit" : (PAYMENT_LABEL[sale.paymentMethod] ?? sale.paymentMethod)}
           </p>
         </Card>
         <Card className="p-4">

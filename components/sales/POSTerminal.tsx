@@ -519,26 +519,6 @@ export function POSTerminal({
             )}
           </div>
 
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-primary">{t.sales.pos.paymentMethod}</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {paymentMethods.map((pm) => (
-                <button
-                  key={pm}
-                  type="button"
-                  onClick={() => setPaymentMethod(pm)}
-                  className={`rounded-full border px-2 py-1.5 text-xs font-medium transition-colors ${
-                    paymentMethod === pm
-                      ? "border-accent bg-accent/15 text-accent"
-                      : "border-border text-secondary hover:text-primary"
-                  }`}
-                >
-                  {PAYMENT_LABEL[pm]}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <label className="flex items-center gap-2 text-sm text-primary">
             <input
               type="checkbox"
@@ -547,6 +527,32 @@ export function POSTerminal({
             />
             {t.sales.pos.isCreditSale}
           </label>
+
+          {/* No cash actually changes hands on a credit sale — asking for a payment method here
+              would only produce misleading data (e.g. a sale recorded as "Cash" that never
+              received cash). The real payment method is captured later, when the customer
+              actually pays down the debt (Record Payment on the customer's debt). */}
+          {!isCredit && (
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-primary">{t.sales.pos.paymentMethod}</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {paymentMethods.map((pm) => (
+                  <button
+                    key={pm}
+                    type="button"
+                    onClick={() => setPaymentMethod(pm)}
+                    className={`rounded-full border px-2 py-1.5 text-xs font-medium transition-colors ${
+                      paymentMethod === pm
+                        ? "border-accent bg-accent/15 text-accent"
+                        : "border-border text-secondary hover:text-primary"
+                    }`}
+                  >
+                    {PAYMENT_LABEL[pm]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {submitError && <p className="mb-3 text-sm text-danger">{submitError}</p>}
@@ -577,8 +583,9 @@ export function POSTerminal({
             { label: t.common.branch, value: branchName },
             { label: t.sales.pos.confirmCustomer, value: customerName },
             { label: t.sales.pos.confirmItems, value: String(cart.length) },
-            { label: t.sales.pos.confirmPayment, value: PAYMENT_LABEL[paymentMethod] },
-            ...(isCredit ? [{ label: t.sales.pos.confirmCredit, value: t.common.yes }] : []),
+            isCredit
+              ? { label: t.sales.pos.confirmCredit, value: t.common.yes }
+              : { label: t.sales.pos.confirmPayment, value: PAYMENT_LABEL[paymentMethod] },
             { label: t.sales.pos.confirmTotal, value: currency.format(total), emphasis: true },
           ]}
           itemsTable={{

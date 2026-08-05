@@ -173,8 +173,7 @@ export default async function SalesReportPage({
                 <Td>{r.sellerName}</Td>
                 <Td>{r.customerName ?? "—"}</Td>
                 <Td>
-                  {PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}
-                  {r.isCredit ? ` (${t.reports.sales.credit})` : ""}
+                  {r.isCredit ? t.reports.sales.credit : (PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod)}
                 </Td>
                 <Td className="text-right tabular-nums">{currency.format(r.total)}</Td>
               </Tr>
