@@ -10,6 +10,7 @@ import { ChinaMasterTable } from "@/components/admin/ChinaMasterTable";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
+import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { parsePageParams } from "@/lib/pagination";
 
 type SearchParams = {
@@ -110,8 +111,21 @@ export default async function ChinaMasterFilePage({
           <div className="flex flex-col gap-4">
             {rawNotes.map((n) => {
               const maxCols = n.rows.reduce((max, row) => Math.max(max, row.length), 0);
+              const headers = [
+                "Bidhaa",
+                "Part No",
+                "Qty",
+                "Qty 2",
+                "Unit Price",
+                "Total",
+                "Unit Price TZS",
+                "Total TZS",
+                "Sale Price",
+                "Sale Total",
+              ];
+              const colCount = Math.max(maxCols, headers.length);
               return (
-                <div key={n.id} className="rounded-card border border-border bg-surface p-3">
+                <div key={n.id}>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge status={n.sourceSheet === "CHINA" ? "info" : "warning"}>
                       {n.sourceSheet}
@@ -121,21 +135,26 @@ export default async function ChinaMasterFilePage({
                       <span className="text-xs text-secondary">Tarehe: {n.dateLabel}</span>
                     )}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-xs">
-                      <tbody>
-                        {n.rows.map((row, ri) => (
-                          <tr key={ri} className="border-b border-border last:border-0">
-                            {Array.from({ length: maxCols }).map((_, ci) => (
-                              <td key={ci} className="px-2 py-1 text-secondary">
-                                {row[ci] ?? ""}
-                              </td>
-                            ))}
-                          </tr>
+                  <Table>
+                    <THead>
+                      <THeadRow>
+                        {Array.from({ length: colCount }).map((_, ci) => (
+                          <Th key={ci}>{headers[ci] ?? `Col ${ci + 1}`}</Th>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </THeadRow>
+                    </THead>
+                    <TBody>
+                      {n.rows.map((row, ri) => (
+                        <Tr key={ri} index={ri}>
+                          {Array.from({ length: colCount }).map((_, ci) => (
+                            <Td key={ci} className="text-secondary">
+                              {row[ci] ?? ""}
+                            </Td>
+                          ))}
+                        </Tr>
+                      ))}
+                    </TBody>
+                  </Table>
                 </div>
               );
             })}
