@@ -19,6 +19,7 @@ import {
   Store,
   CreditCard,
   ScrollText,
+  Globe,
 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { APP_NAME } from "@/config/app";
@@ -55,6 +56,7 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
         { href: "/dashboard/admin/customers", label: t.nav.customers, icon: Users },
         { href: "/dashboard/admin/suppliers", label: t.nav.suppliers, icon: Truck },
         { href: "/dashboard/admin/purchases", label: t.nav.creditPurchases, icon: CreditCard },
+        { href: "/dashboard/admin/china-master-file", label: t.nav.chinaMasterFile, icon: Globe },
       ],
     },
     {

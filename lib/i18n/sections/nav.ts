@@ -16,6 +16,7 @@ export const en = {
   stores: "Stores",
   creditPurchases: "Credit Purchases",
   auditLogs: "Audit Logs",
+  chinaMasterFile: "China Master File",
 };
 
 export const sw = {
@@ -36,4 +37,5 @@ export const sw = {
   stores: "Stores",
   creditPurchases: "Credit Purchases",
   auditLogs: "Audit Logs",
+  chinaMasterFile: "China Master File",
 };
