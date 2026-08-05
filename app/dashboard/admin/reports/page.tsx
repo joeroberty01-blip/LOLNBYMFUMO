@@ -58,26 +58,28 @@ export default async function ReportsPage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.ledger.title}</h1>
-      <p className="mb-6 text-sm text-secondary">{range.label}</p>
+      <div className="no-print">
+        <h1 className="mb-1 text-xl font-semibold text-primary">{t.reports.ledger.title}</h1>
+        <p className="mb-6 text-sm text-secondary">{range.label}</p>
 
-      <div className="no-print mb-6 flex flex-wrap gap-3 text-sm">
-        <span className="text-secondary">{t.reports.ledger.otherReports}:</span>
-        <Link href="/dashboard/admin/reports/sales" className="text-accent hover:underline">
-          {t.reports.sales.title}
-        </Link>
-        <Link href="/dashboard/admin/parts?tab=report" className="text-accent hover:underline">
-          {t.reports.inventory.title}
-        </Link>
-        <Link href="/dashboard/admin/reports/staff" className="text-accent hover:underline">
-          {t.reports.staff.title}
-        </Link>
-        <Link href="/dashboard/admin/reports/customers" className="text-accent hover:underline">
-          {t.reports.customers.title}
-        </Link>
+        <div className="mb-6 flex flex-wrap gap-3 text-sm">
+          <span className="text-secondary">{t.reports.ledger.otherReports}:</span>
+          <Link href="/dashboard/admin/reports/sales" className="text-accent hover:underline">
+            {t.reports.sales.title}
+          </Link>
+          <Link href="/dashboard/admin/parts?tab=report" className="text-accent hover:underline">
+            {t.reports.inventory.title}
+          </Link>
+          <Link href="/dashboard/admin/reports/staff" className="text-accent hover:underline">
+            {t.reports.staff.title}
+          </Link>
+          <Link href="/dashboard/admin/reports/customers" className="text-accent hover:underline">
+            {t.reports.customers.title}
+          </Link>
+        </div>
+
+        <ReportControls branches={branches} />
       </div>
-
-      <ReportControls branches={branches} />
 
       <LedgerActions />
 
