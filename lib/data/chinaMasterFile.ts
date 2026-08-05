@@ -1,12 +1,13 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 export type ChinaMasterItemRow = {
   id: string;
   batchId: string;
   batchLabel: string | null;
+  batchDate: string | null;
   sourceSheet: string;
   lineNo: number | null;
   description: string;
@@ -70,7 +71,7 @@ export async function getChinaMasterItems(
         salePrice1: true,
         salePrice2: true,
         saleTotal: true,
-        batch: { select: { label: true, sourceSheet: true, currencyLabel: true } },
+        batch: { select: { label: true, sourceSheet: true, currencyLabel: true, dateLabel: true } },
       },
     }),
     prisma.chinaMasterItem.count({ where }),
@@ -80,6 +81,7 @@ export async function getChinaMasterItems(
     id: r.id,
     batchId: r.batchId,
     batchLabel: r.batch.label,
+    batchDate: r.batch.dateLabel,
     sourceSheet: r.batch.sourceSheet,
     lineNo: r.lineNo,
     description: r.description,
@@ -109,18 +111,32 @@ export async function getChinaMasterBatchOptions(): Promise<ChinaMasterBatchOpti
   return rows.map((r) => ({ id: r.id, label: r.label ?? "", sourceSheet: r.sourceSheet }));
 }
 
-export type ChinaMasterRawNote = { id: string; sourceSheet: string; rawNotes: string };
+export type ChinaMasterRawNote = {
+  id: string;
+  sourceSheet: string;
+  label: string | null;
+  dateLabel: string | null;
+  rows: string[][];
+};
 
 /** The handful of spreadsheet sections that didn't follow the standard NO/DESCRIPTION/PART NO
- * table layout closely enough to parse into typed items — kept verbatim so nothing from the
- * original file is silently dropped. */
+ * table layout closely enough to parse into typed items. Kept as one array of cells per original
+ * row (not one giant blob of text) so the UI can still render them as a proper table of their
+ * own — nothing from the original file is silently dropped, it's just not force-fit into the
+ * typed columns the standard batches use. */
 export async function getChinaMasterRawNotes(): Promise<ChinaMasterRawNote[]> {
   const rows = await prisma.chinaMasterBatch.findMany({
-    where: { rawNotes: { not: null } },
+    where: { rawLines: { not: Prisma.JsonNull } },
     orderBy: { orderIndex: "asc" },
-    select: { id: true, sourceSheet: true, rawNotes: true },
+    select: { id: true, sourceSheet: true, label: true, dateLabel: true, rawLines: true },
   });
-  return rows.map((r) => ({ id: r.id, sourceSheet: r.sourceSheet, rawNotes: r.rawNotes ?? "" }));
+  return rows.map((r) => ({
+    id: r.id,
+    sourceSheet: r.sourceSheet,
+    label: r.label,
+    dateLabel: r.dateLabel,
+    rows: (r.rawLines as string[][] | null) ?? [],
+  }));
 }
 
 export async function getChinaMasterStats(): Promise<{

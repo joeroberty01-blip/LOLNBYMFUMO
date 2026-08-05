@@ -10,6 +10,7 @@ import {
 import { ChinaMasterFilterBar } from "@/components/admin/ChinaMasterFilterBar";
 import { ChinaMasterTable } from "@/components/admin/ChinaMasterTable";
 import { StatCard } from "@/components/ui/StatCard";
+import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
@@ -81,6 +82,7 @@ export default async function ChinaMasterFilePage({
         filename="china-master-file"
         headers={[
           "Batch",
+          "Tarehe",
           "Source",
           "Description",
           "Part No",
@@ -95,6 +97,7 @@ export default async function ChinaMasterFilePage({
         ]}
         rows={items.rows.map((r) => [
           r.batchLabel ?? "",
+          r.batchDate ?? "",
           r.sourceSheet,
           r.description,
           r.partNumber ?? "",
@@ -123,22 +126,45 @@ export default async function ChinaMasterFilePage({
       {rawNotes.length > 0 && (
         <div className="no-print mt-8">
           <h2 className="mb-2 text-sm font-semibold text-primary">
-            Sehemu zisizo na muundo wa jedwali ({rawNotes.length})
+            Sehemu zisizo na muundo wa kawaida wa jedwali ({rawNotes.length})
           </h2>
           <p className="mb-3 text-xs text-secondary">
             Sehemu hizi za faili la asili hazikufuata muundo wa kawaida wa NO/DESCRIPTION/PART NO,
-            kwa hiyo zimehifadhiwa hapa kama maandishi ghafi (bila kupotea kabisa).
+            kwa hiyo kila row imewekwa kwenye jedwali lake mwenyewe hapa chini — bila kupotea
+            kabisa, na bila kuchanganywa na data nyingine.
           </p>
-          <div className="flex flex-col gap-2">
-            {rawNotes.map((n) => (
-              <details key={n.id} className="rounded-card border border-border bg-surface p-3">
-                <summary className="cursor-pointer text-sm font-medium text-primary">
-                  [{n.sourceSheet}] {n.rawNotes.slice(0, 80)}
-                  {n.rawNotes.length > 80 ? "…" : ""}
-                </summary>
-                <p className="mt-2 text-xs whitespace-pre-wrap text-secondary">{n.rawNotes}</p>
-              </details>
-            ))}
+          <div className="flex flex-col gap-4">
+            {rawNotes.map((n) => {
+              const maxCols = n.rows.reduce((max, row) => Math.max(max, row.length), 0);
+              return (
+                <div key={n.id} className="rounded-card border border-border bg-surface p-3">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <Badge status={n.sourceSheet === "CHINA" ? "info" : "warning"}>
+                      {n.sourceSheet}
+                    </Badge>
+                    {n.label && <span className="text-sm font-medium text-primary">{n.label}</span>}
+                    {n.dateLabel && (
+                      <span className="text-xs text-secondary">Tarehe: {n.dateLabel}</span>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-xs">
+                      <tbody>
+                        {n.rows.map((row, ri) => (
+                          <tr key={ri} className="border-b border-border last:border-0">
+                            {Array.from({ length: maxCols }).map((_, ci) => (
+                              <td key={ci} className="px-2 py-1 text-secondary">
+                                {row[ci] ?? ""}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

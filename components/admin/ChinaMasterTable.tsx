@@ -23,6 +23,7 @@ export function ChinaMasterTable({ rows }: { rows: ChinaMasterItemRow[] }) {
       <THead>
         <THeadRow>
           <Th>Batch / Supplier</Th>
+          <Th>Tarehe</Th>
           <Th>Bidhaa</Th>
           <Th>Part No</Th>
           <Th className="text-right">Qty</Th>
@@ -45,6 +46,7 @@ export function ChinaMasterTable({ rows }: { rows: ChinaMasterItemRow[] }) {
                 </span>
               </div>
             </Td>
+            <Td className="text-secondary whitespace-nowrap">{r.batchDate ?? "—"}</Td>
             <Td className="max-w-[240px]">
               <p className="truncate font-medium text-primary" title={r.description}>
                 {r.description}
