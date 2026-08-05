@@ -1,26 +1,22 @@
 import { redirect } from "next/navigation";
-import { Package, Boxes, DollarSign } from "lucide-react";
 import { auth } from "@/lib/auth";
 import {
   getChinaMasterItems,
   getChinaMasterBatchOptions,
   getChinaMasterRawNotes,
-  getChinaMasterStats,
 } from "@/lib/data/chinaMasterFile";
 import { ChinaMasterFilterBar } from "@/components/admin/ChinaMasterFilterBar";
 import { ChinaMasterTable } from "@/components/admin/ChinaMasterTable";
-import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
 import { parsePageParams } from "@/lib/pagination";
 
-const tzsFmt = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
-
 type SearchParams = {
   q?: string;
   sourceSheet?: string;
   batchId?: string;
+  sort?: string;
   page?: string;
   pageSize?: string;
 };
@@ -35,14 +31,13 @@ export default async function ChinaMasterFilePage({
     redirect("/login/admin");
   }
 
-  const { q, sourceSheet, batchId, page: pageParam, pageSize } = await searchParams;
+  const { q, sourceSheet, batchId, sort, page: pageParam, pageSize } = await searchParams;
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
 
-  const [items, batches, rawNotes, stats] = await Promise.all([
-    getChinaMasterItems({ q, sourceSheet, batchId }, pageArgs),
+  const [items, batches, rawNotes] = await Promise.all([
+    getChinaMasterItems({ q, sourceSheet, batchId, sort }, pageArgs),
     getChinaMasterBatchOptions(),
     getChinaMasterRawNotes(),
-    getChinaMasterStats(),
   ]);
 
   return (
@@ -53,27 +48,6 @@ export default async function ChinaMasterFilePage({
           Kumbukumbu ya kudumu ya manunuzi ya China na Dubai — imeingizwa moja kwa moja kutoka
           faili la Excel, bila kubadilisha chochote.
         </p>
-      </div>
-
-      <div className="no-print mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          icon={<Boxes size={18} />}
-          label="Jumla ya Bidhaa (Rows)"
-          value={String(stats.totalItems)}
-          accent="primary"
-        />
-        <StatCard
-          icon={<Package size={18} />}
-          label="Jumla ya Batches"
-          value={String(stats.totalBatches)}
-          accent="tertiary"
-        />
-        <StatCard
-          icon={<DollarSign size={18} />}
-          label="Jumla ya Thamani (TZS)"
-          value={tzsFmt.format(stats.totalTzsValue)}
-          accent="success"
-        />
       </div>
 
       <ChinaMasterFilterBar batches={batches} />
@@ -116,7 +90,7 @@ export default async function ChinaMasterFilePage({
 
       <Pagination
         baseHref="/dashboard/admin/china-master-file"
-        params={{ q, sourceSheet, batchId, pageSize }}
+        params={{ q, sourceSheet, batchId, sort, pageSize }}
         page={items.page}
         pageSize={items.pageSize}
         total={items.total}

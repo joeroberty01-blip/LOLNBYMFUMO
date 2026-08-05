@@ -74,6 +74,19 @@ export function ChinaMasterFilterBar({ batches }: { batches: ChinaMasterBatchOpt
           </option>
         ))}
       </Select>
+      <Select
+        defaultValue={searchParams.get("sort") ?? "batch"}
+        onChange={(e) => updateParams({ sort: e.target.value })}
+        className="w-auto"
+      >
+        <option value="batch">Sort: Default (Batch)</option>
+        <option value="description_asc">Sort: Bidhaa (A–Z)</option>
+        <option value="description_desc">Sort: Bidhaa (Z–A)</option>
+        <option value="partNumber_asc">Sort: Part Number</option>
+        <option value="quantity_desc">Sort: Qty (Juu–Chini)</option>
+        <option value="totalTzs_desc">Sort: Total TZS (Juu–Chini)</option>
+        <option value="totalTzs_asc">Sort: Total TZS (Chini–Juu)</option>
+      </Select>
     </div>
   );
 }

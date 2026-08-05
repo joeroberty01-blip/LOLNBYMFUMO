@@ -23,10 +23,22 @@ export type ChinaMasterItemRow = {
   saleTotal: number | null;
 };
 
+export const CHINA_MASTER_SORT_OPTIONS = [
+  "batch",
+  "description_asc",
+  "description_desc",
+  "partNumber_asc",
+  "quantity_desc",
+  "totalTzs_desc",
+  "totalTzs_asc",
+] as const;
+export type ChinaMasterSort = (typeof CHINA_MASTER_SORT_OPTIONS)[number];
+
 export type ChinaMasterFilters = {
   q?: string;
   sourceSheet?: string;
   batchId?: string;
+  sort?: string;
 };
 
 function buildWhere(filters: ChinaMasterFilters): Prisma.ChinaMasterItemWhereInput {
@@ -42,6 +54,25 @@ function buildWhere(filters: ChinaMasterFilters): Prisma.ChinaMasterItemWhereInp
   return where;
 }
 
+function buildOrderBy(sort?: string): Prisma.ChinaMasterItemOrderByWithRelationInput[] {
+  switch (sort as ChinaMasterSort) {
+    case "description_asc":
+      return [{ description: "asc" }];
+    case "description_desc":
+      return [{ description: "desc" }];
+    case "partNumber_asc":
+      return [{ partNumber: "asc" }];
+    case "quantity_desc":
+      return [{ quantity: "desc" }];
+    case "totalTzs_desc":
+      return [{ totalTzs: "desc" }];
+    case "totalTzs_asc":
+      return [{ totalTzs: "asc" }];
+    default:
+      return [{ batch: { orderIndex: "asc" } }, { lineNo: "asc" }];
+  }
+}
+
 /** The archive's items, flattened across every batch for a single searchable/paginated table —
  * matches how someone actually uses "kumbukumbu" (a reference archive): looking up whether a
  * part was ever imported before, not browsing block-by-block through 192 spreadsheet sections. */
@@ -54,7 +85,7 @@ export async function getChinaMasterItems(
   const [rows, total] = await Promise.all([
     prisma.chinaMasterItem.findMany({
       where,
-      orderBy: [{ batch: { orderIndex: "asc" } }, { lineNo: "asc" }],
+      orderBy: buildOrderBy(filters.sort),
       skip: page.skip,
       take: page.take,
       select: {
@@ -137,21 +168,4 @@ export async function getChinaMasterRawNotes(): Promise<ChinaMasterRawNote[]> {
     dateLabel: r.dateLabel,
     rows: (r.rawLines as string[][] | null) ?? [],
   }));
-}
-
-export async function getChinaMasterStats(): Promise<{
-  totalItems: number;
-  totalBatches: number;
-  totalTzsValue: number;
-}> {
-  const [totalItems, totalBatches, sumResult] = await Promise.all([
-    prisma.chinaMasterItem.count(),
-    prisma.chinaMasterBatch.count(),
-    prisma.chinaMasterItem.aggregate({ _sum: { totalTzs: true } }),
-  ]);
-  return {
-    totalItems,
-    totalBatches,
-    totalTzsValue: sumResult._sum.totalTzs?.toNumber() ?? 0,
-  };
 }
