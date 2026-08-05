@@ -20,6 +20,7 @@ export const en = {
     memo: "Memo",
     split: "Split",
     salesReceipt: "Sales Receipt",
+    customerPayment: "Customer Payment",
     check: "Check",
   },
   sales: {
@@ -159,6 +160,7 @@ export const sw = {
     memo: "Memo",
     split: "Split",
     salesReceipt: "Sales Receipt",
+    customerPayment: "Customer Payment",
     check: "Check",
     subtitle: "Account QuickReport",
     groupTitle: "CASH AND BANK BALANCES",

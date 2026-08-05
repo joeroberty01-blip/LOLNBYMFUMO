@@ -119,15 +119,17 @@ function LedgerPdfDocument({ ledger }: { ledger: LedgerReport }) {
             </Text>
 
             {section.entries.map((entry) => {
-              const isSale = entry.type === "SALE";
+              const isExpense = entry.type === "EXPENSE";
+              const typeLabel =
+                entry.type === "SALE" ? "Sales Receipt" : entry.type === "PAYMENT" ? "Customer Payment" : "Check";
               return (
                 <Row
                   key={entry.id}
-                  color={isSale ? BLACK : RED}
-                  amountColor={isSale ? BLACK : RED}
+                  color={isExpense ? RED : BLACK}
+                  amountColor={isExpense ? RED : BLACK}
                   indent={12}
                   cells={[
-                    isSale ? "Sales Receipt" : "Check",
+                    typeLabel,
                     entry.date.toLocaleDateString("en-GB", {
                       day: "2-digit",
                       month: "short",

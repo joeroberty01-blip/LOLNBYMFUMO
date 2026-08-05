@@ -125,7 +125,11 @@ export default async function ReportsPage({
                         className={entry.type === "EXPENSE" ? "text-danger" : "text-primary"}
                       >
                         <td className="px-1 py-0.5 pl-4 whitespace-nowrap">
-                          {entry.type === "SALE" ? t.reports.ledger.salesReceipt : t.reports.ledger.check}
+                          {entry.type === "SALE"
+                            ? t.reports.ledger.salesReceipt
+                            : entry.type === "PAYMENT"
+                              ? t.reports.ledger.customerPayment
+                              : t.reports.ledger.check}
                         </td>
                         <td className="px-1 py-0.5 whitespace-nowrap">{fmtDate(entry.date)}</td>
                         <td className="px-1 py-0.5">{entry.num || ""}</td>
