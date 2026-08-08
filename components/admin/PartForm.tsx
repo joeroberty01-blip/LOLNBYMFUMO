@@ -5,29 +5,37 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { partSchema, type PartInput } from "@/lib/validators/parts";
+import { createPartSchema, type PartInput } from "@/lib/validators/parts";
 import { createPart, updatePart } from "@/lib/actions/parts";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
-import { Input, Label } from "@/components/ui/Input";
+import { Input, Select, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
   mode: "create" | "edit";
   partId?: string;
   defaultValues?: Partial<PartInput>;
+  branches?: { id: string; name: string }[];
 };
 
-export function PartForm({ mode, partId, defaultValues }: Props) {
+export function PartForm({ mode, partId, defaultValues, branches = [] }: Props) {
   const t = useTranslations();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  // createPartSchema in both modes: its two extra fields are optional and only rendered on
+  // create, and updatePart re-validates with partSchema, which drops them.
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<z.input<typeof partSchema>, unknown, z.output<typeof partSchema>>({
-    resolver: zodResolver(partSchema),
-    defaultValues: { lowStockThreshold: 5, ...defaultValues },
+  } = useForm<z.input<typeof createPartSchema>, unknown, z.output<typeof createPartSchema>>({
+    resolver: zodResolver(createPartSchema),
+    defaultValues: {
+      lowStockThreshold: 5,
+      openingQuantity: 0,
+      openingBranchId: branches[0]?.id ?? "",
+      ...defaultValues,
+    },
   });
 
   const onSubmit = handleSubmit(async (data) => {
@@ -98,6 +106,28 @@ export function PartForm({ mode, partId, defaultValues }: Props) {
           <p className="mt-1 text-sm text-danger">{errors.lowStockThreshold.message}</p>
         )}
       </div>
+
+      {mode === "create" && branches.length > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Quantity ({t.common.optional})</Label>
+            <Input id="openingQuantity" type="number" min={0} {...register("openingQuantity")} />
+            {errors.openingQuantity && (
+              <p className="mt-1 text-sm text-danger">{errors.openingQuantity.message}</p>
+            )}
+          </div>
+          <div>
+            <Label>Store</Label>
+            <Select id="openingBranchId" {...register("openingBranchId")}>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      )}
 
       <div>
         <Label>

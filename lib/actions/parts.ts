@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { partSchema, type PartInput } from "@/lib/validators/parts";
+import {
+  partSchema,
+  createPartSchema,
+  type PartInput,
+  type CreatePartInput,
+} from "@/lib/validators/parts";
+import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -15,22 +21,65 @@ async function requireAdmin() {
   return session;
 }
 
-export async function createPart(input: PartInput): Promise<ActionResult> {
+export async function createPart(input: CreatePartInput): Promise<ActionResult> {
+  let session;
   try {
-    await requireAdmin();
+    session = await requireAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 
-  const parsed = partSchema.safeParse(input);
+  const parsed = createPartSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
-  const data = parsed.data;
+  const { openingQuantity, openingBranchId, ...data } = parsed.data;
+  const userId = session.user.id;
 
-  await prisma.part.create({ data });
+  if (openingQuantity && openingQuantity > 0 && !openingBranchId) {
+    return { success: false, error: "Chagua store ya kuweka hizo quantity" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const part = await tx.part.create({ data });
+
+      if (openingQuantity && openingQuantity > 0 && openingBranchId) {
+        await tx.inventory.create({
+          data: { partId: part.id, branchId: openingBranchId, quantity: openingQuantity },
+        });
+        const adjustment = await tx.stockAdjustment.create({
+          data: {
+            partId: part.id,
+            branchId: openingBranchId,
+            quantityChange: openingQuantity,
+            reason: "NEW_STOCK",
+            userId,
+          },
+        });
+        await logAudit(tx, {
+          userId,
+          action: "STOCK_ADJUSTED",
+          entityType: "StockAdjustment",
+          entityId: adjustment.id,
+          metadata: {
+            partId: part.id,
+            branchId: openingBranchId,
+            quantityChange: openingQuantity,
+            reason: "NEW_STOCK",
+            previousQty: 0,
+            newQty: openingQuantity,
+          },
+        });
+      }
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kuongeza part" };
+  }
+
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/sales/inventory");
+  revalidatePath("/dashboard/admin");
   return { success: true };
 }
 

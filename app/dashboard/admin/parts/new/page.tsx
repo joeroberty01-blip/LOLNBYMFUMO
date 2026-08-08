@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { PartForm } from "@/components/admin/PartForm";
+import { getBranches } from "@/lib/data/branches";
 import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function NewPartPage() {
@@ -10,7 +11,7 @@ export default async function NewPartPage() {
     redirect("/login/admin");
   }
 
-  const { t } = await getServerDictionary();
+  const [{ t }, branches] = await Promise.all([getServerDictionary(), getBranches()]);
 
   return (
     <div>
@@ -20,7 +21,7 @@ export default async function NewPartPage() {
       <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
         {t.adminCatalog.parts.newTitle}
       </h1>
-      <PartForm mode="create" />
+      <PartForm mode="create" branches={branches} />
     </div>
   );
 }
