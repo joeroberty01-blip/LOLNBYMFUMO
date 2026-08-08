@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
-import { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 export type ChinaMasterItemRow = {
   id: string;
@@ -140,32 +140,4 @@ export async function getChinaMasterBatchOptions(): Promise<ChinaMasterBatchOpti
     select: { id: true, label: true, sourceSheet: true },
   });
   return rows.map((r) => ({ id: r.id, label: r.label ?? "", sourceSheet: r.sourceSheet }));
-}
-
-export type ChinaMasterRawNote = {
-  id: string;
-  sourceSheet: string;
-  label: string | null;
-  dateLabel: string | null;
-  rows: string[][];
-};
-
-/** The handful of spreadsheet sections that didn't follow the standard NO/DESCRIPTION/PART NO
- * table layout closely enough to parse into typed items. Kept as one array of cells per original
- * row (not one giant blob of text) so the UI can still render them as a proper table of their
- * own — nothing from the original file is silently dropped, it's just not force-fit into the
- * typed columns the standard batches use. */
-export async function getChinaMasterRawNotes(): Promise<ChinaMasterRawNote[]> {
-  const rows = await prisma.chinaMasterBatch.findMany({
-    where: { rawLines: { not: Prisma.JsonNull } },
-    orderBy: { orderIndex: "asc" },
-    select: { id: true, sourceSheet: true, label: true, dateLabel: true, rawLines: true },
-  });
-  return rows.map((r) => ({
-    id: r.id,
-    sourceSheet: r.sourceSheet,
-    label: r.label,
-    dateLabel: r.dateLabel,
-    rows: (r.rawLines as string[][] | null) ?? [],
-  }));
 }

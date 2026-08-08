@@ -399,8 +399,9 @@ model PurchaseItem {
 /// verbatim from the user's "CHINA MASTER FILE" spreadsheet. Deliberately NOT wired into
 /// Part/Inventory/Supplier — this is a reference archive of past purchases, not an operational
 /// feature, so importing it can never affect live stock or balances. One ChinaMasterBatch per
-/// original spreadsheet section (a supplier/agent + its line items); some batches from the
-/// source file had no parseable item table and are kept as rawNotes only, so nothing is dropped.
+/// original spreadsheet section (a supplier/agent + its line items). Sections whose header row
+/// didn't literally say "NO" still become ordinary batches with ordinary items, mapped by
+/// column position — every row lands in the one list, none are set aside as unstructured.
 model ChinaMasterBatch {
   id            String   @id @default(cuid())
   sourceSheet   String
@@ -408,11 +409,6 @@ model ChinaMasterBatch {
   label         String?
   dateLabel     String?
   currencyLabel String?
-  rawNotes      String?
-  /// For the handful of sections with no standard NO/DESCRIPTION/PART NO table: every non-empty
-  /// row's cells, one array per row — lets the UI render them as their own small table instead
-  /// of a single wall of text, without guessing which cell means what.
-  rawLines      Json?
   createdAt     DateTime @default(now())
 
   items ChinaMasterItem[]
