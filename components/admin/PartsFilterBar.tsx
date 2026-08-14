@@ -14,25 +14,28 @@ type Props = {
  * short beat after the admin stops typing, instead of waiting for a form submit / Enter press. */
 const DEBOUNCE_MS = 300;
 
+/** Ordering only. The stock-condition options that used to live here ("Stock ndogo kwanza",
+ * "Stock hasi kwanza") were removed on purpose: they only pushed matching parts to the top while
+ * still listing all the others, so printing still produced the whole catalogue. Choosing a stock
+ * condition is now the ONYESHA control below, which actually narrows the list — and therefore
+ * the print and the CSV too. */
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "name_asc", label: "Jina (A–Z)" },
   { value: "name_desc", label: "Jina (Z–A)" },
   { value: "partNumber_asc", label: "Part Number" },
-  { value: "lowStock", label: "Stock ndogo kwanza" },
-  { value: "negative", label: "Stock hasi kwanza" },
-  { value: "quantity_desc", label: "Quantity (kubwa→ndogo)" },
   { value: "quantity_asc", label: "Quantity (ndogo→kubwa)" },
+  { value: "quantity_desc", label: "Quantity (kubwa→ndogo)" },
   { value: "price_desc", label: "Bei (kubwa→ndogo)" },
   { value: "price_asc", label: "Bei (ndogo→kubwa)" },
   { value: "newest", label: "Mpya kwanza" },
 ];
 
 const STOCK_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "Stock zote" },
-  { value: "low", label: "Stock ndogo tu" },
-  { value: "negative", label: "Stock hasi tu" },
-  { value: "out", label: "Zilizoisha (0)" },
-  { value: "instock", label: "Zilizopo tu" },
+  { value: "", label: "Onyesha: Zote" },
+  { value: "low", label: "Onyesha: Stock ndogo tu" },
+  { value: "negative", label: "Onyesha: Stock hasi tu" },
+  { value: "out", label: "Onyesha: Zilizoisha (0)" },
+  { value: "instock", label: "Onyesha: Zilizopo tu" },
 ];
 
 const PAGE_SIZES = [50, 100, 200];

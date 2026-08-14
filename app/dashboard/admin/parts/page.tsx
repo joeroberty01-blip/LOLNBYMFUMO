@@ -53,14 +53,36 @@ export default async function AdminPartsPage({
     .map((c) => c.trim())
     .filter(Boolean);
 
+  // Narrowing to a stock condition implies an urgency order — worst rows first — unless the
+  // admin has explicitly chosen how to sort.
+  const effectiveSort =
+    sort ?? (stock === "low" ? "lowStock" : stock === "negative" ? "negative" : undefined);
+
   const [parts, categories, branches] = await Promise.all([
     getPartsForAdminTable(
-      { q, category, categories: selectedCategories, stock, sort },
+      { q, category, categories: selectedCategories, stock, sort: effectiveSort },
       pageArgs
     ),
     getPartCategories(),
     getBranches(),
   ]);
+
+  const STOCK_LABEL: Record<string, string> = {
+    low: "Stock ndogo tu",
+    negative: "Stock hasi tu",
+    out: "Zilizoisha (0)",
+    instock: "Zilizopo tu",
+  };
+  const scopeParts = [
+    selectedCategories.length > 0
+      ? `Categories: ${selectedCategories.join(", ")}`
+      : category
+        ? `Category: ${category}`
+        : null,
+    stock ? STOCK_LABEL[stock] : null,
+    q ? `Utafutaji: "${q}"` : null,
+  ].filter(Boolean) as string[];
+  const isFiltered = scopeParts.length > 0;
 
   return (
     <div>
@@ -95,6 +117,25 @@ export default async function AdminPartsPage({
         <>
           <PartsFilterBar categories={categories} />
 
+          {/* Makes the print/CSV scope unmistakable before the admin commits to paper: what is
+              on screen after filtering is exactly what comes out. */}
+          <div className="no-print mb-3 rounded-card border border-border bg-surface px-3 py-2 text-xs">
+            <span className="text-secondary">Zitakazochapishwa: </span>
+            <strong className="text-primary">{parts.total} parts</strong>
+            {isFiltered ? (
+              <span className="text-secondary"> · {scopeParts.join(" · ")}</span>
+            ) : (
+              <span className="text-secondary"> · catalogue nzima (hujachuja chochote)</span>
+            )}
+            {parts.totalPages > 1 && (
+              <span className="text-warning">
+                {" "}
+                · ukurasa huu una {parts.rows.length} kati ya {parts.total} — ongeza rows/ukurasa
+                ili uchapishe zote
+              </span>
+            )}
+          </div>
+
           <ListToolbar
             filename="parts"
             headers={["Part Number", "Name", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
@@ -113,15 +154,7 @@ export default async function AdminPartsPage({
               printed sheet has to say for itself which slice of the catalog it covers. */}
           <div className="mb-3 hidden print:block">
             <p className="text-sm font-bold">{t.nav.parts}</p>
-            <p className="text-xs">
-              {selectedCategories.length > 0
-                ? `Categories: ${selectedCategories.join(", ")}`
-                : category
-                  ? `Category: ${category}`
-                  : "Categories zote"}
-              {stock ? ` · Stock: ${stock}` : ""}
-              {q ? ` · Utafutaji: "${q}"` : ""}
-            </p>
+            <p className="text-xs">{isFiltered ? scopeParts.join(" · ") : "Catalogue nzima"}</p>
             <p className="text-xs">
               Jumla: {parts.total} parts · ukurasa {parts.page}/{parts.totalPages}
             </p>
