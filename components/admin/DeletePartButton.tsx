@@ -3,10 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deletePart } from "@/lib/actions/parts";
+import { Trash2 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Button } from "@/components/ui/Button";
 
-export function DeletePartButton({ partId }: { partId: string }) {
+export function DeletePartButton({
+  partId,
+  compact = false,
+}: {
+  partId: string;
+  /** Icon-only, for dense table rows where a labelled button would wrap the row. */
+  compact?: boolean;
+}) {
   const t = useTranslations();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -25,6 +33,23 @@ export function DeletePartButton({ partId }: { partId: string }) {
       }
       router.refresh();
     });
+  }
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={handleClick}
+        aria-label={t.common.delete}
+        title={error ?? t.common.delete}
+        className={`rounded-control p-1.5 hover:bg-danger/10 hover:text-danger disabled:opacity-50 ${
+          error ? "text-danger" : "text-secondary"
+        }`}
+      >
+        <Trash2 size={15} />
+      </button>
+    );
   }
 
   return (

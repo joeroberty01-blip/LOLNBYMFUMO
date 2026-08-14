@@ -52,6 +52,19 @@ export function Tr({
   );
 }
 
-export function Td({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 text-primary ${className}`}>{children}</td>;
+export function Td({
+  children,
+  className = "",
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Native tooltip — lets a truncated cell still reveal its full value on hover. */
+  title?: string;
+}) {
+  return (
+    <td title={title} className={`px-4 py-3 text-primary ${className}`}>
+      {children}
+    </td>
+  );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ChevronDown, X } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Input, Select } from "@/components/ui/Input";
 
@@ -13,6 +14,29 @@ type Props = {
  * short beat after the admin stops typing, instead of waiting for a form submit / Enter press. */
 const DEBOUNCE_MS = 300;
 
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "name_asc", label: "Jina (A–Z)" },
+  { value: "name_desc", label: "Jina (Z–A)" },
+  { value: "partNumber_asc", label: "Part Number" },
+  { value: "lowStock", label: "Stock ndogo kwanza" },
+  { value: "negative", label: "Stock hasi kwanza" },
+  { value: "quantity_desc", label: "Quantity (kubwa→ndogo)" },
+  { value: "quantity_asc", label: "Quantity (ndogo→kubwa)" },
+  { value: "price_desc", label: "Bei (kubwa→ndogo)" },
+  { value: "price_asc", label: "Bei (ndogo→kubwa)" },
+  { value: "newest", label: "Mpya kwanza" },
+];
+
+const STOCK_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Stock zote" },
+  { value: "low", label: "Stock ndogo tu" },
+  { value: "negative", label: "Stock hasi tu" },
+  { value: "out", label: "Zilizoisha (0)" },
+  { value: "instock", label: "Zilizopo tu" },
+];
+
+const PAGE_SIZES = [50, 100, 200];
+
 export function PartsFilterBar({ categories }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -20,7 +44,14 @@ export function PartsFilterBar({ categories }: Props) {
   const t = useTranslations();
 
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [catOpen, setCatOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const catRef = useRef<HTMLDivElement | null>(null);
+
+  const selectedCats = (searchParams.get("categories") ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
 
   function updateParams(updates: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -41,33 +72,137 @@ export function PartsFilterBar({ categories }: Props) {
     debounceRef.current = setTimeout(() => updateParams({ q: value }), DEBOUNCE_MS);
   }
 
+  function toggleCategory(cat: string) {
+    const next = selectedCats.includes(cat)
+      ? selectedCats.filter((c) => c !== cat)
+      : [...selectedCats, cat];
+    // `categories` supersedes the older single-value `category` param, so clear it to avoid
+    // two competing category filters in the same URL.
+    updateParams({ categories: next.join(","), category: undefined });
+  }
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
 
+  // Close the category popover on an outside click, so it behaves like a normal dropdown.
+  useEffect(() => {
+    if (!catOpen) return;
+    function onDown(e: MouseEvent) {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) setCatOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [catOpen]);
+
+  const catLabel =
+    selectedCats.length === 0
+      ? t.adminCatalog.parts.allCategories
+      : selectedCats.length === 1
+        ? selectedCats[0]
+        : `Categories ${selectedCats.length}`;
+
   return (
-    <div className="mb-6 flex flex-wrap gap-2">
-      <Input
-        type="text"
-        placeholder={t.adminCatalog.parts.searchPlaceholder}
-        value={q}
-        onChange={(e) => handleQChange(e.target.value)}
-        className="min-w-[200px] flex-1"
-      />
-      <Select
-        defaultValue={searchParams.get("category") ?? ""}
-        onChange={(e) => updateParams({ category: e.target.value })}
-        className="w-auto"
-      >
-        <option value="">{t.adminCatalog.parts.allCategories}</option>
-        {categories.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </Select>
+    <div className="no-print mb-4 flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Input
+          type="text"
+          placeholder={t.adminCatalog.parts.searchPlaceholder}
+          value={q}
+          onChange={(e) => handleQChange(e.target.value)}
+          className="min-w-[200px] flex-1"
+        />
+
+        <div ref={catRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setCatOpen((v) => !v)}
+            className="flex h-full items-center gap-2 rounded-control border border-border bg-surface px-3 py-2 text-sm text-primary hover:border-accent"
+          >
+            {catLabel}
+            <ChevronDown size={14} className="text-secondary" />
+          </button>
+          {catOpen && (
+            <div className="absolute z-20 mt-1 max-h-72 w-60 overflow-y-auto rounded-control border border-border bg-surface-elevated p-2 shadow-lg">
+              <button
+                type="button"
+                onClick={() => updateParams({ categories: undefined, category: undefined })}
+                className="mb-1 w-full rounded-control px-2 py-1 text-left text-xs text-secondary hover:text-primary"
+              >
+                Ondoa zote
+              </button>
+              {categories.map((c) => (
+                <label
+                  key={c}
+                  className="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-sm text-primary hover:bg-white/[0.04]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedCats.includes(c)}
+                    onChange={() => toggleCategory(c)}
+                  />
+                  {c}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Select
+          value={searchParams.get("stock") ?? ""}
+          onChange={(e) => updateParams({ stock: e.target.value })}
+          className="w-auto"
+        >
+          {STOCK_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={searchParams.get("sort") ?? "name_asc"}
+          onChange={(e) => updateParams({ sort: e.target.value })}
+          className="w-auto"
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={searchParams.get("pageSize") ?? "50"}
+          onChange={(e) => updateParams({ pageSize: e.target.value })}
+          className="w-auto"
+        >
+          {PAGE_SIZES.map((n) => (
+            <option key={n} value={n}>
+              {n}/ukurasa
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      {selectedCats.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-secondary">Zitakazochapishwa:</span>
+          {selectedCats.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => toggleCategory(c)}
+              className="flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-xs text-accent hover:bg-accent/20"
+            >
+              {c}
+              <X size={11} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

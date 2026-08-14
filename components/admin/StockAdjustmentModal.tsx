@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { SlidersHorizontal } from "lucide-react";
 import { adjustStock } from "@/lib/actions/inventory";
 import { adjustmentReasons } from "@/lib/validators/inventory";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
@@ -27,12 +28,15 @@ export function StockAdjustmentModal({
   branchId,
   branchName,
   branches,
+  compact = false,
 }: {
   partId: string;
   partName: string;
   branchId: string | null;
   branchName: string;
   branches: Branch[];
+  /** Icon-only trigger, for dense table rows where a labelled button would wrap the row. */
+  compact?: boolean;
 }) {
   const t = useTranslations();
   const formSchema = z.object({
@@ -98,9 +102,21 @@ export function StockAdjustmentModal({
 
   return (
     <>
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-        {t.adminCatalog.parts.adjustStock}
-      </Button>
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={t.adminCatalog.parts.adjustStock}
+          title={t.adminCatalog.parts.adjustStock}
+          className="rounded-control p-1.5 text-secondary hover:bg-white/[0.06] hover:text-primary"
+        >
+          <SlidersHorizontal size={15} />
+        </button>
+      ) : (
+        <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+          {t.adminCatalog.parts.adjustStock}
+        </Button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

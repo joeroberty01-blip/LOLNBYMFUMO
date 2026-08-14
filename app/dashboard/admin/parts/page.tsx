@@ -18,6 +18,9 @@ import type { Period } from "@/lib/dateRanges";
 type SearchParams = {
   q?: string;
   category?: string;
+  categories?: string;
+  stock?: string;
+  sort?: string;
   page?: string;
   pageSize?: string;
   tab?: string;
@@ -41,13 +44,20 @@ export default async function AdminPartsPage({
   }
 
   const sp = await searchParams;
-  const { q, category, page: pageParam, pageSize, tab } = sp;
+  const { q, category, stock, sort, page: pageParam, pageSize, tab } = sp;
   const activeTab = tab === "report" ? "report" : "list";
   const { t } = await getServerDictionary();
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
+  const selectedCategories = (sp.categories ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
 
   const [parts, categories, branches] = await Promise.all([
-    getPartsForAdminTable({ q, category }, pageArgs),
+    getPartsForAdminTable(
+      { q, category, categories: selectedCategories, stock, sort },
+      pageArgs
+    ),
     getPartCategories(),
     getBranches(),
   ]);
@@ -99,11 +109,37 @@ export default async function AdminPartsPage({
             ])}
           />
 
+          {/* Print-only letterhead: the on-screen filter chrome is hidden when printing, so the
+              printed sheet has to say for itself which slice of the catalog it covers. */}
+          <div className="mb-3 hidden print:block">
+            <p className="text-sm font-bold">{t.nav.parts}</p>
+            <p className="text-xs">
+              {selectedCategories.length > 0
+                ? `Categories: ${selectedCategories.join(", ")}`
+                : category
+                  ? `Category: ${category}`
+                  : "Categories zote"}
+              {stock ? ` · Stock: ${stock}` : ""}
+              {q ? ` · Utafutaji: "${q}"` : ""}
+            </p>
+            <p className="text-xs">
+              Jumla: {parts.total} parts · ukurasa {parts.page}/{parts.totalPages}
+            </p>
+          </div>
+
           <PartsTable rows={parts.rows} branches={branches} />
 
           <Pagination
             baseHref="/dashboard/admin/parts"
-            params={{ q, category, pageSize, tab: "list" }}
+            params={{
+              q,
+              category,
+              categories: sp.categories,
+              stock,
+              sort,
+              pageSize,
+              tab: "list",
+            }}
             page={parts.page}
             pageSize={parts.pageSize}
             total={parts.total}
