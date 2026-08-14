@@ -77,23 +77,27 @@ export default async function AccountingPage({
   return (
     <div>
       <div className="no-print">
-        <h1 className="mb-1 text-xl font-semibold text-primary">Accounting</h1>
-        <p className="mb-4 text-sm text-secondary">{range.label}</p>
-
-        <div className="mb-6 flex flex-wrap gap-3 text-sm">
-          <span className="text-secondary">Ripoti nyingine:</span>
-          <Link href="/dashboard/admin/reports" className="text-accent hover:underline">
-            Ledger
-          </Link>
-          <Link href="/dashboard/admin/reports/sales" className="text-accent hover:underline">
-            Mauzo
-          </Link>
-          <Link href="/dashboard/admin/parts?tab=report" className="text-accent hover:underline">
-            Inventory
-          </Link>
-          <Link href="/dashboard/admin/reports/customers" className="text-accent hover:underline">
-            Wateja
-          </Link>
+        {/* Title and cross-links share one row so the page chrome costs a single line instead of
+            three, leaving the figures higher up the fold. */}
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <h1 className="text-xl font-semibold text-primary">Accounting</h1>
+            <span className="text-sm text-secondary">{range.label}</span>
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs">
+            <Link href="/dashboard/admin/reports" className="text-accent hover:underline">
+              Ledger
+            </Link>
+            <Link href="/dashboard/admin/reports/sales" className="text-accent hover:underline">
+              Mauzo
+            </Link>
+            <Link href="/dashboard/admin/parts?tab=report" className="text-accent hover:underline">
+              Inventory
+            </Link>
+            <Link href="/dashboard/admin/reports/customers" className="text-accent hover:underline">
+              Wateja
+            </Link>
+          </div>
         </div>
 
         <Tabs

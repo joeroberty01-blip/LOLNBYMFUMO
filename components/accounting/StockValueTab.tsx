@@ -3,6 +3,49 @@ import type { StockValuation, DeadStockRow } from "@/lib/data/reports/accounting
 import { StatCard } from "@/components/ui/StatCard";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Section, Note } from "@/components/accounting/Section";
+
+function ValuationTable({
+  groups,
+  head,
+}: {
+  groups: { key: string; label: string; units: number; costValue: number; retailValue: number; expectedProfit: number }[];
+  head: string;
+}) {
+  if (groups.length === 0) return <EmptyState title="Hakuna stock." />;
+  return (
+    <Table>
+      <THead>
+        <THeadRow>
+          <Th>{head}</Th>
+          <Th className="text-right">Units</Th>
+          <Th className="text-right">Gharama</Th>
+          <Th className="text-right">Kuuzia</Th>
+          <Th className="text-right">Faida</Th>
+        </THeadRow>
+      </THead>
+      <TBody>
+        {groups.map((g, i) => (
+          <Tr key={g.key} index={i}>
+            <Td className="max-w-0 truncate" title={g.label}>
+              {g.label}
+            </Td>
+            <Td className="text-right tabular-nums">{g.units}</Td>
+            <Td className="text-right tabular-nums whitespace-nowrap">
+              {currency.format(g.costValue)}
+            </Td>
+            <Td className="text-right tabular-nums whitespace-nowrap">
+              {currency.format(g.retailValue)}
+            </Td>
+            <Td className="text-right font-medium tabular-nums whitespace-nowrap text-success">
+              {currency.format(g.expectedProfit)}
+            </Td>
+          </Tr>
+        ))}
+      </TBody>
+    </Table>
+  );
+}
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const pct = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 1 });
@@ -14,9 +57,11 @@ export function StockValueTab({
   valuation: StockValuation;
   deadStock: DeadStockRow[];
 }) {
+  const deadTotal = deadStock.reduce((s, r) => s + r.costValue, 0);
+
   return (
-    <div>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<Coins size={18} />}
           label="Thamani ya Stock (Gharama)"
@@ -44,86 +89,36 @@ export function StockValueTab({
         />
       </div>
 
-      <p className="mb-6 rounded-card border border-border bg-surface p-3 text-xs text-secondary">
-        <strong className="text-primary">Faida inayotarajiwa</strong> ni{" "}
-        {currency.format(valuation.retailValue)} − {currency.format(valuation.costValue)} ={" "}
-        {currency.format(valuation.expectedProfit)}. Hii <em>bado si faida halisi</em> — inakuwa
-        halisi tu stock ikiuzwa, na kwa bei kamili ya list. Kila punguzo unalotoa kwa mteja
-        linaipunguza. Jumla: <strong className="text-primary">{valuation.totalUnits}</strong> units
-        kutoka parts <strong className="text-primary">{valuation.distinctParts}</strong>.
-      </p>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Section
+          title="Thamani kwa Store"
+          basis="now"
+          right={`Stores ${valuation.byBranch.length}`}
+        >
+          <ValuationTable groups={valuation.byBranch} head="Store" />
+        </Section>
 
-      <h2 className="mb-2 text-sm font-semibold text-primary">Thamani kwa Store</h2>
-      <div className="mb-8">
-        {valuation.byBranch.length === 0 ? (
-          <EmptyState title="Hakuna stock." />
-        ) : (
-          <Table>
-            <THead>
-              <THeadRow>
-                <Th>Store</Th>
-                <Th className="text-right">Units</Th>
-                <Th className="text-right">Gharama</Th>
-                <Th className="text-right">Kuuzia</Th>
-                <Th className="text-right">Faida Inayotarajiwa</Th>
-              </THeadRow>
-            </THead>
-            <TBody>
-              {valuation.byBranch.map((g, i) => (
-                <Tr key={g.key} index={i}>
-                  <Td>{g.label}</Td>
-                  <Td className="text-right tabular-nums">{g.units}</Td>
-                  <Td className="text-right tabular-nums">{currency.format(g.costValue)}</Td>
-                  <Td className="text-right tabular-nums">{currency.format(g.retailValue)}</Td>
-                  <Td className="text-right font-medium tabular-nums text-success">
-                    {currency.format(g.expectedProfit)}
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
-        )}
+        <Section
+          title="Thamani kwa Category"
+          basis="now"
+          right={`Categories ${valuation.byCategory.length}`}
+        >
+          <ValuationTable groups={valuation.byCategory} head="Category" />
+          <Note title="Faida inayotarajiwa bado si faida halisi">
+            {currency.format(valuation.retailValue)} − {currency.format(valuation.costValue)} ={" "}
+            {currency.format(valuation.expectedProfit)}. Inakuwa halisi tu stock ikiuzwa, na kwa
+            bei kamili ya list — kila punguzo unalotoa linaipunguza. Jumla:{" "}
+            {valuation.totalUnits} units kutoka parts {valuation.distinctParts}.
+          </Note>
+        </Section>
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-primary">Thamani kwa Category</h2>
-      <div className="mb-8">
-        {valuation.byCategory.length === 0 ? (
-          <EmptyState title="Hakuna stock." />
-        ) : (
-          <Table>
-            <THead>
-              <THeadRow>
-                <Th>Category</Th>
-                <Th className="text-right">Units</Th>
-                <Th className="text-right">Gharama</Th>
-                <Th className="text-right">Kuuzia</Th>
-                <Th className="text-right">Faida Inayotarajiwa</Th>
-              </THeadRow>
-            </THead>
-            <TBody>
-              {valuation.byCategory.map((g, i) => (
-                <Tr key={g.key} index={i}>
-                  <Td>{g.label}</Td>
-                  <Td className="text-right tabular-nums">{g.units}</Td>
-                  <Td className="text-right tabular-nums">{currency.format(g.costValue)}</Td>
-                  <Td className="text-right tabular-nums">{currency.format(g.retailValue)}</Td>
-                  <Td className="text-right font-medium tabular-nums text-success">
-                    {currency.format(g.expectedProfit)}
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
-        )}
-      </div>
-
-      <h2 className="mb-1 text-sm font-semibold text-primary">
-        Dead Stock — Mtaji Uliolala (siku 90+)
-      </h2>
-      <p className="mb-3 text-xs text-secondary">
-        Stock iliyopo lakini haijauzwa kwa muda mrefu, ikipimwa kwa gharama ya kununua. Hizi ni
-        pesa zilizolala kwenye shelf.
-      </p>
+      <Section
+        title="Dead Stock — Mtaji Uliolala"
+        basis="now"
+        subtitle="Stock iliyopo lakini haijauzwa kwa siku 90+, ikipimwa kwa gharama ya kununua."
+        right={`Jumla ${currency.format(deadTotal)}`}
+      >
       {deadStock.length === 0 ? (
         <EmptyState title="Hakuna dead stock — kila kitu kinauzwa." />
       ) : (
@@ -141,13 +136,17 @@ export function StockValueTab({
           <TBody>
             {deadStock.map((r, i) => (
               <Tr key={r.partId} index={i}>
-                <Td className="font-medium">{r.name}</Td>
-                <Td className="text-secondary">{r.partNumber}</Td>
+                <Td className="max-w-0 truncate font-medium" title={r.name}>
+                  {r.name}
+                </Td>
+                <Td className="max-w-0 truncate text-secondary" title={r.partNumber}>
+                  {r.partNumber}
+                </Td>
                 <Td className="text-right tabular-nums">{r.units}</Td>
-                <Td className="text-right font-medium tabular-nums text-warning">
+                <Td className="text-right font-medium tabular-nums whitespace-nowrap text-warning">
                   {currency.format(r.costValue)}
                 </Td>
-                <Td className="text-secondary">
+                <Td className="whitespace-nowrap text-secondary">
                   {r.lastSoldAt ? r.lastSoldAt.toLocaleDateString("sw-TZ") : "Haijawahi kuuzwa"}
                 </Td>
                 <Td className="text-right tabular-nums">{r.daysIdle ?? "—"}</Td>
@@ -156,6 +155,7 @@ export function StockValueTab({
           </TBody>
         </Table>
       )}
+      </Section>
     </div>
   );
 }

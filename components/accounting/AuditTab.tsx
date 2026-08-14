@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
 import type { AuditSummary, IntegrityCheck } from "@/lib/data/reports/accounting";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Section } from "@/components/accounting/Section";
 
 const ACTION_LABEL: Record<string, string> = {
   SALE_COMPLETED: "Mauzo yamekamilika",
@@ -45,13 +46,18 @@ export function AuditTab({
   const clean = checks.filter((c) => c.count === 0);
 
   return (
-    <div>
-      <h2 className="mb-1 text-sm font-semibold text-primary">Ukaguzi wa Data</h2>
-      <p className="mb-3 text-xs text-secondary">
-        Hali halisi zilizosomwa moja kwa moja kutoka kwenye data — si makadirio.
-      </p>
-
-      <div className="mb-8 flex flex-col gap-2">
+    <div className="flex flex-col gap-8">
+      <Section
+        title="Ukaguzi wa Data"
+        basis="now"
+        subtitle="Hali halisi zilizosomwa moja kwa moja kutoka kwenye data — si makadirio."
+        right={
+          problems.length === 0
+            ? "Hakuna tatizo"
+            : `${problems.length} kati ya ${checks.length} zinahitaji macho`
+        }
+      >
+      <div className="flex flex-col gap-2">
         {problems.map((c) => (
           <div
             key={c.key}
@@ -94,15 +100,15 @@ export function AuditTab({
           </div>
         )}
       </div>
+      </Section>
 
-      <h2 className="mb-1 text-sm font-semibold text-primary">
-        Vitendo Nyeti — {rangeLabel} ({audit.sensitiveCount})
-      </h2>
-      <p className="mb-3 text-xs text-secondary">
-        Kufuta, kuhariri, na kurekebisha stock — vitendo vinavyobadilisha rekodi baada ya
-        kuandikwa. Kuongeza kwa kawaida hakupo hapa.
-      </p>
-      <div className="mb-8">
+      <Section
+        title="Vitendo Nyeti"
+        basis="period"
+        subtitle="Kufuta, kuhariri, na kurekebisha stock — vinavyobadilisha rekodi baada ya kuandikwa. Kuongeza kwa kawaida hakupo hapa."
+        right={`${audit.sensitiveCount} kwenye ${rangeLabel}`}
+      >
+      <div>
         {audit.sensitive.length === 0 ? (
           <EmptyState title="Hakuna kitendo nyeti kwenye kipindi hiki." />
         ) : (
@@ -138,11 +144,14 @@ export function AuditTab({
           </p>
         )}
       </div>
+      </Section>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div>
-          <h2 className="mb-1 text-sm font-semibold text-primary">Vitendo kwa Aina</h2>
-          <p className="mb-3 text-xs text-secondary">Jumla: {audit.totalEvents} matukio</p>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Section
+          title="Vitendo kwa Aina"
+          basis="period"
+          right={`${audit.totalEvents} matukio`}
+        >
           {audit.byAction.length === 0 ? (
             <EmptyState title="Hakuna matukio." />
           ) : (
@@ -163,11 +172,13 @@ export function AuditTab({
               </TBody>
             </Table>
           )}
-        </div>
+        </Section>
 
-        <div>
-          <h2 className="mb-1 text-sm font-semibold text-primary">Vitendo kwa Mtumiaji</h2>
-          <p className="mb-3 text-xs text-secondary">Nani amefanya nini kwenye kipindi hiki.</p>
+        <Section
+          title="Vitendo kwa Mtumiaji"
+          basis="period"
+          subtitle="Nani amefanya nini kwenye kipindi hiki."
+        >
           {audit.byUser.length === 0 ? (
             <EmptyState title="Hakuna matukio." />
           ) : (
@@ -188,7 +199,7 @@ export function AuditTab({
               </TBody>
             </Table>
           )}
-        </div>
+        </Section>
       </div>
     </div>
   );

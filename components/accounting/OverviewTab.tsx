@@ -3,6 +3,7 @@ import type { FinancialSummary } from "@/lib/accounting";
 import type { BalancePositions, StockValuation } from "@/lib/data/reports/accounting";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
+import { Section, Note } from "@/components/accounting/Section";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const pct = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 1 });
@@ -31,11 +32,27 @@ function Line({
         {note && <span className="block text-xs text-secondary">{note}</span>}
       </Td>
       <Td
-        className={`text-right tabular-nums ${toneClass} ${strong ? "text-base font-semibold" : ""}`}
+        className={`text-right tabular-nums whitespace-nowrap ${toneClass} ${
+          strong ? "text-base font-semibold" : ""
+        }`}
       >
         {tone === "negative" ? `−${currency.format(Math.abs(value))}` : currency.format(value)}
       </Td>
     </Tr>
+  );
+}
+
+function MoneyTable({ children }: { children: React.ReactNode }) {
+  return (
+    <Table>
+      <THead>
+        <THeadRow>
+          <Th>Kipengele</Th>
+          <Th className="text-right">Kiasi (TZS)</Th>
+        </THeadRow>
+      </THead>
+      <TBody>{children}</TBody>
+    </Table>
   );
 }
 
@@ -50,12 +67,14 @@ export function OverviewTab({
   valuation: StockValuation;
   rangeLabel: string;
 }) {
-  const grossMarginPct = summary.totalRevenue > 0 ? (summary.grossProfit / summary.totalRevenue) * 100 : 0;
-  const netMarginPct = summary.totalRevenue > 0 ? (summary.netProfit / summary.totalRevenue) * 100 : 0;
+  const grossMarginPct =
+    summary.totalRevenue > 0 ? (summary.grossProfit / summary.totalRevenue) * 100 : 0;
+  const netMarginPct =
+    summary.totalRevenue > 0 ? (summary.netProfit / summary.totalRevenue) * 100 : 0;
 
   return (
-    <div>
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<Wallet size={18} />}
           label="Faida Halisi (Net Profit)"
@@ -84,22 +103,19 @@ export function OverviewTab({
         />
       </div>
 
-      <h2 className="mb-1 text-sm font-semibold text-primary">Profit &amp; Loss — {rangeLabel}</h2>
-      <p className="mb-3 text-xs text-secondary">
-        Faida halisi iliyopatikana kwenye mauzo ya kipindi hiki.
-      </p>
-      <div className="mb-8">
-        <Table>
-          <THead>
-            <THeadRow>
-              <Th>Kipengele</Th>
-              <Th className="text-right">Kiasi (TZS)</Th>
-            </THeadRow>
-          </THead>
-          <TBody>
+      {/* Period figures on the left, as-of-now figures on the right — the split is the point,
+          so the two bases are never read as one continuous statement. */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Section
+          title="Profit &amp; Loss"
+          basis="period"
+          subtitle={`Faida iliyopatikana kwenye mauzo — ${rangeLabel}.`}
+          right={`Margin ${pct.format(netMarginPct)}%`}
+        >
+          <MoneyTable>
             <Line label="Mauzo (Revenue)" value={summary.totalRevenue} tone="positive" />
             <Line
-              label="Gharama ya Bidhaa Zilizouzwa (COGS)"
+              label="Gharama ya Bidhaa (COGS)"
               value={summary.cogs}
               tone="negative"
               note="Bei ya kununua ya bidhaa zilizouzwa"
@@ -120,75 +136,73 @@ export function OverviewTab({
               strong
               divider
             />
-          </TBody>
-        </Table>
-      </div>
+          </MoneyTable>
+          <Note title="Jinsi gharama inavyohesabiwa">
+            Bidhaa za kawaida hazihifadhi gharama yake wakati wa mauzo — COGS inasoma bei ya
+            kununua <em>iliyopo sasa</em> kwenye part. Ukibadilisha bei ya kununua, faida ya
+            mauzo ya zamani nayo inabadilika. Manual items pekee ndizo huhifadhi gharama halisi.
+          </Note>
+        </Section>
 
-      <h2 className="mb-1 text-sm font-semibold text-primary">Hali ya Mtaji (Working Capital)</h2>
-      <p className="mb-3 text-xs text-secondary">
-        Picha ya sasa hivi — haitegemei kipindi ulichochagua.
-      </p>
-      <div className="mb-8">
-        <Table>
-          <THead>
-            <THeadRow>
-              <Th>Kipengele</Th>
-              <Th className="text-right">Kiasi (TZS)</Th>
-            </THeadRow>
-          </THead>
-          <TBody>
-            <Line
-              label="Stock Iliyopo (kwa gharama)"
-              value={positions.stockCostValue}
-              note={`${valuation.totalUnits} units · parts ${valuation.distinctParts}`}
-            />
-            <Line
-              label="Tunaowadai (Receivables)"
-              value={positions.receivables}
-              note={`Wateja ${positions.customersOwing}`}
-            />
-            <Line
-              label="Wanaotudai (Payables)"
-              value={positions.payables}
-              tone="negative"
-              note={`Suppliers ${positions.suppliersOwed}`}
-            />
-            <Line
-              label="JUMLA YA MTAJI"
-              value={positions.netPosition}
-              tone={positions.netPosition >= 0 ? "positive" : "negative"}
-              strong
-              divider
-              note="Stock + tunaowadai − wanaotudai. Haijumuishi pesa taslimu."
-            />
-          </TBody>
-        </Table>
-      </div>
+        <div className="flex flex-col gap-8">
+          <Section
+            title="Hali ya Mtaji"
+            basis="now"
+            subtitle="Haitegemei kipindi ulichochagua."
+          >
+            <MoneyTable>
+              <Line
+                label="Stock Iliyopo (kwa gharama)"
+                value={positions.stockCostValue}
+                note={`${valuation.totalUnits} units · parts ${valuation.distinctParts}`}
+              />
+              <Line
+                label="Tunaowadai (Receivables)"
+                value={positions.receivables}
+                note={`Wateja ${positions.customersOwing}`}
+              />
+              <Line
+                label="Wanaotudai (Payables)"
+                value={positions.payables}
+                tone="negative"
+                note={`Suppliers ${positions.suppliersOwed}`}
+              />
+              <Line
+                label="JUMLA YA MTAJI"
+                value={positions.netPosition}
+                tone={positions.netPosition >= 0 ? "positive" : "negative"}
+                strong
+                divider
+                note="Stock + tunaowadai − wanaotudai"
+              />
+            </MoneyTable>
+            <Note title="Pesa taslimu haimo">
+              Mfumo hauhifadhi salio la pesa mkononi wala benki, kwa hiyo jumla hii ni mtaji
+              unaoonekana kwenye stock na madeni pekee.
+            </Note>
+          </Section>
 
-      <h2 className="mb-1 text-sm font-semibold text-primary">Faida Inayotarajiwa (Stock Iliyopo)</h2>
-      <p className="mb-3 text-xs text-secondary">
-        Ikiwa stock yote itauzwa kwa bei kamili ya list.
-      </p>
-      <Table>
-        <THead>
-          <THeadRow>
-            <Th>Kipengele</Th>
-            <Th className="text-right">Kiasi (TZS)</Th>
-          </THeadRow>
-        </THead>
-        <TBody>
-          <Line label="Thamani ya Kuuzia (list)" value={valuation.retailValue} tone="positive" />
-          <Line label="Gharama ya Kununua" value={valuation.costValue} tone="negative" />
-          <Line
-            label="FAIDA INAYOTARAJIWA"
-            value={valuation.expectedProfit}
-            note={`Margin: ${pct.format(valuation.expectedMarginPct)}% · bado haijapatikana`}
-            tone="positive"
-            strong
-            divider
-          />
-        </TBody>
-      </Table>
+          <Section
+            title="Faida Inayotarajiwa"
+            basis="now"
+            subtitle="Ikiwa stock yote itauzwa kwa bei kamili ya list."
+            right={`Margin ${pct.format(valuation.expectedMarginPct)}%`}
+          >
+            <MoneyTable>
+              <Line label="Thamani ya Kuuzia (list)" value={valuation.retailValue} tone="positive" />
+              <Line label="Gharama ya Kununua" value={valuation.costValue} tone="negative" />
+              <Line
+                label="FAIDA INAYOTARAJIWA"
+                value={valuation.expectedProfit}
+                note="Bado haijapatikana — punguzo lolote linaipunguza"
+                tone="positive"
+                strong
+                divider
+              />
+            </MoneyTable>
+          </Section>
+        </div>
+      </div>
     </div>
   );
 }

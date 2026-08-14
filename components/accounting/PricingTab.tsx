@@ -3,6 +3,7 @@ import type { PricingVariance, PricingVarianceRow } from "@/lib/data/reports/acc
 import { StatCard } from "@/components/ui/StatCard";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Note } from "@/components/accounting/Section";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const pct = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 1 });
@@ -105,7 +106,7 @@ export function PricingTab({
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<ArrowUpRight size={18} />}
           label="Ziada (Juu ya List)"
@@ -133,18 +134,20 @@ export function PricingTab({
         />
       </div>
 
-      <p className="mb-6 rounded-card border border-border bg-surface p-3 text-xs text-secondary">
-        Ulinganisho ni <strong className="text-primary">bei iliyouzwa dhidi ya bei ya list</strong>{" "}
-        ya part (Selling Price kwenye catalog). Lines {variance.atListCount} ziliuzwa kwa bei kamili
-        ya list.
-        {variance.manualItemsExcluded > 0 && (
-          <>
-            {" "}
-            Manual items {variance.manualItemsExcluded} hazikuhesabiwa hapa — hazina bei ya list ya
-            kulinganisha nayo.
-          </>
-        )}
-      </p>
+      <div className="mb-6">
+        <Note title="Ulinganisho unafanywaje">
+          Ni <strong className="text-primary">bei iliyouzwa dhidi ya bei ya list</strong> ya part
+          (Selling Price kwenye catalog). Lines {variance.atListCount} ziliuzwa kwa bei kamili ya
+          list.
+          {variance.manualItemsExcluded > 0 && (
+            <>
+              {" "}
+              Manual items {variance.manualItemsExcluded} hazikuhesabiwa — hazina bei ya list ya
+              kulinganisha nayo.
+            </>
+          )}
+        </Note>
+      </div>
 
       {show("belowcost") && variance.belowCost.length > 0 && (
         <div className="mb-8">
