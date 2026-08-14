@@ -20,6 +20,7 @@ import {
   CreditCard,
   ScrollText,
   Globe,
+  Calculator,
 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { APP_NAME } from "@/config/app";
@@ -80,6 +81,7 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
       label: t.adminOps.sidebar.finance,
       items: [
         { href: "/dashboard/admin/expenses", label: t.nav.expenses, icon: Wallet },
+        { href: "/dashboard/admin/accounting", label: t.nav.accounting, icon: Calculator },
         { href: "/dashboard/admin/reports", label: t.nav.reports, icon: BarChart3 },
         { href: "/dashboard/admin/logs", label: t.nav.auditLogs, icon: ScrollText },
       ],
