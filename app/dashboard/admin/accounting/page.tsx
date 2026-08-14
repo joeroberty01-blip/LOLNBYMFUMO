@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { BarChart3, Package, Tags } from "lucide-react";
+import { BarChart3, Package, Tags, Scale, ShieldCheck } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getFinancialSummary } from "@/lib/accounting";
@@ -9,16 +9,24 @@ import {
   getBalancePositions,
   getPricingVariance,
   getDeadStock,
+  getBalanceSheet,
+  getTrialBalance,
+  getExpenseBreakdown,
+  getAuditSummary,
+  getIntegrityChecks,
 } from "@/lib/data/reports/accounting";
 import { getBranches } from "@/lib/data/branches";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { Tabs } from "@/components/ui/Tabs";
 import { OverviewTab } from "@/components/accounting/OverviewTab";
 import { StockValueTab } from "@/components/accounting/StockValueTab";
-import { PricingTab } from "@/components/accounting/PricingTab";
+import { PricingTab, type PricingView } from "@/components/accounting/PricingTab";
+import { BalanceSheetTab } from "@/components/accounting/BalanceSheetTab";
+import { AuditTab } from "@/components/accounting/AuditTab";
 
 type SearchParams = {
   tab?: string;
+  view?: string;
   period?: Period;
   date?: string;
   weekOf?: string;
@@ -49,10 +57,22 @@ export default async function AccountingPage({
   const branches = await getBranches();
   const valuation = await getStockValuation(sp.branchId);
 
-  const summary = tab === "overview" ? await getFinancialSummary(range, filters) : null;
+  const needsSummary = tab === "overview" || tab === "balance";
+  const summary = needsSummary ? await getFinancialSummary(range, filters) : null;
+
   const positions = tab === "overview" ? await getBalancePositions(valuation.costValue) : null;
   const deadStock = tab === "stock" ? await getDeadStock() : [];
   const variance = tab === "pricing" ? await getPricingVariance(range, filters) : null;
+
+  const sheet = tab === "balance" ? await getBalanceSheet(valuation.costValue) : null;
+  const trial =
+    tab === "balance" && summary
+      ? await getTrialBalance(range, valuation.costValue, summary)
+      : null;
+  const expenses = tab === "balance" ? await getExpenseBreakdown(range, filters) : [];
+
+  const audit = tab === "audit" ? await getAuditSummary(range) : null;
+  const checks = tab === "audit" ? await getIntegrityChecks(range) : [];
 
   return (
     <div>
@@ -80,8 +100,10 @@ export default async function AccountingPage({
           defaultValue="overview"
           tabs={[
             { value: "overview", label: "Muhtasari", icon: <BarChart3 size={15} /> },
+            { value: "balance", label: "Balance Sheet", icon: <Scale size={15} /> },
             { value: "stock", label: "Thamani ya Stock", icon: <Package size={15} /> },
             { value: "pricing", label: "Bei za Mauzo", icon: <Tags size={15} /> },
+            { value: "audit", label: "Ukaguzi", icon: <ShieldCheck size={15} /> },
           ]}
         />
 
@@ -97,9 +119,24 @@ export default async function AccountingPage({
         />
       )}
 
+      {tab === "balance" && sheet && trial && (
+        <BalanceSheetTab
+          sheet={sheet}
+          trial={trial}
+          expenses={expenses}
+          rangeLabel={range.label}
+        />
+      )}
+
       {tab === "stock" && <StockValueTab valuation={valuation} deadStock={deadStock} />}
 
-      {tab === "pricing" && variance && <PricingTab variance={variance} />}
+      {tab === "pricing" && variance && (
+        <PricingTab variance={variance} view={(sp.view as PricingView) || "all"} />
+      )}
+
+      {tab === "audit" && audit && (
+        <AuditTab audit={audit} checks={checks} rangeLabel={range.label} />
+      )}
 
       <p className="mt-8 rounded-card border border-border bg-surface p-3 text-xs text-secondary">
         <strong className="text-primary">Kumbuka:</strong> gharama ya bidhaa zilizouzwa inasomwa

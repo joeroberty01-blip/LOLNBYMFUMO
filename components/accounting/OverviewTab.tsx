@@ -71,13 +71,13 @@ export function OverviewTab({
         />
         <StatCard
           icon={<HandCoins size={18} />}
-          label="Wanaotudai (Receivables)"
+          label="Tunaowadai (Receivables)"
           value={currency.format(positions.receivables)}
           accent="warning"
         />
         <StatCard
           icon={<Landmark size={18} />}
-          label="Tunaodaiwa (Payables)"
+          label="Wanaotudai (Payables)"
           value={currency.format(positions.payables)}
           accent="danger"
           alert={positions.payables > 0}
@@ -143,12 +143,12 @@ export function OverviewTab({
               note={`${valuation.totalUnits} units · parts ${valuation.distinctParts}`}
             />
             <Line
-              label="Wanaotudai (Receivables)"
+              label="Tunaowadai (Receivables)"
               value={positions.receivables}
               note={`Wateja ${positions.customersOwing}`}
             />
             <Line
-              label="Tunaodaiwa (Payables)"
+              label="Wanaotudai (Payables)"
               value={positions.payables}
               tone="negative"
               note={`Suppliers ${positions.suppliersOwed}`}
@@ -159,7 +159,7 @@ export function OverviewTab({
               tone={positions.netPosition >= 0 ? "positive" : "negative"}
               strong
               divider
-              note="Stock + wanaotudai − tunaodaiwa. Haijumuishi pesa taslimu."
+              note="Stock + tunaowadai − wanaotudai. Haijumuishi pesa taslimu."
             />
           </TBody>
         </Table>

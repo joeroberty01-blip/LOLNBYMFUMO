@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { DollarSign, Receipt, Banknote, CreditCard } from "lucide-react";
+import Link from "next/link";
+import { DollarSign, Receipt, Banknote, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getSalesReport, getSalesReportRows } from "@/lib/data/reports/sales";
@@ -75,7 +76,19 @@ export default async function SalesReportPage({
         <ReportControls branches={branches} staff={staff} showPaymentMethod />
       </div>
 
-      <div className="no-print mb-4 flex justify-end">
+      <div className="no-print mb-4 flex flex-wrap justify-end gap-2">
+        {/* Both land on the Accounting → Bei za Mauzo tab, which already computes sold-price vs
+            catalog-price variance — no second implementation of the same comparison. */}
+        <Link href="/dashboard/admin/accounting?tab=pricing&view=over">
+          <Button type="button" variant="secondary">
+            <TrendingUp size={14} /> Zilizouzwa juu ya bei
+          </Button>
+        </Link>
+        <Link href="/dashboard/admin/accounting?tab=pricing&view=under">
+          <Button type="button" variant="secondary">
+            <TrendingDown size={14} /> Zilizouzwa chini ya bei
+          </Button>
+        </Link>
         <a
           href={`/api/reports/sales-csv?${new URLSearchParams(
             Object.entries(sp).filter(([, v]) => v) as [string, string][]

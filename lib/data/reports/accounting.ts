@@ -379,3 +379,350 @@ export async function getDeadStock(minDaysIdle = 90, limit = 25): Promise<DeadSt
     .sort((a, b) => b.costValue - a.costValue)
     .slice(0, limit);
 }
+
+// ---------------------------------------------------------------------------
+// Balance sheet
+// ---------------------------------------------------------------------------
+
+export type BalanceSheetLine = { label: string; amount: number; note?: string };
+
+export type BalanceSheet = {
+  assets: BalanceSheetLine[];
+  liabilities: BalanceSheetLine[];
+  totalAssets: number;
+  totalLiabilities: number;
+  /** Assets − Liabilities. Derived, not a reconciled capital account. */
+  netWorth: number;
+};
+
+/**
+ * A partial balance sheet built from what this app actually records, and honest about its gaps
+ * rather than presenting figures it cannot support:
+ *   - No cash/bank balances. The app stores a payment *method* on each transaction but never
+ *     maintains account balances, so cash on hand is genuinely unknown.
+ *   - No fixed assets, prepayments, accruals, loans, tax, or owner capital accounts.
+ * What remains is working capital, and Net Worth is therefore a derivation
+ * (Assets − Liabilities), not a reconciled equity figure.
+ */
+export async function getBalanceSheet(stockCostValue: number): Promise<BalanceSheet> {
+  // Sequential (not Promise.all) — see the note in getBalancePositions.
+  const receivableAgg = await prisma.customer.aggregate({
+    where: { isActive: true, balance: { gt: 0 } },
+    _sum: { balance: true },
+    _count: true,
+  });
+  const payableAgg = await prisma.supplier.aggregate({
+    where: { isActive: true, balance: { gt: 0 } },
+    _sum: { balance: true },
+    _count: true,
+  });
+
+  const receivables = receivableAgg._sum.balance?.toNumber() ?? 0;
+  const payables = payableAgg._sum.balance?.toNumber() ?? 0;
+
+  const assets: BalanceSheetLine[] = [
+    { label: "Stock Iliyopo (kwa gharama)", amount: stockCostValue, note: "Inventory at cost" },
+    {
+      label: "Tunaowadai (Receivables)",
+      amount: receivables,
+      note: `Wateja ${receivableAgg._count} wenye deni kwetu`,
+    },
+  ];
+  const liabilities: BalanceSheetLine[] = [
+    {
+      label: "Wanaotudai (Payables)",
+      amount: payables,
+      note: `Suppliers ${payableAgg._count} tunaowadai`,
+    },
+  ];
+
+  const totalAssets = assets.reduce((s, l) => s + l.amount, 0);
+  const totalLiabilities = liabilities.reduce((s, l) => s + l.amount, 0);
+
+  return {
+    assets,
+    liabilities,
+    totalAssets,
+    totalLiabilities,
+    netWorth: totalAssets - totalLiabilities,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Trial balance
+// ---------------------------------------------------------------------------
+
+export type TrialBalanceRow = { account: string; debit: number; credit: number; note?: string };
+
+export type TrialBalance = {
+  rows: TrialBalanceRow[];
+  totalDebit: number;
+  totalCredit: number;
+  difference: number;
+};
+
+/**
+ * A trial balance *derived* from single-entry data. This app records transactions, not journal
+ * entries, so there are no real Dr/Cr postings to list — each figure below is computed from the
+ * source tables and placed on its natural side.
+ *
+ * Consequence worth being explicit about: the two columns cannot independently corroborate each
+ * other the way a genuine double-entry trial balance does, because the Mtaji/Retained line is a
+ * balancing figure. The totals therefore always agree by construction. Read this as a
+ * structured summary for review, never as evidence that the books balance.
+ */
+export async function getTrialBalance(
+  range: DateRange,
+  stockCostValue: number,
+  summary: { totalRevenue: number; cogs: number; totalExpenses: number }
+): Promise<TrialBalance> {
+  const receivableAgg = await prisma.customer.aggregate({
+    where: { isActive: true, balance: { gt: 0 } },
+    _sum: { balance: true },
+  });
+  const payableAgg = await prisma.supplier.aggregate({
+    where: { isActive: true, balance: { gt: 0 } },
+    _sum: { balance: true },
+  });
+
+  const receivables = receivableAgg._sum.balance?.toNumber() ?? 0;
+  const payables = payableAgg._sum.balance?.toNumber() ?? 0;
+
+  const rows: TrialBalanceRow[] = [
+    { account: "Stock (Inventory)", debit: stockCostValue, credit: 0, note: "Kwa gharama" },
+    { account: "Tunaowadai (Receivables)", debit: receivables, credit: 0 },
+    { account: "Gharama ya Mauzo (COGS)", debit: summary.cogs, credit: 0, note: range.label },
+    { account: "Matumizi (Expenses)", debit: summary.totalExpenses, credit: 0, note: range.label },
+    { account: "Wanaotudai (Payables)", debit: 0, credit: payables },
+    { account: "Mauzo (Sales Revenue)", debit: 0, credit: summary.totalRevenue, note: range.label },
+  ];
+
+  const plug =
+    rows.reduce((s, r) => s + r.debit, 0) - rows.reduce((s, r) => s + r.credit, 0);
+
+  rows.push({
+    account: "Mtaji / Retained",
+    debit: plug < 0 ? -plug : 0,
+    credit: plug > 0 ? plug : 0,
+    note: "Kiasi cha kusawazisha — si akaunti halisi",
+  });
+
+  const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
+  const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
+
+  return { rows, totalDebit, totalCredit, difference: totalDebit - totalCredit };
+}
+
+// ---------------------------------------------------------------------------
+// Expense breakdown
+// ---------------------------------------------------------------------------
+
+export type ExpenseBreakdownRow = { category: string; amount: number; count: number; pct: number };
+
+export async function getExpenseBreakdown(
+  range: DateRange,
+  filters: { branchId?: string } = {}
+): Promise<ExpenseBreakdownRow[]> {
+  const where: Prisma.ExpenseWhereInput = { createdAt: { gte: range.start, lte: range.end } };
+  if (filters.branchId) where.branchId = filters.branchId;
+
+  const grouped = await prisma.expense.groupBy({
+    by: ["category"],
+    where,
+    _sum: { amount: true },
+    _count: true,
+  });
+
+  const total = grouped.reduce((s, g) => s + (g._sum.amount?.toNumber() ?? 0), 0);
+  return grouped
+    .map((g) => {
+      const amount = g._sum.amount?.toNumber() ?? 0;
+      return {
+        category: g.category,
+        amount,
+        count: g._count,
+        pct: total > 0 ? (amount / total) * 100 : 0,
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+export type AuditEntryRow = {
+  id: string;
+  createdAt: Date;
+  action: string;
+  entityType: string;
+  entityId: string;
+  userName: string;
+};
+
+export type AuditSummary = {
+  totalEvents: number;
+  byAction: { action: string; count: number }[];
+  byUser: { userName: string; count: number }[];
+  sensitive: AuditEntryRow[];
+  sensitiveCount: number;
+};
+
+/** Void/delete/update actions — everything that alters or removes a record after it was first
+ * written, plus stock adjustments and backup restores. These are what an owner actually needs
+ * to review; routine creates are just normal trading. */
+const SENSITIVE_ACTIONS = [
+  "SALE_VOIDED",
+  "SALE_UPDATED",
+  "PURCHASE_DELETED",
+  "PURCHASE_UPDATED",
+  "EXPENSE_DELETED",
+  "EXPENSE_UPDATED",
+  "CUSTOMER_PAYMENT_DELETED",
+  "SUPPLIER_PAYMENT_DELETED",
+  "BACKUP_RESTORED",
+  "STOCK_ADJUSTED",
+];
+
+export async function getAuditSummary(range: DateRange, limit = 30): Promise<AuditSummary> {
+  const where: Prisma.AuditLogWhereInput = {
+    createdAt: { gte: range.start, lte: range.end },
+  };
+
+  const grouped = await prisma.auditLog.groupBy({ by: ["action"], where, _count: true });
+
+  const logs = await prisma.auditLog.findMany({
+    where,
+    select: { user: { select: { name: true } } },
+  });
+
+  const sensitiveWhere: Prisma.AuditLogWhereInput = { ...where, action: { in: SENSITIVE_ACTIONS } };
+  const sensitiveRows = await prisma.auditLog.findMany({
+    where: sensitiveWhere,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      createdAt: true,
+      action: true,
+      entityType: true,
+      entityId: true,
+      user: { select: { name: true } },
+    },
+  });
+  const sensitiveCount = await prisma.auditLog.count({ where: sensitiveWhere });
+
+  const byUserMap = new Map<string, number>();
+  for (const l of logs) {
+    const name = l.user?.name ?? "—";
+    byUserMap.set(name, (byUserMap.get(name) ?? 0) + 1);
+  }
+
+  return {
+    totalEvents: logs.length,
+    byAction: grouped
+      .map((g) => ({ action: g.action, count: g._count }))
+      .sort((a, b) => b.count - a.count),
+    byUser: Array.from(byUserMap.entries())
+      .map(([userName, count]) => ({ userName, count }))
+      .sort((a, b) => b.count - a.count),
+    sensitive: sensitiveRows.map((r) => ({
+      id: r.id,
+      createdAt: r.createdAt,
+      action: r.action,
+      entityType: r.entityType,
+      entityId: r.entityId,
+      userName: r.user?.name ?? "—",
+    })),
+    sensitiveCount,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Data integrity checks
+// ---------------------------------------------------------------------------
+
+export type IntegrityCheck = {
+  key: string;
+  label: string;
+  count: number;
+  detail: string;
+  severity: "danger" | "warning" | "ok";
+  href?: string;
+};
+
+/** States that mean the books or the stock records need a human to look. Each is a concrete,
+ * checkable condition read straight from the data — none of these is a heuristic guess. */
+export async function getIntegrityChecks(range: DateRange): Promise<IntegrityCheck[]> {
+  const negativeStock = await prisma.inventory.count({
+    where: { quantity: { lt: 0 }, part: { isActive: true } },
+  });
+
+  // Two-column comparisons, which Prisma's filter API cannot express.
+  const lossMaking = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM "Part"
+    WHERE "isActive" = true AND "unitPrice" <= "costPrice"
+  `;
+  const overLimit = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM "Customer"
+    WHERE "isActive" = true AND "creditLimit" > 0 AND balance > "creditLimit"
+  `;
+
+  const voided = await prisma.sale.count({
+    where: { status: "VOIDED", createdAt: { gte: range.start, lte: range.end } },
+  });
+  const negativeCustomerBalance = await prisma.customer.count({
+    where: { isActive: true, balance: { lt: 0 } },
+  });
+  const manualNoCost = await prisma.saleItem.count({
+    where: { isManualEntry: true, manualCostPrice: null },
+  });
+
+  return [
+    {
+      key: "negativeStock",
+      label: "Stock hasi",
+      count: negativeStock,
+      detail: "Inventory iliyo chini ya sifuri — haiwezekani kimwili, inahitaji marekebisho.",
+      severity: negativeStock > 0 ? "danger" : "ok",
+      href: "/dashboard/admin/parts?stock=negative&sort=negative",
+    },
+    {
+      key: "lossMakingPrices",
+      label: "Parts zenye bei ya hasara",
+      count: lossMaking[0]?.n ?? 0,
+      detail: "Bei ya kuuzia iko chini au sawa na bei ya kununua — kila mauzo ni hasara.",
+      severity: (lossMaking[0]?.n ?? 0) > 0 ? "danger" : "ok",
+    },
+    {
+      key: "overCreditLimit",
+      label: "Wateja waliozidi kikomo cha mkopo",
+      count: overLimit[0]?.n ?? 0,
+      detail: "Deni lao limezidi credit limit uliyowawekea.",
+      severity: (overLimit[0]?.n ?? 0) > 0 ? "warning" : "ok",
+      href: "/dashboard/admin/customers",
+    },
+    {
+      key: "negativeCustomerBalance",
+      label: "Wateja wenye balance hasi",
+      count: negativeCustomerBalance,
+      detail: "Wamelipa zaidi ya deni lao — huenda kuna malipo yaliyoingizwa mara mbili.",
+      severity: negativeCustomerBalance > 0 ? "warning" : "ok",
+      href: "/dashboard/admin/customers",
+    },
+    {
+      key: "voidedSales",
+      label: "Mauzo yaliyofutwa (kipindi hiki)",
+      count: voided,
+      detail: "Si kosa lenyewe, lakini idadi kubwa inastahili kuangaliwa.",
+      severity: voided > 0 ? "warning" : "ok",
+    },
+    {
+      key: "manualNoCost",
+      label: "Manual items zisizo na gharama",
+      count: manualNoCost,
+      detail: "Hazina bei ya kununua, kwa hiyo faida yake inaonekana kubwa kuliko ilivyo.",
+      severity: manualNoCost > 0 ? "warning" : "ok",
+    },
+  ];
+}

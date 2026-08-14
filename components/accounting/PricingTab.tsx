@@ -67,9 +67,44 @@ function VarianceTable({
   );
 }
 
-export function PricingTab({ variance }: { variance: PricingVariance }) {
+export type PricingView = "all" | "over" | "under" | "belowcost";
+
+const VIEW_TABS: { value: PricingView; label: string }[] = [
+  { value: "all", label: "Zote" },
+  { value: "over", label: "Juu ya bei" },
+  { value: "under", label: "Chini ya bei" },
+  { value: "belowcost", label: "Chini ya gharama" },
+];
+
+export function PricingTab({
+  variance,
+  view = "all",
+  baseHref = "/dashboard/admin/accounting",
+}: {
+  variance: PricingVariance;
+  view?: PricingView;
+  baseHref?: string;
+}) {
+  const show = (v: PricingView) => view === "all" || view === v;
+
   return (
     <div>
+      <div className="no-print mb-4 flex flex-wrap gap-1 rounded-control border border-border bg-surface-elevated p-1">
+        {VIEW_TABS.map((tabItem) => (
+          <a
+            key={tabItem.value}
+            href={`${baseHref}?tab=pricing&view=${tabItem.value}`}
+            className={`rounded-control px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === tabItem.value
+                ? "bg-accent/20 text-accent"
+                : "text-secondary hover:text-primary"
+            }`}
+          >
+            {tabItem.label}
+          </a>
+        ))}
+      </div>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<ArrowUpRight size={18} />}
@@ -111,7 +146,7 @@ export function PricingTab({ variance }: { variance: PricingVariance }) {
         )}
       </p>
 
-      {variance.belowCost.length > 0 && (
+      {show("belowcost") && variance.belowCost.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-1 text-sm font-semibold text-danger">
             ⚠ Ziliuzwa Chini ya Gharama ({variance.belowCost.length})
@@ -151,7 +186,7 @@ export function PricingTab({ variance }: { variance: PricingVariance }) {
         </div>
       )}
 
-      <div className="mb-8">
+      <div className={show("over") ? "mb-8" : "hidden"}>
         <h2 className="mb-1 text-sm font-semibold text-primary">
           Ziliuzwa Juu ya Bei ya List ({variance.overpriced.length})
         </h2>
@@ -165,7 +200,7 @@ export function PricingTab({ variance }: { variance: PricingVariance }) {
         />
       </div>
 
-      <div className="mb-8">
+      <div className={show("under") ? "mb-8" : "hidden"}>
         <h2 className="mb-1 text-sm font-semibold text-primary">
           Ziliuzwa Chini ya Bei ya List ({variance.underpriced.length})
         </h2>
