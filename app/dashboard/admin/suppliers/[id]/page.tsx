@@ -1,7 +1,11 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getSupplierDetail, getSupplierPayments } from "@/lib/data/suppliers";
+import {
+  getSupplierDetail,
+  getSupplierPayments,
+  getSupplierPartsHistory,
+} from "@/lib/data/suppliers";
 import { getBranches } from "@/lib/data/branches";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
@@ -10,7 +14,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PaySupplierButton } from "@/components/admin/PaySupplierButton";
-import { CreditCard } from "lucide-react";
+import { ListToolbar } from "@/components/ui/ListToolbar";
+import { CreditCard, Package, Boxes, Receipt } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -38,6 +43,9 @@ export default async function SupplierDetailPage({
   if (!supplier) notFound();
   const payments = await getSupplierPayments(id);
   const branches = await getBranches();
+  const history = await getSupplierPartsHistory(id);
+
+  const fmtDate = (d: Date) => d.toLocaleDateString("sw-TZ");
 
   return (
     <div>
@@ -75,13 +83,110 @@ export default async function SupplierDetailPage({
         </div>
       </div>
 
-      <div className="mb-6 w-fit">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<CreditCard size={18} />}
           label={t.adminCatalog.suppliers.currentBalance}
           value={currency.format(supplier.balance)}
           alert={supplier.balance > 0}
         />
+        <StatCard
+          icon={<Receipt size={18} />}
+          label="Jumla ya Manunuzi"
+          value={currency.format(history.totalSpend)}
+          accent="primary"
+        />
+        <StatCard
+          icon={<Package size={18} />}
+          label="Parts Tofauti"
+          value={String(history.distinctParts)}
+          accent="tertiary"
+        />
+        <StatCard
+          icon={<Boxes size={18} />}
+          label="Jumla ya Units"
+          value={String(history.totalUnits)}
+          accent="success"
+        />
+      </div>
+
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="text-sm font-semibold text-primary">Parts Zilizotoka Kwake</h2>
+        <span className="text-xs text-secondary">
+          {history.purchaseCount} manunuzi
+          {history.firstPurchase && history.lastPurchase && (
+            <>
+              {" · "}
+              {fmtDate(history.firstPurchase)} — {fmtDate(history.lastPurchase)}
+            </>
+          )}
+        </span>
+      </div>
+
+      <div className="mb-8">
+        {history.lines.length === 0 ? (
+          <EmptyState title="Hakuna manunuzi yaliyorekodiwa kutoka kwa supplier huyu." />
+        ) : (
+          <>
+            <ListToolbar
+              filename={`supplier-${supplier.name.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase()}-parts`}
+              headers={[
+                "Tarehe",
+                "Bidhaa",
+                "Part No",
+                "Qty",
+                "Bei kwa Unit",
+                "Jumla",
+                "Store",
+                "Maelezo",
+              ]}
+              rows={history.lines.map((l) => [
+                fmtDate(l.date),
+                l.partName,
+                l.partNumber,
+                l.quantity,
+                l.unitPrice,
+                l.lineTotal,
+                l.branchName,
+                l.notes ?? "",
+              ])}
+            />
+            <Table>
+              <THead>
+                <THeadRow>
+                  <Th>Tarehe</Th>
+                  <Th>Bidhaa</Th>
+                  <Th>Part No</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th className="text-right">Bei kwa Unit</Th>
+                  <Th className="text-right">Jumla</Th>
+                  <Th>Store</Th>
+                </THeadRow>
+              </THead>
+              <TBody>
+                {history.lines.map((l, i) => (
+                  <Tr key={l.purchaseItemId} index={i}>
+                    <Td className="whitespace-nowrap text-secondary">{fmtDate(l.date)}</Td>
+                    <Td className="max-w-0 truncate font-medium" title={l.partName}>
+                      {l.partName}
+                    </Td>
+                    <Td className="max-w-0 truncate text-secondary" title={l.partNumber}>
+                      {l.partNumber}
+                    </Td>
+                    <Td className="text-right tabular-nums">{l.quantity}</Td>
+                    <Td className="text-right tabular-nums whitespace-nowrap">
+                      {currency.format(l.unitPrice)}
+                    </Td>
+                    <Td className="text-right font-medium tabular-nums whitespace-nowrap text-primary">
+                      {currency.format(l.lineTotal)}
+                    </Td>
+                    <Td className="whitespace-nowrap text-secondary">{l.branchName}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
+          </>
+        )}
       </div>
 
       <h2 className="mb-2 text-sm font-semibold text-primary">{t.adminCatalog.suppliers.recordPayment}</h2>

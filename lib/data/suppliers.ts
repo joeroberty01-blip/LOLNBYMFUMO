@@ -83,6 +83,95 @@ export async function getSupplierDetail(id: string) {
   };
 }
 
+export type SupplierPartLine = {
+  purchaseId: string;
+  purchaseItemId: string;
+  date: Date;
+  partId: string;
+  partName: string;
+  partNumber: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  branchName: string;
+  notes: string | null;
+};
+
+export type SupplierPartsHistory = {
+  lines: SupplierPartLine[];
+  totalSpend: number;
+  totalUnits: number;
+  distinctParts: number;
+  purchaseCount: number;
+  firstPurchase: Date | null;
+  lastPurchase: Date | null;
+};
+
+/** Every part line this supplier has delivered, newest first, each carrying the date of the
+ * purchase it belonged to. Reads through Purchase -> PurchaseItem -> Part, which is the only
+ * link between a supplier and the parts it supplied — a Part has no supplier column of its own,
+ * so a part bought from two suppliers correctly appears under both. */
+export async function getSupplierPartsHistory(supplierId: string): Promise<SupplierPartsHistory> {
+  const purchases = await prisma.purchase.findMany({
+    where: { supplierId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      notes: true,
+      branch: { select: { name: true } },
+      items: {
+        select: {
+          id: true,
+          quantity: true,
+          unitPrice: true,
+          part: { select: { id: true, name: true, partNumber: true } },
+        },
+      },
+    },
+  });
+
+  const lines: SupplierPartLine[] = [];
+  const partIds = new Set<string>();
+  let totalSpend = 0;
+  let totalUnits = 0;
+
+  for (const p of purchases) {
+    for (const it of p.items) {
+      const unitPrice = it.unitPrice.toNumber();
+      const lineTotal = unitPrice * it.quantity;
+      totalSpend += lineTotal;
+      totalUnits += it.quantity;
+      partIds.add(it.part.id);
+      lines.push({
+        purchaseId: p.id,
+        purchaseItemId: it.id,
+        date: p.createdAt,
+        partId: it.part.id,
+        partName: it.part.name,
+        partNumber: it.part.partNumber,
+        quantity: it.quantity,
+        unitPrice,
+        lineTotal,
+        branchName: p.branch.name,
+        notes: p.notes,
+      });
+    }
+  }
+
+  const dates = purchases.map((p) => p.createdAt);
+  return {
+    lines,
+    totalSpend,
+    totalUnits,
+    distinctParts: partIds.size,
+    purchaseCount: purchases.length,
+    // purchases is ordered desc, so the last element is the earliest.
+    firstPurchase: dates.length > 0 ? dates[dates.length - 1] : null,
+    lastPurchase: dates.length > 0 ? dates[0] : null,
+  };
+}
+
 export async function getSupplierPayments(supplierId: string) {
   const rows = await prisma.supplierPayment.findMany({
     where: { supplierId },
