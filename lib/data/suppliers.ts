@@ -83,6 +83,53 @@ export async function getSupplierDetail(id: string) {
   };
 }
 
+export type SupplierInvoiceRow = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  invoiceNo: string | null;
+  invoiceDate: Date | null;
+  amount: number | null;
+  notes: string | null;
+  uploadedByName: string;
+  createdAt: Date;
+};
+
+/** Invoice metadata only. The `data` column is deliberately absent from this select — pulling
+ * file bytes to render a list would move megabytes per page view for no reason. The download
+ * route is the only reader of the bytes. */
+export async function getSupplierInvoices(supplierId: string): Promise<SupplierInvoiceRow[]> {
+  const rows = await prisma.supplierInvoice.findMany({
+    where: { supplierId },
+    orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      fileName: true,
+      mimeType: true,
+      sizeBytes: true,
+      invoiceNo: true,
+      invoiceDate: true,
+      amount: true,
+      notes: true,
+      createdAt: true,
+      uploadedBy: { select: { name: true } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    fileName: r.fileName,
+    mimeType: r.mimeType,
+    sizeBytes: r.sizeBytes,
+    invoiceNo: r.invoiceNo,
+    invoiceDate: r.invoiceDate,
+    amount: r.amount?.toNumber() ?? null,
+    notes: r.notes,
+    uploadedByName: r.uploadedBy?.name ?? "—",
+    createdAt: r.createdAt,
+  }));
+}
+
 export type SupplierPartLine = {
   purchaseId: string;
   purchaseItemId: string;

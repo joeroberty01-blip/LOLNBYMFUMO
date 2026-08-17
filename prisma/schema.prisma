@@ -71,6 +71,7 @@ model User {
   customerPayments CustomerPayment[]
   auditLogs        AuditLog[]
   backupLogs       BackupLog[]
+  supplierInvoices SupplierInvoice[]
 
   @@index([branchId])
   @@index([role])
@@ -132,11 +133,47 @@ model Supplier {
 
   purchases Purchase[]
   payments  SupplierPayment[]
+  invoices  SupplierInvoice[]
 
   @@index([name])
   @@index([isActive])
   /// Serves the paginated Suppliers list: WHERE isActive ORDER BY name.
   @@index([isActive, name])
+}
+
+/// A scanned/photographed supplier invoice, stored in the database rather than an object store.
+///
+/// Why in Postgres: this deployment has no blob store configured and runs on a platform with an
+/// ephemeral filesystem, so the database is the only durable place available without adding an
+/// external service and its credentials. The tradeoff is real — invoice bytes inflate database
+/// size and every backup — so `data` is deliberately isolated:
+///   - it lives on this table only, never on Supplier, so no supplier query can drag it along;
+///   - every list query must select columns explicitly and omit `data`;
+///   - only the single-file download route ever reads it.
+/// Moving to an object store later means replacing `data` with a URL/key column and porting the
+/// rows; nothing else in the app touches the bytes.
+model SupplierInvoice {
+  id          String   @id @default(cuid())
+  supplierId  String
+  /// Original filename as uploaded, for display and for the download filename.
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  /// Invoice number as printed on the document, when the admin records it.
+  invoiceNo   String?
+  /// Date on the invoice itself, which is often earlier than the upload date.
+  invoiceDate DateTime?
+  amount      Decimal? @db.Decimal(12, 2)
+  notes       String?
+  data        Bytes
+  uploadedById String
+  createdAt   DateTime @default(now())
+
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+
+  @@index([supplierId])
+  @@index([createdAt])
 }
 
 model SupplierPayment {

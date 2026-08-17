@@ -5,7 +5,9 @@ import {
   getSupplierDetail,
   getSupplierPayments,
   getSupplierPartsHistory,
+  getSupplierInvoices,
 } from "@/lib/data/suppliers";
+import { SupplierInvoices } from "@/components/admin/SupplierInvoices";
 import { getBranches } from "@/lib/data/branches";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
@@ -44,6 +46,7 @@ export default async function SupplierDetailPage({
   const payments = await getSupplierPayments(id);
   const branches = await getBranches();
   const history = await getSupplierPartsHistory(id);
+  const invoices = await getSupplierInvoices(id);
 
   const fmtDate = (d: Date) => d.toLocaleDateString("sw-TZ");
 
@@ -109,6 +112,8 @@ export default async function SupplierDetailPage({
           accent="success"
         />
       </div>
+
+      <SupplierInvoices supplierId={supplier.id} invoices={invoices} />
 
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-sm font-semibold text-primary">Parts Zilizotoka Kwake</h2>
