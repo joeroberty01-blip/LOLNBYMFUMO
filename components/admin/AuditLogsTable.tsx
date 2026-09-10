@@ -11,6 +11,17 @@ import { Badge, statusBadgeVariant } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
+/** partIds on a PARTS_BULK_IMPORTED entry can run into the thousands — useful for Undo, but
+ * dumping the whole array into a table cell/tooltip/CSV row is just noise. Show a count instead. */
+function summarizeMetadata(metadata: Record<string, unknown> | null): string {
+  if (!metadata) return "—";
+  if (Array.isArray(metadata.partIds)) {
+    const { partIds, ...rest } = metadata;
+    return JSON.stringify({ ...rest, partIds: `${partIds.length} part(s)` });
+  }
+  return JSON.stringify(metadata);
+}
+
 function actionBadgeVariant(action: string): ReturnType<typeof statusBadgeVariant> {
   if (action.endsWith("_DELETED") || action === "SALE_VOIDED") return "danger";
   if (action.endsWith("_CREATED") || action.endsWith("_COMPLETED") || action.endsWith("_RECORDED"))
@@ -72,9 +83,7 @@ export function AuditLogsTable({ rows, t }: { rows: AuditLogRow[]; t: Dictionary
               <Td className="text-primary">{r.entityType}</Td>
               <Td className="text-secondary">{r.userName}</Td>
               <Td className="max-w-[360px] truncate text-secondary">
-                <span title={r.metadata ? JSON.stringify(r.metadata) : undefined}>
-                  {r.metadata ? JSON.stringify(r.metadata) : "—"}
-                </span>
+                <span title={summarizeMetadata(r.metadata)}>{summarizeMetadata(r.metadata)}</span>
               </Td>
               <Td>
                 {isUndoableAuditAction(r.action) && (

@@ -384,6 +384,10 @@ export async function commitBulkImport(rowsToCommit: CommitRow[]): Promise<Commi
               stockAdded: outcomes.filter((o) => o.action === "STOCK_ADDED").length,
               stockReplaced: outcomes.filter((o) => o.action === "STOCK_REPLACED").length,
               skipped: outcomes.filter((o) => o.action === "SKIPPED").length,
+              // Only the brand-new Part rows this import created — lets "Undo" on the logs
+              // page (lib/actions/auditLogs.ts) reverse exactly this import's new catalog
+              // entries without touching parts that already existed before it ran.
+              partIds: newPartsToCreate.map(({ id }) => id),
             },
           });
         },

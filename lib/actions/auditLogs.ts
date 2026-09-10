@@ -57,6 +57,28 @@ export async function undoAuditLog(logId: string): Promise<ActionResult> {
       result = await deleteExpense(log.entityId);
       break;
 
+    case "PARTS_BULK_IMPORTED": {
+      // Only reverses the Part rows this specific import CREATED — never touches parts that
+      // already existed and merely had stock added/replaced by the same import, since those
+      // may have had other activity (sales, further adjustments) since. Soft delete only, same
+      // convention as deletePart (lib/actions/parts.ts) — no hard-delete path anywhere in this
+      // app, so catalog/sale/purchase history referencing these parts stays intact.
+      const { partIds } = metadata;
+      if (!Array.isArray(partIds) || partIds.length === 0 || !partIds.every((id) => typeof id === "string")) {
+        result = {
+          success: false,
+          error: "Log hii ya zamani haina orodha ya parts zilizoundwa — haiwezi kuondolewa (undo) kiotomatiki",
+        };
+      } else {
+        await prisma.part.updateMany({
+          where: { id: { in: partIds as string[] } },
+          data: { isActive: false },
+        });
+        result = { success: true };
+      }
+      break;
+    }
+
     case "STOCK_ADJUSTED": {
       const { partId, branchId, quantityChange } = metadata;
       if (
@@ -82,6 +104,10 @@ export async function undoAuditLog(logId: string): Promise<ActionResult> {
 
   if (result.success) {
     revalidatePath("/dashboard/admin/logs");
+    if (log.action === "PARTS_BULK_IMPORTED") {
+      revalidatePath("/dashboard/admin/parts");
+      revalidatePath("/dashboard/sales/inventory");
+    }
   }
   return result;
 }

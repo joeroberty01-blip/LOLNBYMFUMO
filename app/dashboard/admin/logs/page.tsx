@@ -58,7 +58,13 @@ export default async function AuditLogsPage({
           r.entityType,
           r.entityId,
           r.userName,
-          r.metadata ? JSON.stringify(r.metadata) : "",
+          r.metadata
+            ? JSON.stringify(
+                Array.isArray(r.metadata.partIds)
+                  ? { ...r.metadata, partIds: `${r.metadata.partIds.length} part(s)` }
+                  : r.metadata
+              )
+            : "",
         ])}
       />
 

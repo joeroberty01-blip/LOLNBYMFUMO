@@ -11,6 +11,7 @@ const UNDOABLE_ACTIONS = new Set([
   "CUSTOMER_PAYMENT_RECORDED",
   "EXPENSE_CREATED",
   "PURCHASE_CREATED",
+  "PARTS_BULK_IMPORTED",
 ]);
 
 export function isUndoableAuditAction(action: string): boolean {
