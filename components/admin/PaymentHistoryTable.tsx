@@ -10,6 +10,7 @@ import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -26,6 +27,14 @@ export function PaymentHistoryTable({ rows, t }: { rows: PaymentHistoryRow[]; t:
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const query = search.trim().toLowerCase();
+  const visibleRows = query
+    ? rows.filter(
+        (r) => r.partyName.toLowerCase().includes(query) || r.userName.toLowerCase().includes(query)
+      )
+    : rows;
 
   function handleDelete(row: PaymentHistoryRow) {
     const confirmed = window.confirm(t.common.archiveConfirm);
@@ -54,6 +63,16 @@ export function PaymentHistoryTable({ rows, t }: { rows: PaymentHistoryRow[]; t:
   return (
     <>
       {error && <p className="mb-3 text-sm text-danger">{error}</p>}
+      <Input
+        type="text"
+        placeholder="Tafuta jina la customer/supplier au mtumiaji..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="mb-4 max-w-sm"
+      />
+      {visibleRows.length === 0 ? (
+        <EmptyState title={`Hakuna malipo yanayolingana na "${search}"`} />
+      ) : (
       <Table>
         <THead>
           <THeadRow>
@@ -68,7 +87,7 @@ export function PaymentHistoryTable({ rows, t }: { rows: PaymentHistoryRow[]; t:
           </THeadRow>
         </THead>
         <TBody>
-          {rows.map((r, i) => (
+          {visibleRows.map((r, i) => (
             <Tr key={`${r.type}-${r.id}`} index={i}>
               <Td className="text-secondary">{r.createdAt.toLocaleDateString("sw-TZ")}</Td>
               <Td>
@@ -97,6 +116,7 @@ export function PaymentHistoryTable({ rows, t }: { rows: PaymentHistoryRow[]; t:
           ))}
         </TBody>
       </Table>
+      )}
     </>
   );
 }

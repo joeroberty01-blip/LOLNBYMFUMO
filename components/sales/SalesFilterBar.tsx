@@ -2,7 +2,7 @@
 
 import { paymentMethods } from "@/lib/validators/sales";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
-import { DateInput, Select, Label } from "@/components/ui/Input";
+import { DateInput, Select, Label, Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 const PAYMENT_LABEL: Record<string, string> = {
@@ -24,6 +24,7 @@ type Props = {
     dateFrom?: string;
     dateTo?: string;
     manualOnly?: string;
+    q?: string;
   };
 };
 
@@ -31,6 +32,15 @@ export function SalesFilterBar({ action, branches, staff, values }: Props) {
   const t = useTranslations();
   return (
     <form action={action} method="GET" className="mb-6 flex flex-wrap items-end gap-2">
+      <div className="min-w-[220px] flex-1">
+        <Label>{t.common.search}</Label>
+        <Input
+          type="text"
+          name="q"
+          defaultValue={values.q}
+          placeholder="Namba ya invoice au jina la customer..."
+        />
+      </div>
       <div>
         <Label>{t.common.from}</Label>
         <DateInput name="dateFrom" defaultValue={values.dateFrom} />

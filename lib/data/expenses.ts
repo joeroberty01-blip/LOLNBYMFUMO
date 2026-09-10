@@ -4,7 +4,7 @@ import type { DateRange } from "@/lib/dateRanges";
 import type { Prisma } from "@/generated/prisma/client";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
 
-export type ExpenseFilters = { category?: string; branchId?: string };
+export type ExpenseFilters = { category?: string; branchId?: string; q?: string };
 
 export type ExpenseRow = {
   id: string;
@@ -27,6 +27,14 @@ function buildExpenseWhere(range: DateRange, filters: ExpenseFilters): Prisma.Ex
     where.category = filters.category as Prisma.ExpenseWhereInput["category"];
   }
   if (filters.branchId) where.branchId = filters.branchId;
+  const q = filters.q?.trim();
+  if (q) {
+    where.OR = [
+      { description: { contains: q, mode: "insensitive" } },
+      { user: { name: { contains: q, mode: "insensitive" } } },
+      { relatedSupplierPayment: { supplier: { name: { contains: q, mode: "insensitive" } } } },
+    ];
+  }
   return where;
 }
 

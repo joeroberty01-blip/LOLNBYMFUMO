@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
 
 export type SupplierRow = {
@@ -34,8 +35,114 @@ export async function getSuppliersWithDebt(): Promise<SupplierDebtRow[]> {
   }));
 }
 
-export async function getSuppliers(page: PageArgs): Promise<Paginated<SupplierRow>> {
-  const where = { isActive: true };
+export type SupplierDebtItem = {
+  purchaseId: string;
+  createdAt: Date;
+  branchName: string;
+  total: number;
+  remaining: number;
+  dueDate: Date | null;
+  notes: string | null;
+};
+
+export type SupplierDebtGroup = {
+  id: string;
+  name: string;
+  phone: string | null;
+  balance: number;
+  items: SupplierDebtItem[];
+};
+
+/** Itemized version of getSuppliersWithDebt — same FIFO-replay approach as
+ * getCustomerDebtItems (lib/data/reports/customers.ts), mirrored for the supplier side. Every
+ * Purchase increases Supplier.balance (see creditPurchase in lib/actions/purchases.ts — there is
+ * no separate "cash purchase" path, every Purchase record is a credit purchase against the
+ * supplier) and every SupplierPayment decreases it; neither is ever allocated to a specific
+ * Purchase in storage, so this replays both in date order, applying payments oldest-purchase-first. */
+export async function getSupplierDebtItems(): Promise<SupplierDebtGroup[]> {
+  const debtors = await prisma.supplier.findMany({
+    where: { isActive: true, balance: { gt: 0 } },
+    orderBy: { balance: "desc" },
+  });
+  if (debtors.length === 0) return [];
+  const ids = debtors.map((d) => d.id);
+
+  const [purchases, payments] = await Promise.all([
+    prisma.purchase.findMany({
+      where: { supplierId: { in: ids } },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        createdAt: true,
+        total: true,
+        dueDate: true,
+        notes: true,
+        supplierId: true,
+        branch: { select: { name: true } },
+      },
+    }),
+    prisma.supplierPayment.findMany({
+      where: { supplierId: { in: ids } },
+      select: { supplierId: true, amount: true },
+    }),
+  ]);
+
+  const paidBySupplier = new Map<string, number>();
+  for (const p of payments) {
+    paidBySupplier.set(p.supplierId, (paidBySupplier.get(p.supplierId) ?? 0) + p.amount.toNumber());
+  }
+
+  const purchasesBySupplier = new Map<string, typeof purchases>();
+  for (const p of purchases) {
+    const arr = purchasesBySupplier.get(p.supplierId);
+    if (arr) arr.push(p);
+    else purchasesBySupplier.set(p.supplierId, [p]);
+  }
+
+  return debtors.map((d) => {
+    let pool = paidBySupplier.get(d.id) ?? 0;
+    const items: SupplierDebtItem[] = [];
+    for (const p of purchasesBySupplier.get(d.id) ?? []) {
+      const total = p.total.toNumber();
+      let remaining = total;
+      if (pool > 0) {
+        const applied = Math.min(pool, total);
+        remaining -= applied;
+        pool -= applied;
+      }
+      if (remaining > 0.5) {
+        items.push({
+          purchaseId: p.id,
+          createdAt: p.createdAt,
+          branchName: p.branch.name,
+          total,
+          remaining,
+          dueDate: p.dueDate,
+          notes: p.notes,
+        });
+      }
+    }
+    return {
+      id: d.id,
+      name: d.name,
+      phone: d.phone,
+      balance: d.balance.toNumber(),
+      items,
+    };
+  });
+}
+
+export async function getSuppliers(page: PageArgs, q?: string): Promise<Paginated<SupplierRow>> {
+  const where: Prisma.SupplierWhereInput = { isActive: true };
+  const query = q?.trim();
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: "insensitive" } },
+      { phone: { contains: query, mode: "insensitive" } },
+      { email: { contains: query, mode: "insensitive" } },
+      { address: { contains: query, mode: "insensitive" } },
+    ];
+  }
   const [rows, total] = await Promise.all([
     prisma.supplier.findMany({
       where,

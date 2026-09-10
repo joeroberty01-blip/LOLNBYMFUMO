@@ -11,6 +11,7 @@ import { ArchiveCustomerButton } from "@/components/admin/ArchiveCustomerButton"
 import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -18,16 +19,16 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 export default async function AdminCustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; pageSize?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string; q?: string }>;
 }) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const { page: pageParam, pageSize } = await searchParams;
+  const { page: pageParam, pageSize, q } = await searchParams;
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
-  const [customers, branches] = await Promise.all([getCustomers(pageArgs), getBranches()]);
+  const [customers, branches] = await Promise.all([getCustomers(pageArgs, q), getBranches()]);
   const { t } = await getServerDictionary();
 
   return (
@@ -41,6 +42,10 @@ export default async function AdminCustomersPage({
         </Link>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        <SearchBar placeholder="Tafuta jina, simu, au email..." className="min-w-[240px] flex-1" />
+      </div>
+
       <ListToolbar
         filename="customers"
         headers={["Name", "Phone", "Email", "Credit Limit", "Balance"]}
@@ -48,7 +53,7 @@ export default async function AdminCustomersPage({
       />
 
       {customers.rows.length === 0 ? (
-        <EmptyState title={t.adminCatalog.customers.empty} />
+        <EmptyState title={q ? `Hakuna customer anayelingana na "${q}"` : t.adminCatalog.customers.empty} />
       ) : (
         <Table>
           <THead>
@@ -102,7 +107,7 @@ export default async function AdminCustomersPage({
 
       <Pagination
         baseHref="/dashboard/admin/customers"
-        params={{ pageSize }}
+        params={{ pageSize, q }}
         page={customers.page}
         pageSize={customers.pageSize}
         total={customers.total}

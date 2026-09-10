@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
 
 export type PurchaseRow = {
@@ -13,9 +14,21 @@ export type PurchaseRow = {
   notes: string | null;
 };
 
-export async function getPurchases(page: PageArgs): Promise<Paginated<PurchaseRow>> {
+export async function getPurchases(page: PageArgs, q?: string): Promise<Paginated<PurchaseRow>> {
+  const query = q?.trim();
+  const where: Prisma.PurchaseWhereInput = query
+    ? {
+        OR: [
+          { supplier: { name: { contains: query, mode: "insensitive" } } },
+          { branch: { name: { contains: query, mode: "insensitive" } } },
+          { notes: { contains: query, mode: "insensitive" } },
+        ],
+      }
+    : {};
+
   const [rows, total] = await Promise.all([
     prisma.purchase.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: page.skip,
       take: page.take,
@@ -30,7 +43,7 @@ export async function getPurchases(page: PageArgs): Promise<Paginated<PurchaseRo
         items: { select: { id: true } },
       },
     }),
-    prisma.purchase.count(),
+    prisma.purchase.count({ where }),
   ]);
 
   const mapped = rows.map((p) => ({

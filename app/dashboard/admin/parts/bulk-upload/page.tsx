@@ -5,6 +5,12 @@ import { getServerDictionary } from "@/lib/i18n/server";
 import { getBranches } from "@/lib/data/branches";
 import { BulkUploadWizard } from "@/components/admin/BulkUploadWizard";
 
+// Real spreadsheet imports here run to thousands of rows. commitBulkImport batches its writes
+// to stay fast, but this raises the ceiling on Pro/Enterprise too (Hobby is fixed at 10s
+// regardless). Server Actions take their timeout from the page that calls them, not from the
+// action's own file — see node_modules/next/dist/docs/.../maxDuration.md.
+export const maxDuration = 60;
+
 export default async function BulkUploadPage() {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {

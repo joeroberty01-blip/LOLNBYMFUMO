@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getCustomersWithDebt } from "@/lib/data/reports/customers";
+import { getCustomerDebtItems } from "@/lib/data/reports/customers";
+import { getBranches } from "@/lib/data/branches";
 import { ReportActions } from "@/components/reports/ReportActions";
+import { CustomerDebtItemsTable } from "@/components/admin/CustomerDebtItemsTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
-import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { CreditCard } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -19,7 +18,7 @@ export default async function CustomersDebtReportPage() {
 
   const { t } = await getServerDictionary();
 
-  const debtors = await getCustomersWithDebt();
+  const [debtors, branches] = await Promise.all([getCustomerDebtItems(), getBranches()]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
 
   return (
@@ -41,41 +40,7 @@ export default async function CustomersDebtReportPage() {
         />
       </div>
 
-      {debtors.length === 0 ? (
-        <EmptyState title={t.reports.customers.noDebtors} />
-      ) : (
-        <Table>
-          <THead>
-            <THeadRow>
-              <Th>{t.common.name}</Th>
-              <Th>{t.common.phone}</Th>
-              <Th className="text-right">{t.reports.customers.balance}</Th>
-              <Th className="text-right">{t.reports.customers.creditLimit}</Th>
-              <Th>{t.common.actions}</Th>
-            </THeadRow>
-          </THead>
-          <TBody>
-            {debtors.map((d, i) => (
-              <Tr key={d.id} index={i}>
-                <Td>{d.name}</Td>
-                <Td>{d.phone ?? "—"}</Td>
-                <Td className="text-right font-medium text-danger tabular-nums">
-                  {currency.format(d.balance)}
-                </Td>
-                <Td className="text-right tabular-nums">{currency.format(d.creditLimit)}</Td>
-                <Td>
-                  <Link
-                    href={`/dashboard/admin/reports/customers/${d.id}`}
-                    className="text-accent no-print hover:underline"
-                  >
-                    {t.reports.customers.history}
-                  </Link>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
-      )}
+      <CustomerDebtItemsTable groups={debtors} branches={branches} t={t} />
     </div>
   );
 }

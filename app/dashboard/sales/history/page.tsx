@@ -13,6 +13,7 @@ type SearchParams = {
   paymentMethod?: string;
   dateFrom?: string;
   dateTo?: string;
+  q?: string;
   page?: string;
   pageSize?: string;
 };

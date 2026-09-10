@@ -19,6 +19,7 @@ type SearchParams = {
   dateFrom?: string;
   dateTo?: string;
   manualOnly?: string;
+  q?: string;
   page?: string;
   pageSize?: string;
 };

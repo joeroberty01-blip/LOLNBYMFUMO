@@ -2,20 +2,21 @@ import { redirect } from "next/navigation";
 import { Users, Truck, History } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getPurchases } from "@/lib/data/purchases";
-import { getCustomersWithDebt } from "@/lib/data/reports/customers";
-import { getSuppliersWithDebt, getSuppliersDirectory } from "@/lib/data/suppliers";
+import { getCustomerDebtItems } from "@/lib/data/reports/customers";
+import { getSupplierDebtItems, getSuppliersDirectory } from "@/lib/data/suppliers";
 import { getAllPaymentsHistory } from "@/lib/data/payments";
 import { getBranches } from "@/lib/data/branches";
 import { getAllActivePartsLite } from "@/lib/data/parts";
 import { PurchasesTable } from "@/components/admin/PurchasesTable";
-import { CustomerDebtsTable } from "@/components/admin/CustomerDebtsTable";
-import { SupplierDebtsTable } from "@/components/admin/SupplierDebtsTable";
+import { CustomerDebtItemsTable } from "@/components/admin/CustomerDebtItemsTable";
+import { SupplierDebtItemsTable } from "@/components/admin/SupplierDebtItemsTable";
 import { PaymentHistoryTable } from "@/components/admin/PaymentHistoryTable";
 import { CreditPurchaseButton } from "@/components/admin/CreditPurchaseButton";
 import { Tabs } from "@/components/ui/Tabs";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
 
 type TabValue = "customers" | "suppliers" | "history";
@@ -23,23 +24,23 @@ type TabValue = "customers" | "suppliers" | "history";
 export default async function CreditPurchasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; pageSize?: string; tab?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string; tab?: string; q?: string }>;
 }) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const { page: pageParam, pageSize, tab: tabParam } = await searchParams;
+  const { page: pageParam, pageSize, tab: tabParam, q } = await searchParams;
   const activeTab: TabValue =
     tabParam === "customers" || tabParam === "history" ? tabParam : "suppliers";
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
 
   const [purchases, customerDebtors, supplierDebtors, paymentHistory, suppliers, branches, parts] =
     await Promise.all([
-      getPurchases(pageArgs),
-      getCustomersWithDebt(),
-      getSuppliersWithDebt(),
+      getPurchases(pageArgs, q),
+      getCustomerDebtItems(),
+      getSupplierDebtItems(),
       getAllPaymentsHistory(),
       getSuppliersDirectory(),
       getBranches(),
@@ -88,10 +89,20 @@ export default async function CreditPurchasesPage({
         <>
           <ListToolbar
             filename="customer-debts"
-            headers={["Name", "Phone", "Balance", "Credit Limit"]}
-            rows={customerDebtors.map((d) => [d.name, d.phone ?? "", d.balance, d.creditLimit])}
+            headers={["Customer", "Phone", "Invoice #", "Date", "Branch", "Invoice Total", "Outstanding"]}
+            rows={customerDebtors.flatMap((d) =>
+              d.items.map((it) => [
+                d.name,
+                d.phone ?? "",
+                it.invoiceNumber,
+                it.createdAt.toLocaleDateString("sw-TZ"),
+                it.branchName,
+                it.total,
+                it.remaining,
+              ])
+            )}
           />
-          <CustomerDebtsTable debtors={customerDebtors} branches={branches} t={t} />
+          <CustomerDebtItemsTable groups={customerDebtors} branches={branches} t={t} />
         </>
       )}
 
@@ -99,15 +110,27 @@ export default async function CreditPurchasesPage({
         <div className="flex flex-col gap-8">
           <ListToolbar
             filename="supplier-debts"
-            headers={["Name", "Phone", "Balance"]}
-            rows={supplierDebtors.map((d) => [d.name, d.phone ?? "", d.balance])}
+            headers={["Supplier", "Phone", "Date", "Branch", "Purchase Total", "Outstanding"]}
+            rows={supplierDebtors.flatMap((d) =>
+              d.items.map((it) => [
+                d.name,
+                d.phone ?? "",
+                it.createdAt.toLocaleDateString("sw-TZ"),
+                it.branchName,
+                it.total,
+                it.remaining,
+              ])
+            )}
           />
-          <SupplierDebtsTable debtors={supplierDebtors} branches={branches} t={t} />
+          <SupplierDebtItemsTable groups={supplierDebtors} branches={branches} t={t} />
 
           <div>
             <h2 className="mb-3 text-sm font-semibold text-primary">
               {t.adminCatalog.purchases.title}
             </h2>
+            <div className="mb-4 flex flex-wrap gap-2">
+              <SearchBar placeholder="Tafuta supplier, tawi, au notes..." className="min-w-[240px] flex-1" />
+            </div>
             <ListToolbar
               filename="purchases"
               headers={["Date", "Supplier", "Branch", "Items", "Total", "Due Date", "Notes"]}
@@ -124,7 +147,7 @@ export default async function CreditPurchasesPage({
             <PurchasesTable rows={purchases.rows} parts={parts} />
             <Pagination
               baseHref="/dashboard/admin/purchases"
-              params={{ pageSize, tab: "suppliers" }}
+              params={{ pageSize, tab: "suppliers", q }}
               page={purchases.page}
               pageSize={purchases.pageSize}
               total={purchases.total}

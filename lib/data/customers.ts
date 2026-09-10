@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
 
 export type CustomerRow = {
@@ -11,8 +12,16 @@ export type CustomerRow = {
   balance: number;
 };
 
-export async function getCustomers(page: PageArgs): Promise<Paginated<CustomerRow>> {
-  const where = { isActive: true };
+export async function getCustomers(page: PageArgs, q?: string): Promise<Paginated<CustomerRow>> {
+  const where: Prisma.CustomerWhereInput = { isActive: true };
+  const query = q?.trim();
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: "insensitive" } },
+      { phone: { contains: query, mode: "insensitive" } },
+      { email: { contains: query, mode: "insensitive" } },
+    ];
+  }
   const [rows, total] = await Promise.all([
     prisma.customer.findMany({
       where,

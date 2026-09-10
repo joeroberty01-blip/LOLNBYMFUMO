@@ -1,8 +1,10 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { parseWorkbookAllSheets, detectHeaderRowIndex } from "@/lib/bulk/parse";
 import { classifyRows, type ExistingPart, type NumberedRow } from "@/lib/bulk/classify";
 import {
@@ -219,11 +221,28 @@ export type CommitResult = { success: true; outcomes: CommitOutcome[] } | Fail;
 
 const WRITE_CHUNK = 500;
 
+/** Same identity rule as lib/bulk/classify.ts's catalogKey — Part Number alone isn't a unique
+ * catalog key here (the same code is legitimately reused across different vehicle-specific
+ * variants), so "the same part" means Part Number + Name + Buying + Selling Price all match. */
+function catalogKey(partNumber: string, name: string, costPrice: number, unitPrice: number): string {
+  return [partNumber.trim().toLowerCase(), name.trim().toLowerCase(), costPrice.toFixed(2), unitPrice.toFixed(2)].join("|");
+}
+
 /**
  * Step 3 — apply the admin's decisions in a single transaction, across every sheet at once.
  * Only NEW rows and DUPLICATE rows the admin explicitly chose to ADD/REPLACE are written;
  * CONFLICT and ERROR rows are never sent here by the UI. Every store referenced must already
  * exist (multi-sheet mode resolves stores from the existing 5, it never invents new ones).
+ *
+ * Writes in batches (createMany + one INSERT ... ON CONFLICT per chunk) instead of one
+ * find/create/upsert round trip per row — a real spreadsheet import here runs to thousands of
+ * rows, and at one round trip per row that reliably blew past both this function's own
+ * transaction timeout and Vercel's serverless function timeout. The per-row DB lookups are
+ * replaced with two batched reads up front (existing parts by Part Number, existing inventory
+ * for those parts) and the rest is computed in memory — including replaying rows in their
+ * original order to reproduce the old code's behavior when two rows in the same commit resolve
+ * to the same new part (the second row finds the first row's not-yet-committed Part, exactly as
+ * it would inside one sequential transaction).
  */
 export async function commitBulkImport(rowsToCommit: CommitRow[]): Promise<CommitResult> {
   let session;
@@ -240,107 +259,146 @@ export async function commitBulkImport(rowsToCommit: CommitRow[]): Promise<Commi
   try {
     const outcomes: CommitOutcome[] = [];
 
-    await prisma.$transaction(
-      async (tx) => {
-        for (let i = 0; i < rowsToCommit.length; i += WRITE_CHUNK) {
-          const chunk = rowsToCommit.slice(i, i + WRITE_CHUNK);
+    const skipped = rowsToCommit.filter((r) => r.outcome === "DUPLICATE" && r.decision === "SKIP");
+    for (const row of skipped) {
+      outcomes.push({
+        sheetName: row.sheetName,
+        rowNumber: row.rowNumber,
+        partNumber: row.values.partNumber,
+        action: "SKIPPED",
+        detail: "Admin alichagua Skip — hakuna kilichobadilishwa",
+      });
+    }
+    const writable = rowsToCommit.filter((r) => !(r.outcome === "DUPLICATE" && r.decision === "SKIP"));
 
-          for (const row of chunk) {
+    if (writable.length > 0) {
+      await prisma.$transaction(
+        async (tx) => {
+          // 1. One batched lookup for every part these rows might already match, instead of a
+          //    findFirst per row.
+          const partNumbers = [...new Set(writable.map((r) => r.values.partNumber))];
+          const dbParts = partNumbers.length
+            ? await tx.part.findMany({
+                where: { partNumber: { in: partNumbers, mode: "insensitive" } },
+                select: { id: true, partNumber: true, name: true, costPrice: true, unitPrice: true },
+              })
+            : [];
+          const partIdByKey = new Map(
+            dbParts.map((p) => [catalogKey(p.partNumber, p.name, p.costPrice.toNumber(), p.unitPrice.toNumber()), p.id])
+          );
+          const dbPartIds = new Set(partIdByKey.values());
+
+          // 2. One batched lookup for current Inventory quantities of every part that might
+          //    already have stock somewhere, instead of a findUnique per row.
+          const currentQtyByInvKey = new Map<string, number>();
+          if (dbPartIds.size > 0) {
+            const inv = await tx.inventory.findMany({
+              where: { partId: { in: [...dbPartIds] } },
+              select: { partId: true, branchId: true, quantity: true },
+            });
+            for (const i of inv) currentQtyByInvKey.set(`${i.partId}:${i.branchId}`, i.quantity);
+          }
+
+          // 3. Replay every row in its original order, resolving each to a Part id (reusing one
+          //    already assigned to an earlier row with the same catalog identity — this is what
+          //    makes a same-batch "new part appears in two sheets" resolve to one Part instead
+          //    of two) and a running Inventory quantity per (part, store).
+          const runningQty = new Map(currentQtyByInvKey);
+          const newPartsToCreate: { id: string; row: CommitRow }[] = [];
+
+          for (const row of writable) {
             const { values } = row;
-
-            if (row.outcome === "DUPLICATE" && row.decision === "SKIP") {
-              outcomes.push({
-                sheetName: row.sheetName,
-                rowNumber: row.rowNumber,
-                partNumber: values.partNumber,
-                action: "SKIPPED",
-                detail: "Admin alichagua Skip — hakuna kilichobadilishwa",
-              });
-              continue;
+            const key = catalogKey(values.partNumber, values.name, values.costPrice, values.unitPrice);
+            let partId = partIdByKey.get(key);
+            let isFirstCreate = false;
+            if (!partId) {
+              partId = randomUUID();
+              partIdByKey.set(key, partId);
+              newPartsToCreate.push({ id: partId, row });
+              isFirstCreate = true;
             }
 
-            const description = values.compatibility
-              ? `Compatibility: ${values.compatibility}`
-              : undefined;
-
-            // Part Number alone isn't a unique catalog identity (see schema comment) — the same
-            // code is legitimately reused across different vehicle-specific variants. "Existing"
-            // means Part Number + Name + Buying + Selling Price all match.
-            const existing = await tx.part.findFirst({
-              where: {
-                partNumber: { equals: values.partNumber, mode: "insensitive" },
-                name: { equals: values.name, mode: "insensitive" },
-                costPrice: values.costPrice,
-                unitPrice: values.unitPrice,
-              },
-              select: { id: true },
-            });
-
-            if (!existing) {
-              const part = await tx.part.create({
-                data: {
-                  partNumber: values.partNumber,
-                  name: values.name,
-                  oemNumber: values.oemNumber,
-                  category: values.category,
-                  costPrice: values.costPrice,
-                  unitPrice: values.unitPrice,
-                  description,
-                },
-                select: { id: true },
-              });
-              await tx.inventory.create({
-                data: { partId: part.id, branchId: row.storeId, quantity: values.quantity },
-              });
-              outcomes.push({
-                sheetName: row.sheetName,
-                rowNumber: row.rowNumber,
-                partNumber: values.partNumber,
-                action: "CREATED",
-                detail: `Part mpya imeundwa na stock ${values.quantity}`,
-              });
-              continue;
-            }
-
-            const current = await tx.inventory.findUnique({
-              where: { partId_branchId: { partId: existing.id, branchId: row.storeId } },
-              select: { quantity: true },
-            });
-            const before = current?.quantity ?? 0;
+            const invKey = `${partId}:${row.storeId}`;
+            const before = runningQty.get(invKey) ?? 0;
             const after = row.decision === "ADD" ? before + values.quantity : values.quantity;
-
-            await tx.inventory.upsert({
-              where: { partId_branchId: { partId: existing.id, branchId: row.storeId } },
-              update: { quantity: after },
-              create: { partId: existing.id, branchId: row.storeId, quantity: after },
-            });
+            runningQty.set(invKey, after);
 
             outcomes.push({
               sheetName: row.sheetName,
               rowNumber: row.rowNumber,
               partNumber: values.partNumber,
-              action: row.decision === "ADD" ? "STOCK_ADDED" : "STOCK_REPLACED",
-              detail: `${before} → ${after}`,
+              action: isFirstCreate ? "CREATED" : row.decision === "ADD" ? "STOCK_ADDED" : "STOCK_REPLACED",
+              detail: isFirstCreate
+                ? `Part mpya imeundwa na stock ${values.quantity}`
+                : `${before} → ${after}`,
             });
           }
-        }
 
-        await logAudit(tx, {
-          userId: session.user.id,
-          action: "PARTS_BULK_IMPORTED",
-          entityType: "Part",
-          entityId: "bulk",
-          metadata: {
-            rows: rowsToCommit.length,
-            sheets: [...new Set(rowsToCommit.map((r) => r.sheetName))],
-            created: outcomes.filter((o) => o.action === "CREATED").length,
-            stockAdded: outcomes.filter((o) => o.action === "STOCK_ADDED").length,
-            stockReplaced: outcomes.filter((o) => o.action === "STOCK_REPLACED").length,
-            skipped: outcomes.filter((o) => o.action === "SKIPPED").length,
-          },
-        });
-      },
-      { timeout: 120_000, maxWait: 20_000 }
+          // 4. Write every brand-new Part in chunks.
+          for (let i = 0; i < newPartsToCreate.length; i += WRITE_CHUNK) {
+            const chunk = newPartsToCreate.slice(i, i + WRITE_CHUNK);
+            await tx.part.createMany({
+              data: chunk.map(({ id, row }) => ({
+                id,
+                partNumber: row.values.partNumber,
+                name: row.values.name,
+                oemNumber: row.values.oemNumber,
+                category: row.values.category,
+                costPrice: row.values.costPrice,
+                unitPrice: row.values.unitPrice,
+                description: row.values.compatibility ? `Compatibility: ${row.values.compatibility}` : undefined,
+              })),
+            });
+          }
+
+          // 5. Write every final (part, store) quantity in chunks — one INSERT ... ON CONFLICT
+          //    per chunk covers both "first stock at this store" (insert) and "stock already
+          //    existed" (update) in a single statement. Each (partId, branchId) pair appears
+          //    at most once here (runningQty already collapsed repeats within the batch), which
+          //    Postgres requires for ON CONFLICT to affect a row only once per statement.
+          const invEntries = [...runningQty.entries()];
+          for (let i = 0; i < invEntries.length; i += WRITE_CHUNK) {
+            const chunk = invEntries.slice(i, i + WRITE_CHUNK);
+            const values = Prisma.join(
+              chunk.map(([invKey, quantity]) => {
+                const [partId, branchId] = invKey.split(":");
+                return Prisma.sql`(${randomUUID()}, ${partId}, ${branchId}, ${quantity})`;
+              })
+            );
+            await tx.$executeRaw`
+              INSERT INTO "Inventory" ("id", "partId", "branchId", "quantity")
+              VALUES ${values}
+              ON CONFLICT ("partId", "branchId") DO UPDATE SET "quantity" = excluded."quantity"
+            `;
+          }
+
+          await logAudit(tx, {
+            userId: session.user.id,
+            action: "PARTS_BULK_IMPORTED",
+            entityType: "Part",
+            entityId: "bulk",
+            metadata: {
+              rows: rowsToCommit.length,
+              sheets: [...new Set(rowsToCommit.map((r) => r.sheetName))],
+              created: outcomes.filter((o) => o.action === "CREATED").length,
+              stockAdded: outcomes.filter((o) => o.action === "STOCK_ADDED").length,
+              stockReplaced: outcomes.filter((o) => o.action === "STOCK_REPLACED").length,
+              skipped: outcomes.filter((o) => o.action === "SKIPPED").length,
+            },
+          });
+        },
+        { timeout: 120_000, maxWait: 20_000 }
+      );
+    }
+
+    // Skipped rows and written rows were collected into `outcomes` in two separate passes
+    // above — restore the original row order (as the admin saw it in the preview table) rather
+    // than leaving skips bunched at the front.
+    const originalIndex = new Map(rowsToCommit.map((r, i) => [`${r.sheetName}::${r.rowNumber}`, i]));
+    outcomes.sort(
+      (a, b) =>
+        (originalIndex.get(`${a.sheetName}::${a.rowNumber}`) ?? 0) -
+        (originalIndex.get(`${b.sheetName}::${b.rowNumber}`) ?? 0)
     );
 
     revalidatePath("/dashboard/admin/parts");

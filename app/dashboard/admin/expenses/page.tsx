@@ -11,6 +11,7 @@ import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -34,6 +35,7 @@ type SearchParams = {
   to?: string;
   category?: string;
   branchId?: string;
+  q?: string;
   page?: string;
   pageSize?: string;
 };
@@ -52,7 +54,7 @@ export default async function ExpensesPage({
   const range = getDateRange({ period: sp.period || "daily", ...sp });
   const { t } = await getServerDictionary();
   const pageArgs = parsePageParams({ page: sp.page, pageSize: sp.pageSize });
-  const filters = { category: sp.category, branchId: sp.branchId };
+  const filters = { category: sp.category, branchId: sp.branchId, q: sp.q };
 
   const [expenses, total, branches] = await Promise.all([
     getExpenses(range, filters, pageArgs),
@@ -77,6 +79,10 @@ export default async function ExpensesPage({
           value={currency.format(total)}
           accent="secondary"
         />
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        <SearchBar placeholder="Tafuta description, mtumiaji, au supplier..." className="min-w-[240px] flex-1" />
       </div>
 
       <ListToolbar

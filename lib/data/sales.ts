@@ -83,6 +83,9 @@ export type SaleFilters = {
   dateFrom?: string;
   dateTo?: string;
   manualOnly?: boolean;
+  /** Free-text search: matches invoice number exactly (when numeric), or customer/seller name
+   * partially — covers "find this invoice" and "find this customer's invoices" in one box. */
+  q?: string;
 };
 
 function buildSaleWhere(filters: SaleFilters): Prisma.SaleWhereInput {
@@ -99,6 +102,15 @@ function buildSaleWhere(filters: SaleFilters): Prisma.SaleWhereInput {
   }
   if (filters.manualOnly) {
     where.items = { some: { isManualEntry: true } };
+  }
+  const q = filters.q?.trim();
+  if (q) {
+    const asInvoiceNumber = /^\d+$/.test(q) ? Number(q) : null;
+    where.OR = [
+      { customer: { name: { contains: q, mode: "insensitive" } } },
+      { user: { name: { contains: q, mode: "insensitive" } } },
+      ...(asInvoiceNumber !== null ? [{ invoiceNumber: asInvoiceNumber }] : []),
+    ];
   }
   return where;
 }

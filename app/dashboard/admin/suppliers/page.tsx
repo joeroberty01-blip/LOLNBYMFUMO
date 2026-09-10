@@ -8,21 +8,22 @@ import { getServerDictionary } from "@/lib/i18n/server";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
 
 export default async function SuppliersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; pageSize?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string; q?: string }>;
 }) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const { page: pageParam, pageSize } = await searchParams;
+  const { page: pageParam, pageSize, q } = await searchParams;
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
-  const [suppliers, branches] = await Promise.all([getSuppliers(pageArgs), getBranches()]);
+  const [suppliers, branches] = await Promise.all([getSuppliers(pageArgs, q), getBranches()]);
   const { t } = await getServerDictionary();
 
   return (
@@ -39,6 +40,10 @@ export default async function SuppliersPage({
         </Link>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        <SearchBar placeholder="Tafuta jina, simu, email, au anwani..." className="min-w-[240px] flex-1" />
+      </div>
+
       <ListToolbar
         filename="suppliers"
         headers={["Name", "Phone", "Email", "Address", "Balance"]}
@@ -49,7 +54,7 @@ export default async function SuppliersPage({
 
       <Pagination
         baseHref="/dashboard/admin/suppliers"
-        params={{ pageSize }}
+        params={{ pageSize, q }}
         page={suppliers.page}
         pageSize={suppliers.pageSize}
         total={suppliers.total}

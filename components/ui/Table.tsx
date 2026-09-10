@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 export function Table({ children }: { children: ReactNode }) {
   return (
@@ -16,7 +16,7 @@ export function THeadRow({ children }: { children: ReactNode }) {
   return <tr className="text-left">{children}</tr>;
 }
 
-export function Th({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {
   return (
     <th
       className={`px-4 py-3 text-xs font-medium tracking-wide text-secondary uppercase ${className}`}
@@ -56,14 +56,23 @@ export function Td({
   children,
   className = "",
   title,
+  colSpan,
+  onClick,
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
   /** Native tooltip — lets a truncated cell still reveal its full value on hover. */
   title?: string;
+  colSpan?: number;
+  onClick?: (e: MouseEvent<HTMLTableCellElement>) => void;
 }) {
   return (
-    <td title={title} className={`px-4 py-3 text-primary ${className}`}>
+    <td
+      title={title}
+      colSpan={colSpan}
+      onClick={onClick}
+      className={`px-4 py-3 text-primary ${className}`}
+    >
       {children}
     </td>
   );
