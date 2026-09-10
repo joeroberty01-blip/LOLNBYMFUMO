@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+/** A real part name always has at least one recognizable word (3+ letters in a row) — a bare
+ * code like "13572-17021" or "16401-62100" does not. Catches Part Number and Name having been
+ * entered/swapped into the wrong field, at the one point (this shared schema) every path that
+ * writes a Part — the Add/Edit form and the bulk-upload wizard (lib/bulk/classify.ts) — funnels
+ * through. "-" is exempt: it's the agreed placeholder for a genuinely nameless catalog entry. */
+export function looksLikeBareCode(name: string): boolean {
+  return name !== "-" && !/[A-Za-z]{3,}/.test(name);
+}
+
 export const partSchema = z.object({
   partNumber: z.string().trim().min(1, "Weka part number"),
   oemNumber: z
@@ -8,7 +17,14 @@ export const partSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((v) => (v ? v : undefined)),
-  name: z.string().trim().min(1, "Weka jina la part"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Weka jina la part")
+    .refine((v) => !looksLikeBareCode(v), {
+      message:
+        'Hii inaonekana ni part number/code, si jina la bidhaa — hakikisha Part Number na Name hazijabadilishana nafasi (tumia "-" kama part hii kwa kweli haina jina)',
+    }),
   category: z.string().trim().min(1, "Weka category"),
   unitPrice: z.coerce.number().positive("Selling price iwe zaidi ya 0"),
   costPrice: z.coerce.number().positive("Buying price iwe zaidi ya 0"),

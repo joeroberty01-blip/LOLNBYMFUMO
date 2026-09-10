@@ -7,6 +7,7 @@ import {
   type BulkField,
   type RowOutcome,
 } from "@/lib/bulk/schema";
+import { looksLikeBareCode } from "@/lib/validators/parts";
 
 export type ExistingPart = {
   id: string;
@@ -108,6 +109,11 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
     const errors: string[] = [];
     if (!rawPartNumber) errors.push("Part Number ni tupu");
     if (!rawName) errors.push("Name ni tupu");
+    else if (looksLikeBareCode(rawName)) {
+      errors.push(
+        'Name inaonekana ni part number/code, si jina la bidhaa — hakikisha columns za Part Number na Name hazijabadilishana nafasi (tumia "-" kama part hii kwa kweli haina jina)'
+      );
+    }
     if (quantity === null) errors.push("Quantity si namba");
     else if (!Number.isInteger(quantity)) errors.push("Quantity lazima iwe namba nzima");
 
