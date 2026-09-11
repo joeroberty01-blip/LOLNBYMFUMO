@@ -13,8 +13,10 @@ import { getStaffPerformance, getMyPerformance } from "@/lib/data/reports/staff"
 import { getCustomersWithDebt } from "@/lib/data/reports/customers";
 import { getFinancialSummary } from "@/lib/accounting";
 import { getLedgerReport } from "@/lib/data/reports/ledger";
+import { getStockMovementReport } from "@/lib/data/stockMovements";
 import { renderReportPdf, type PdfTable } from "@/lib/reports/pdf";
 import { renderLedgerPdf } from "@/lib/reports/ledgerPdf";
+import { APP_NAME } from "@/config/app";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -204,6 +206,39 @@ export async function buildReportPdfBuffer(
       tables: [table],
     });
     return { buffer, filename: "staff-report.pdf", title };
+  }
+
+  if (reportType === "stock-movements") {
+    const summary = await getStockMovementReport(range, { branchId: params.branchId });
+    const table: PdfTable = {
+      title: "Stock Movements",
+      columns: ["Tarehe", "Aina", "Item Name", "Part Number", "Quantity", "Branch", "Person", "Description"],
+      rows: summary.rows.map((r) => [
+        r.createdAt.toLocaleString("sw-TZ"),
+        r.movementType === "STOCK_IN" ? "Stock In" : "Stock Out",
+        r.itemName,
+        r.partNumber,
+        r.quantity,
+        r.branchName,
+        r.personName,
+        r.description ?? "-",
+      ]),
+    };
+
+    const title = "Stock Movement Report";
+    const buffer = await renderReportPdf({
+      title,
+      subtitle: `${APP_NAME} — ${range.label}`,
+      generatedAt: new Date().toLocaleString("sw-TZ"),
+      summary: [
+        { label: "Stock In — Transactions", value: String(summary.stockIn.count) },
+        { label: "Stock In — Jumla Quantity", value: String(summary.stockIn.totalQuantity) },
+        { label: "Stock Out — Transactions", value: String(summary.stockOut.count) },
+        { label: "Stock Out — Jumla Quantity", value: String(summary.stockOut.totalQuantity) },
+      ],
+      tables: [table],
+    });
+    return { buffer, filename: "stock-movements-report.pdf", title };
   }
 
   if (reportType === "customers") {

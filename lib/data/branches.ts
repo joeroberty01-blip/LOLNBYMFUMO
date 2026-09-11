@@ -13,6 +13,18 @@ export async function getBranches() {
   });
 }
 
+/** Stock In/Out branch picker — deliberately limited to just these two stores, per explicit
+ * request, unlike every other branch dropdown in the app which lists all active branches. */
+const STOCK_MOVEMENT_BRANCH_NAMES = ["LOLNBY", "WOODLAND"];
+
+export async function getStockMovementBranches() {
+  return prisma.branch.findMany({
+    where: { isActive: true, name: { in: STOCK_MOVEMENT_BRANCH_NAMES, mode: "insensitive" } },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 /** POS selling-point picker only — excludes branches (like the legacy Main Branch) that keep
  * historical inventory/sales but are no longer offered as a place to check out a new sale. */
 export async function getSellingPointBranches() {

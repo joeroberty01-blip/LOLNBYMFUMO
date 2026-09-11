@@ -24,7 +24,10 @@ export type AuditAction =
   | "PURCHASE_UPDATED"
   | "PURCHASE_DELETED"
   | "SUPPLIER_INVOICE_UPLOADED"
-  | "SUPPLIER_INVOICE_DELETED";
+  | "SUPPLIER_INVOICE_DELETED"
+  | "STOCK_MOVEMENT_CREATED"
+  | "STOCK_MOVEMENT_UPDATED"
+  | "STOCK_MOVEMENT_DELETED";
 
 export type AuditEntityType =
   | "Sale"
@@ -36,7 +39,8 @@ export type AuditEntityType =
   | "Branch"
   | "User"
   | "Purchase"
-  | "SupplierInvoice";
+  | "SupplierInvoice"
+  | "StockMovement";
 
 /**
  * Writes one audit log row inside the same transaction as the operation it's recording, so the

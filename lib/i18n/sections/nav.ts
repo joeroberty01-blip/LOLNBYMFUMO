@@ -18,6 +18,7 @@ export const en = {
   auditLogs: "Audit Logs",
   chinaMasterFile: "China Master File",
   accounting: "Accounting",
+  stockMovements: "Stock In & Out",
 };
 
 export const sw = {
@@ -40,4 +41,5 @@ export const sw = {
   auditLogs: "Audit Logs",
   chinaMasterFile: "China Master File",
   accounting: "Accounting",
+  stockMovements: "Stock In & Out",
 };

@@ -51,6 +51,11 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum StockMovementType {
+  STOCK_IN
+  STOCK_OUT
+}
+
 model User {
   id           String     @id @default(cuid())
   name         String
@@ -72,6 +77,7 @@ model User {
   auditLogs        AuditLog[]
   backupLogs       BackupLog[]
   supplierInvoices SupplierInvoice[]
+  stockMovements   StockMovement[]
 
   @@index([branchId])
   @@index([role])
@@ -119,6 +125,7 @@ model Branch {
   expenses            Expense[]
   supplierPayments    SupplierPayment[]
   customerPayments    CustomerPayment[]
+  stockMovements      StockMovement[]
 }
 
 model Supplier {
@@ -139,6 +146,35 @@ model Supplier {
   @@index([isActive])
   /// Serves the paginated Suppliers list: WHERE isActive ORDER BY name.
   @@index([isActive, name])
+}
+
+/// A manual stock movement logbook entry — record-keeping only, deliberately NOT linked to Part
+/// or Inventory (no partId/inventoryId anywhere on this model). Recording a Stock In/Out here
+/// must never read, increment, or decrement Inventory.quantity; itemName/partNumber are free
+/// text the person recording it types by hand, not a reference to the Part catalog. Real
+/// hard-delete (no isActive flag), same convention as Expense — this is a simple log, not
+/// something other financial records point back to.
+model StockMovement {
+  id           String            @id @default(cuid())
+  movementType StockMovementType
+  branchId     String
+  itemName     String
+  partNumber   String
+  quantity     Int
+  personName   String
+  description  String?
+  userId       String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([branchId])
+  @@index([movementType])
+  @@index([partNumber])
+  @@index([personName])
+  @@index([createdAt])
 }
 
 /// A scanned/photographed supplier invoice, stored in the database rather than an object store.

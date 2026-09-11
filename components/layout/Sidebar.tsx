@@ -21,6 +21,7 @@ import {
   ScrollText,
   Globe,
   Calculator,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { APP_NAME } from "@/config/app";
@@ -69,6 +70,11 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
           label: t.nav.manualItems,
           icon: Boxes,
         },
+        {
+          href: "/dashboard/admin/stock-movements",
+          label: t.nav.stockMovements,
+          icon: ArrowLeftRight,
+        },
       ],
     },
     {
@@ -97,6 +103,11 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
         { href: "/dashboard/sales/inventory", label: t.nav.inventory, icon: Package },
         { href: "/dashboard/sales/suppliers", label: t.nav.suppliers, icon: Truck },
         { href: "/dashboard/sales/expenses", label: t.nav.expenses, icon: Wallet },
+        {
+          href: "/dashboard/sales/stock-movements",
+          label: t.nav.stockMovements,
+          icon: ArrowLeftRight,
+        },
         { href: "/dashboard/sales/my-performance", label: t.nav.myPerformance, icon: LineChart },
       ],
     },

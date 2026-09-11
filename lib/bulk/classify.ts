@@ -109,7 +109,7 @@ export function classifyRows({ rows, mapping, existingParts }: ClassifyInput): A
     const errors: string[] = [];
     if (!rawPartNumber) errors.push("Part Number ni tupu");
     if (!rawName) errors.push("Name ni tupu");
-    else if (looksLikeBareCode(rawName)) {
+    else if (looksLikeBareCode(rawName, rawPartNumber)) {
       errors.push(
         'Name inaonekana ni part number/code, si jina la bidhaa — hakikisha columns za Part Number na Name hazijabadilishana nafasi (tumia "-" kama part hii kwa kweli haina jina)'
       );
