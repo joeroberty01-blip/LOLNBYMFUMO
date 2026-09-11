@@ -1,11 +1,11 @@
-/** v3: same rules as build-final-v2, plus "mechanic intelligence" — a curated list of vehicle
+﻿/** v3: same rules as build-final-v2, plus "mechanic intelligence" — a curated list of vehicle
  * model/chassis/brand names that, even though they're plain letters, should stop the Name
  * accumulation and join the Part Number/model side instead of being swallowed into the
  * generic product name (e.g. "BODY MOUNTING PRADO 120" -> Name="BODY MOUNTING",
  * PartNumber="PRADO 120", not Name="BODY MOUNTING PRADO"). */
 import ExcelJS from "exceljs";
 
-function cellToString(value: any): string {
+export function cellToString(value: any): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "object") {
     if ("result" in value && value.result !== undefined) return cellToString(value.result);
@@ -15,14 +15,14 @@ function cellToString(value: any): string {
   }
   return String(value).trim();
 }
-function norm(s: string) { return s.trim().toLowerCase().replace(/\s+/g, " "); }
+export function norm(s: string) { return s.trim().toLowerCase().replace(/\s+/g, " "); }
 function parseNum(s: string): number | null {
   const c = s.replace(/[\s,]/g, "");
   if (c === "") return null;
   const n = Number(c);
   return Number.isFinite(n) ? n : null;
 }
-function splitTrailingParen(raw: string): { outside: string; inside: string } | null {
+export function splitTrailingParen(raw: string): { outside: string; inside: string } | null {
   const trimmed = raw.trimEnd();
   if (!trimmed.endsWith(")")) return null;
   let depth = 0;
@@ -36,7 +36,7 @@ function splitTrailingParen(raw: string): { outside: string; inside: string } | 
   }
   return null;
 }
-function splitCode(raw: string): { code: string; name: string } {
+export function splitCode(raw: string): { code: string; name: string } {
   const eq = raw.indexOf("=");
   const sp = raw.indexOf(" ");
   let cut: number;
@@ -63,36 +63,131 @@ const MODEL_TOKENS = new Set(
     "NAVARA", "JUKE", "TERRANO", "PAJERO", "OUTLANDER", "TRITON", "SURF", "CHASER",
     "TOYOTA", "MITSUBISHI", "SUBARU", "HONDA", "MAZDA", "SUZUKI", "DAIHATSU", "HYUNDAI",
     "KIA", "MERCEDES", "BENZ", "SCANIA", "FUSO", "HINO", "VOLVO",
+    // Models/makes that only showed up once the Name column was audited token by token.
+    "FORD", "RANGER", "D-MAX", "DMAX", "GX", "HARDBODY", "COASTER", "COSTER", "CHASE",
+    "L/C", "LC", "ESCUDO", "GRAND", "CARINA", "DUALIS", "DUARIS", "PARDON", "LAND", "CRUISER",
   ].map((s) => s.toUpperCase())
 );
-/** Same list, used to relocate a LEADING brand/model word out of an otherwise-normal Name
- * ("0000007A=FOTON OVERHAULL GASKET" -> Name="FOTON OVERHAULL GASKET") into the Part Number
- * ("0000007A" -> "FOTON 0000007A"), per explicit request: the vehicle make/model identifies
- * WHICH part this is (belongs with the code), the remaining words are the generic product name.
- * Deliberately NOT applied to supplier/quality-grade prefixes (GP, SP, B, ZUMI, TRW, DENSO...)
- * — those stay in the Name exactly as before. */
-function relocateLeadingBrand(partNumber: string, name: string): { partNumber: string; name: string } {
-  if (name === "-" || name === partNumber) return { partNumber, name };
-  const tokens = name.split(/\s+/).filter(Boolean);
-  if (tokens.length < 2) return { partNumber, name }; // nothing left to be a name if we move it
-  if (!isModelToken(tokens[0])) return { partNumber, name };
-  // A bare number right after the model name is a generation/series marker, not a separate
-  // product spec — "PRADO 150", "MARK X 200" belong together, not "PRADO" alone with "150"
-  // left stranded at the front of the Name.
-  let moveCount = 1;
-  if (tokens.length > 2 && /^\d+$/.test(tokens[1])) moveCount = 2;
-  const moved = tokens.slice(0, moveCount).join(" ");
-  const rest = tokens.slice(moveCount).join(" ");
-  // If what's left has no letters at all ("2015/202" — a truncated-at-source row with nothing
-  // descriptive after the model name), moving the brand out would leave a Name that fails the
-  // app's own swap-guard. Better to leave the brand word in the Name than produce that.
-  if (!rest || !/[A-Za-z]/.test(rest)) return { partNumber, name };
-  return { partNumber: `${moved} ${partNumber}`, name: rest };
-}
+
+/** Quality grade / supplier / aftermarket-brand prefixes. Confirmed against the user's own
+ * JOSEPH 2-6-26.xlsx, which is the model for this split: not one of these words appears anywhere
+ * in its DESCRIPTION column (1,908 rows), while its PART NO column is full of them. Every entry
+ * here was read off Book3's actual leading-token frequency table, not recalled from memory. */
+const QUALIFIER_BRANDS = new Set(
+  [
+    "GP", "G", "B", "SP", "GDP", "DENSO", "ZUMI", "TRW", "BOSCH", "BOSH", "SFQZ", "OSK",
+    "CH", "MT", "CASTROL", "TAIHO", "LUKAS", "ASIMCO", "ASMCO", "ORITECE", "KYB", "NOK",
+    "AISIN", "TP", "OG", "JAPAN", "MOON", "FROTIS", "TONGSRAM", "NPR",
+  ].map((s) => s.toUpperCase())
+);
+
+/** Condition / size / fitment-spec words. Same evidence: JOSEPH keeps these on the PART NO side
+ * ("FORD OLD", "MOON SIZE 18", "ATF CASTROL 1L", "DOT 3 SUPER STAR"), never in a DESCRIPTION. */
+const QUALIFIER_SPECS = new Set(["STD", "NEW", "OLD", "DOT3"]);
+
+/** Words that describe the product itself and must stay in the Name even though they sit in the
+ * leading position. JOSEPH's DESCRIPTION column uses all of these (REAR 47x, LOWER 42x, UPPER
+ * 38x, SIDE 28x, FRONT 13x, RR 2x), so they are product vocabulary, not fitment qualifiers.
+ * SMALL/BIG/YELLOW/ASSORTED lead rows like "SMALL OIL SEAL" and "YELLOW SPRING BUSH" where they
+ * are the only thing distinguishing one product from another. */
+const KEEP_IN_NAME = new Set([
+  "FRONT", "REAR", "UPPER", "LOWER", "SIDE", "RR", "FRT", "FR", "LH", "RH", "INNER", "OUTER",
+  "SMALL", "BIG", "YELLOW", "ASSORTED", "COMPLETE", "SET", "MANUAL", "AUTO",
+]);
+
+/** Engine, chassis and electrical-spec code shapes. Deliberately narrow patterns rather than a
+ * blanket "has both letters and digits" test, so genuine part codes that happen to be mixed
+ * ("GDB3197", "MR541476", "DO638-0JY") are never mistaken for a fitment code and dragged out of
+ * the Name. */
+const CODE_PATTERNS: RegExp[] = [
+  /^\d{1,3}[A-Z]{1,3}(-?[A-Z]{1,3})?$/,                             // 1HZ 2KD 1GD 5L 14B 15B 1HD-T
+  /^\d{1,3}[A-Z]{1,3}(\/\d{0,3}[A-Z]{0,3})+$/,                      // 1GD/2GD 1TR/2TR 3L/5L 1S/5K
+  /^(L\/C|LC)\d+[A-Z0-9/]*$/,                                       // L/C200 LC105 L/C78/79/105
+  /^(HZJ|VDJ|UZJ|FZJ|GRJ|KDJ|TRJ|RZJ|VZJ|KZJ|KUN|GUN|ACA|ZRE|NZE)\d+[A-Z0-9/]*$/,
+  /^(TD|YD|ZD|QD|FE|4D|6D|4M|4G|GW4D)\d+[A-Z0-9/]*$/,               // TD42 YD25 ZD30 4D56 4M40
+  /^[YD]\d{2}(\/[YD]?\d{2})*$/,                                     // Y61 Y60 D22 D23 TD27/TD42
+  /^V\d(\d)?(\/V\d{1,2})*$/,                                        // V6 V8 V73/V93
+  /^[24]WD$/,
+  /^\d+\.\d+$/,                                                     // 0.25 0.50 piston oversize
+  /^\d+(V|K|W|A|MM|DOOR|HOLE|PC)$/,                                 // 12V 6000K 21W 30A 5DOOR 6HOLE
+];
+
+/** Engine-code suffixes that the source sometimes strands as their own token ("1VD FTV" instead
+ * of "1VD-FTV"). They are not English words, so matching them outright is safe. */
+const CODE_SUFFIXES = new Set(["FTV", "FTE", "FT", "TE", "GTE"]);
 const MODEL_PHRASES = [["LAND", "CRUISER"]];
 
 function isModelToken(token: string): boolean {
   return MODEL_TOKENS.has(token.toUpperCase());
+}
+
+/** Drops the punctuation a token can pick up from the source ("=L/C200", "GP,") so it can be
+ * matched against the vocabularies. "/" is kept because it is load-bearing inside codes
+ * ("L/C78/79", "1GD/2GD"). */
+function normToken(token: string): string {
+  return token.replace(/^[^A-Za-z0-9]+/, "").replace(/[^A-Za-z0-9/]+$/, "").toUpperCase();
+}
+
+function isQualifierAtom(atom: string): boolean {
+  const s = normToken(atom);
+  if (!s) return false;
+  if (KEEP_IN_NAME.has(s)) return false;
+  if (QUALIFIER_BRANDS.has(s) || QUALIFIER_SPECS.has(s) || MODEL_TOKENS.has(s)) return true;
+  if (CODE_SUFFIXES.has(s)) return true;
+  // A model name welded to its series number ("PRADO150", "PRADO95", "LC200") is still just a
+  // model name — the source is inconsistent about the space.
+  const glued = s.match(/^([A-Z/]+)\d+$/);
+  if (glued && MODEL_TOKENS.has(glued[1])) return true;
+  return CODE_PATTERNS.some((re) => re.test(s));
+}
+
+/** The source often welds two qualifiers into one token ("2GD=GP", "1HZ=DENSO", "GP-5L",
+ * "VIGO=GP"). Such a token only moves when EVERY piece of it is itself a qualifier, so a real
+ * part code that merely contains a separator ("DO638-0JY", "04465-YZZR2") is never torn apart. */
+function isQualifierToken(token: string): boolean {
+  const equalsParts = token.split("=").filter(Boolean);
+  if (equalsParts.length > 1) return equalsParts.every(isQualifierToken);
+  const dashParts = token.split("-").filter(Boolean);
+  if (dashParts.length > 1 && dashParts.every(isQualifierAtom)) return true;
+  return isQualifierAtom(token);
+}
+
+/** Moves the whole LEADING RUN of qualifier words out of the Name and onto the front of the Part
+ * Number, leaving the Name as the clean product description — the shape the user's own
+ * JOSEPH 2-6-26.xlsx uses throughout ("GP 1HZ OVERHAUL GASKET" -> Name="OVERHAUL GASKET",
+ * PartNumber="GP 1HZ 04111-17055"; compare JOSEPH's Name="AIR FILTER", PART NO="17801-11130=PRADO
+ * 150"). A qualifier is a vehicle make/model, a quality/supplier brand (GP, SP, DENSO, ZUMI...),
+ * an engine or chassis code (1HZ, 2KD, L/C200, V8, TD42...), or a condition/size spec (STD, NEW,
+ * 0.50, 12V). The scan stops at the first ordinary product word, so only the prefix moves. */
+export function relocateLeadingQualifiers(
+  partNumber: string,
+  name: string
+): { partNumber: string; name: string } {
+  if (name === "-" || name === partNumber) return { partNumber, name };
+  const tokens = name.split(/\s+/).filter(Boolean);
+
+  let i = 0;
+  while (i < tokens.length) {
+    // A bare number inside a run of qualifiers is a generation/series marker, not a product spec
+    // — "PRADO 150", "LAND CRUISER 200", "G 200 BRAKE PADS" keep the number with the fitment
+    // side rather than leaving the digits stranded at the front of the Name. Only inside a run:
+    // a Name that genuinely starts with a number is left alone.
+    if (i > 0 && /^[\d/]+$/.test(normToken(tokens[i]))) {
+      i++;
+      continue;
+    }
+    if (!isQualifierToken(tokens[i])) break;
+    i++;
+  }
+  if (i === 0) return { partNumber, name };
+
+  const rest = tokens.slice(i).join(" ");
+  // If nothing with a letter survives, the row was nothing but qualifiers (or was truncated at
+  // source). Moving them would leave a Name that fails the app's own swap-guard, so the row is
+  // left exactly as it was rather than manufacturing a broken one.
+  if (!rest || !/[A-Za-z]/.test(rest)) return { partNumber, name };
+
+  return { partNumber: `${tokens.slice(0, i).join(" ")} ${partNumber}`, name: rest };
 }
 
 /** Splits "BODY MOUNTING PRADO 120" into name="BODY MOUNTING", code="PRADO 120": pure-letter
@@ -102,7 +197,7 @@ function isModelToken(token: string): boolean {
  * one ordinary word has already been accumulated (i > 0) — a model name as the very FIRST token
  * ("FORD RANGER 2.2 STD...", "VIGO 2012...") has no earlier word to anchor a name to, so it's
  * left as an ordinary leading word instead of forcing an empty/awkward split. */
-function splitWordsThenCode(text: string): { name: string; code: string } | null {
+export function splitWordsThenCode(text: string): { name: string; code: string } | null {
   const tokens = text.split(/\s+/).filter(Boolean);
   let i = 0;
   while (i < tokens.length) {
@@ -132,7 +227,7 @@ function looksLikeBareCode(name: string, partNumber: string): boolean {
   return !/[A-Za-z]/.test(name);
 }
 
-const NESTED_PAREN_FIXES: Record<string, { partNumber: string; name: string }> = {
+export const NESTED_PAREN_FIXES: Record<string, { partNumber: string; name: string }> = {
   "16100-09260/69357=(GWT164A)2KD (16100-09260/69357=GP(GWT164A)2KD)": { partNumber: "16100-09260/69357", name: "GP(GWT164A)2KD" },
   "44250/44200-60090=(UZJ100,4700) (44250/44200-60090=(UZJ100,4700) STEERING RACK)": { partNumber: "44250/44200-60090", name: "(UZJ100,4700) STEERING RACK" },
   "45510-42060=(RAV4 KILLTIME) STE (45510-42060=(RAV4 KILLTIME) STE)": { partNumber: "45510-42060", name: "(RAV4 KILLTIME) STE" },
@@ -168,7 +263,7 @@ async function main() {
 
     if (NESTED_PAREN_FIXES[cell]) {
       const fix = NESTED_PAREN_FIXES[cell];
-      const relocated = relocateLeadingBrand(fix.partNumber, fix.name);
+      const relocated = relocateLeadingQualifiers(fix.partNumber, fix.name);
       ready.push({ excelRow: i + 1, partNumber: relocated.partNumber, name: relocated.name, buying: cost, selling: price, qty });
       continue;
     }
@@ -240,14 +335,14 @@ async function main() {
       finalName = name;
     }
 
-    const relocated = relocateLeadingBrand(finalPartNumber, finalName);
+    const relocated = relocateLeadingQualifiers(finalPartNumber, finalName);
     ready.push({ excelRow: i + 1, partNumber: relocated.partNumber, name: relocated.name, buying: cost, selling: price, qty });
   }
 
   const readyWb = new ExcelJS.Workbook();
   const readySheet = readyWb.addWorksheet("LOLNBY");
-  readySheet.addRow(["Part Number", "Name", "OEM Number", "Category", "Buying Price", "Selling Price", "Vehicle Compatibility", "Quantity"]);
-  for (const r of ready) readySheet.addRow([r.partNumber, r.name, "", "Uncategorized", r.buying, r.selling, "", r.qty]);
+  readySheet.addRow(["Name", "Part Number", "OEM Number", "Category", "Buying Price", "Selling Price", "Vehicle Compatibility", "Quantity"]);
+  for (const r of ready) readySheet.addRow([r.name, r.partNumber, "", "Uncategorized", r.buying, r.selling, "", r.qty]);
   readySheet.getRow(1).font = { bold: true };
   readySheet.columns.forEach((c) => (c.width = 22));
   await readyWb.xlsx.writeFile(readyPath);
@@ -263,4 +358,6 @@ async function main() {
   console.log(`Ready to import: ${ready.length} rows`);
   console.log(`Held out for review: ${review.length} rows`);
 }
-main();
+// Only run the generator when this file is executed directly — build-name-audit.ts imports the
+// split rules from here so the audit can never drift out of sync with the file it audits.
+if (/build-final-v3/.test(process.argv[1] ?? "")) main();
