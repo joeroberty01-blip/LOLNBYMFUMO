@@ -4,19 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { partSchema } from "@/lib/validators/parts";
+import { quickPartSchema } from "@/lib/validators/parts";
 import { createPartQuick } from "@/lib/actions/parts";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-
-const quickPartSchema = partSchema.pick({
-  partNumber: true,
-  name: true,
-  category: true,
-  costPrice: true,
-  unitPrice: true,
-});
 
 export function QuickPartModal({
   onClose,

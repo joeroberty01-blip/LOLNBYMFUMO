@@ -62,6 +62,15 @@ export type PartInput = z.infer<typeof partSchema>;
  * making a separate stock adjustment. Not part of partSchema because editing a part must never
  * silently overwrite stock — changing quantity later goes through adjustStock, which records a
  * StockAdjustment and an audit entry. */
+/** The five fields the Credit Purchase "New Product" modal asks for. Built by narrowing
+ * basePartObject and re-applying the check, NOT by `partSchema.pick(...)` — Zod refuses `.pick()`
+ * on a schema that already carries refinements and throws at module-evaluation time, which took
+ * the whole Credit Purchase client chunk down with it. */
+export const quickPartSchema = basePartObject
+  .pick({ partNumber: true, name: true, category: true, costPrice: true, unitPrice: true })
+  .superRefine(bareCodeCheck);
+export type QuickPartInput = z.infer<typeof quickPartSchema>;
+
 export const createPartSchema = basePartObject
   .extend({
     openingQuantity: z.coerce.number().int().min(0, "Isiwe hasi").optional(),
