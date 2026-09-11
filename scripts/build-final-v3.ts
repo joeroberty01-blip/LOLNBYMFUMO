@@ -61,8 +61,34 @@ const MODEL_TOKENS = new Set(
     "NISSAN", "ISUZU", "CANTER", "CIVILIAN", "WISH", "IST", "RUMION", "SIENTA", "PASSO",
     "VITZ", "ALLION", "PREMIO", "CAMRY", "YARIS", "FORTUNER", "INNOVA", "AVANZA", "XTRAIL",
     "NAVARA", "JUKE", "TERRANO", "PAJERO", "OUTLANDER", "TRITON", "SURF", "CHASER",
+    "TOYOTA", "MITSUBISHI", "SUBARU", "HONDA", "MAZDA", "SUZUKI", "DAIHATSU", "HYUNDAI",
+    "KIA", "MERCEDES", "BENZ", "SCANIA", "FUSO", "HINO", "VOLVO",
   ].map((s) => s.toUpperCase())
 );
+/** Same list, used to relocate a LEADING brand/model word out of an otherwise-normal Name
+ * ("0000007A=FOTON OVERHAULL GASKET" -> Name="FOTON OVERHAULL GASKET") into the Part Number
+ * ("0000007A" -> "FOTON 0000007A"), per explicit request: the vehicle make/model identifies
+ * WHICH part this is (belongs with the code), the remaining words are the generic product name.
+ * Deliberately NOT applied to supplier/quality-grade prefixes (GP, SP, B, ZUMI, TRW, DENSO...)
+ * — those stay in the Name exactly as before. */
+function relocateLeadingBrand(partNumber: string, name: string): { partNumber: string; name: string } {
+  if (name === "-" || name === partNumber) return { partNumber, name };
+  const tokens = name.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return { partNumber, name }; // nothing left to be a name if we move it
+  if (!isModelToken(tokens[0])) return { partNumber, name };
+  // A bare number right after the model name is a generation/series marker, not a separate
+  // product spec — "PRADO 150", "MARK X 200" belong together, not "PRADO" alone with "150"
+  // left stranded at the front of the Name.
+  let moveCount = 1;
+  if (tokens.length > 2 && /^\d+$/.test(tokens[1])) moveCount = 2;
+  const moved = tokens.slice(0, moveCount).join(" ");
+  const rest = tokens.slice(moveCount).join(" ");
+  // If what's left has no letters at all ("2015/202" — a truncated-at-source row with nothing
+  // descriptive after the model name), moving the brand out would leave a Name that fails the
+  // app's own swap-guard. Better to leave the brand word in the Name than produce that.
+  if (!rest || !/[A-Za-z]/.test(rest)) return { partNumber, name };
+  return { partNumber: `${moved} ${partNumber}`, name: rest };
+}
 const MODEL_PHRASES = [["LAND", "CRUISER"]];
 
 function isModelToken(token: string): boolean {
@@ -142,7 +168,8 @@ async function main() {
 
     if (NESTED_PAREN_FIXES[cell]) {
       const fix = NESTED_PAREN_FIXES[cell];
-      ready.push({ excelRow: i + 1, partNumber: fix.partNumber, name: fix.name, buying: cost, selling: price, qty });
+      const relocated = relocateLeadingBrand(fix.partNumber, fix.name);
+      ready.push({ excelRow: i + 1, partNumber: relocated.partNumber, name: relocated.name, buying: cost, selling: price, qty });
       continue;
     }
 
@@ -213,7 +240,8 @@ async function main() {
       finalName = name;
     }
 
-    ready.push({ excelRow: i + 1, partNumber: finalPartNumber, name: finalName, buying: cost, selling: price, qty });
+    const relocated = relocateLeadingBrand(finalPartNumber, finalName);
+    ready.push({ excelRow: i + 1, partNumber: relocated.partNumber, name: relocated.name, buying: cost, selling: price, qty });
   }
 
   const readyWb = new ExcelJS.Workbook();
