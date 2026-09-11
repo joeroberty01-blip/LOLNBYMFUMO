@@ -660,7 +660,7 @@ function SheetConfigCard({
             <Select
               value={sheet.targetStoreId ?? ""}
               onChange={(e) => onPickStore(e.target.value || "")}
-              className="w-auto"
+              className="!w-auto"
             >
               <option value="">-- Chagua Store --</option>
               {stores.map((s) => (

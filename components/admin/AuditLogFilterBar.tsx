@@ -30,7 +30,7 @@ export function AuditLogFilterBar({ action, actions, entityTypes, values }: Prop
       </div>
       <div>
         <Label>{t.adminOps.auditLogs.action}</Label>
-        <Select name="action" defaultValue={values.action ?? ""} className="w-auto">
+        <Select name="action" defaultValue={values.action ?? ""} className="!w-auto">
           <option value="">{t.adminOps.auditLogs.allActions}</option>
           {actions.map((a) => (
             <option key={a} value={a}>
@@ -41,7 +41,7 @@ export function AuditLogFilterBar({ action, actions, entityTypes, values }: Prop
       </div>
       <div>
         <Label>{t.adminOps.auditLogs.entityType}</Label>
-        <Select name="entityType" defaultValue={values.entityType ?? ""} className="w-auto">
+        <Select name="entityType" defaultValue={values.entityType ?? ""} className="!w-auto">
           <option value="">{t.adminOps.auditLogs.allEntityTypes}</option>
           {entityTypes.map((e) => (
             <option key={e} value={e}>

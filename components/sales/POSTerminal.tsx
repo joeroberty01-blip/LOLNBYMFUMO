@@ -349,7 +349,7 @@ export function POSTerminal({
           <Select
             value={sourceBranchId ?? ALL_STORES}
             onChange={(e) => selectSourceBranch(e.target.value)}
-            className="w-auto"
+            className="!w-auto"
           >
             <option value={ALL_STORES}>{t.sales.pos.sourceStoreAllOption}</option>
             {allStores.map((s) => (

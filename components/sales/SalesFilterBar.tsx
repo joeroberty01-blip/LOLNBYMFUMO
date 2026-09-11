@@ -51,7 +51,7 @@ export function SalesFilterBar({ action, branches, staff, values }: Props) {
       </div>
       <div>
         <Label>{t.common.branch}</Label>
-        <Select name="branchId" defaultValue={values.branchId ?? ""} className="w-auto">
+        <Select name="branchId" defaultValue={values.branchId ?? ""} className="!w-auto">
           <option value="">{t.common.allBranches}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
@@ -63,7 +63,7 @@ export function SalesFilterBar({ action, branches, staff, values }: Props) {
       {staff && (
         <div>
           <Label>{t.sales.historyFilter.staffLabel}</Label>
-          <Select name="userId" defaultValue={values.userId ?? ""} className="w-auto">
+          <Select name="userId" defaultValue={values.userId ?? ""} className="!w-auto">
             <option value="">{t.sales.historyFilter.allStaff}</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>
@@ -75,7 +75,7 @@ export function SalesFilterBar({ action, branches, staff, values }: Props) {
       )}
       <div>
         <Label>{t.sales.historyFilter.paymentLabel}</Label>
-        <Select name="paymentMethod" defaultValue={values.paymentMethod ?? ""} className="w-auto">
+        <Select name="paymentMethod" defaultValue={values.paymentMethod ?? ""} className="!w-auto">
           <option value="">{t.sales.historyFilter.allPayments}</option>
           {paymentMethods.map((pm) => (
             <option key={pm} value={pm}>

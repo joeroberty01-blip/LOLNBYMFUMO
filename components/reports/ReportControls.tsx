@@ -133,7 +133,7 @@ export function ReportControls({
               <Select
                 defaultValue={searchParams.get("month") ?? String(now.getMonth() + 1)}
                 onChange={(e) => updateParams({ month: e.target.value })}
-                className="w-auto"
+                className="!w-auto"
               >
                 {MONTHS.map((m, i) => (
                   <option key={m} value={i + 1}>
@@ -147,7 +147,7 @@ export function ReportControls({
               <Select
                 defaultValue={searchParams.get("year") ?? String(currentYear)}
                 onChange={(e) => updateParams({ year: e.target.value })}
-                className="w-auto"
+                className="!w-auto"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -165,7 +165,7 @@ export function ReportControls({
             <Select
               defaultValue={searchParams.get("year") ?? String(currentYear)}
               onChange={(e) => updateParams({ year: e.target.value })}
-              className="w-auto"
+              className="!w-auto"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -201,7 +201,7 @@ export function ReportControls({
             <Select
               defaultValue={searchParams.get("branchId") ?? ""}
               onChange={(e) => updateParams({ branchId: e.target.value })}
-              className="w-auto"
+              className="!w-auto"
             >
               <option value="">{t.common.allBranches}</option>
               {branches.map((b) => (
@@ -219,7 +219,7 @@ export function ReportControls({
             <Select
               defaultValue={searchParams.get("userId") ?? ""}
               onChange={(e) => updateParams({ userId: e.target.value })}
-              className="w-auto"
+              className="!w-auto"
             >
               <option value="">{t.reports.controls.allStaff}</option>
               {staff.map((s) => (
@@ -237,7 +237,7 @@ export function ReportControls({
             <Select
               defaultValue={searchParams.get("category") ?? ""}
               onChange={(e) => updateParams({ category: e.target.value })}
-              className="w-auto"
+              className="!w-auto"
             >
               <option value="">{t.reports.controls.allOptions}</option>
               {categories.map((c) => (
@@ -255,7 +255,7 @@ export function ReportControls({
             <Select
               defaultValue={searchParams.get("paymentMethod") ?? ""}
               onChange={(e) => updateParams({ paymentMethod: e.target.value })}
-              className="w-auto"
+              className="!w-auto"
             >
               <option value="">{t.reports.controls.allOptions}</option>
               {paymentMethods.map((pm) => (

@@ -156,7 +156,7 @@ export function PartsFilterBar({ categories }: Props) {
         <Select
           value={searchParams.get("stock") ?? ""}
           onChange={(e) => updateParams({ stock: e.target.value })}
-          className="w-auto"
+          className="!w-auto"
         >
           {STOCK_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -168,7 +168,7 @@ export function PartsFilterBar({ categories }: Props) {
         <Select
           value={searchParams.get("sort") ?? "name_asc"}
           onChange={(e) => updateParams({ sort: e.target.value })}
-          className="w-auto"
+          className="!w-auto"
         >
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -180,7 +180,7 @@ export function PartsFilterBar({ categories }: Props) {
         <Select
           value={searchParams.get("pageSize") ?? "50"}
           onChange={(e) => updateParams({ pageSize: e.target.value })}
-          className="w-auto"
+          className="!w-auto"
         >
           {PAGE_SIZES.map((n) => (
             <option key={n} value={n}>

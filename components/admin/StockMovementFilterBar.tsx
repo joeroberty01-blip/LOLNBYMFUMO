@@ -33,7 +33,7 @@ export function StockMovementFilterBar({
       <Select
         value={searchParams.get("movementType") ?? ""}
         onChange={(e) => updateParams({ movementType: e.target.value })}
-        className="w-auto"
+        className="!w-auto"
       >
         <option value="">Aina Zote</option>
         <option value="STOCK_IN">Stock In</option>
@@ -43,7 +43,7 @@ export function StockMovementFilterBar({
       <Select
         value={searchParams.get("branchId") ?? ""}
         onChange={(e) => updateParams({ branchId: e.target.value })}
-        className="w-auto"
+        className="!w-auto"
       >
         <option value="">Branch Zote</option>
         {branches.map((b) => (
@@ -73,7 +73,7 @@ export function StockMovementFilterBar({
       <Select
         value={searchParams.get("sort") ?? "newest"}
         onChange={(e) => updateParams({ sort: e.target.value })}
-        className="w-auto"
+        className="!w-auto"
       >
         <option value="newest">Mpya Kwanza</option>
         <option value="oldest">Zamani Kwanza</option>

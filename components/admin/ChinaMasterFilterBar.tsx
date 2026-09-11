@@ -56,7 +56,7 @@ export function ChinaMasterFilterBar({ batches }: { batches: ChinaMasterBatchOpt
       <Select
         defaultValue={searchParams.get("sourceSheet") ?? ""}
         onChange={(e) => updateParams({ sourceSheet: e.target.value })}
-        className="w-auto"
+        className="!w-auto"
       >
         <option value="">Vyanzo vyote</option>
         <option value="CHINA">CHINA</option>
@@ -65,7 +65,7 @@ export function ChinaMasterFilterBar({ batches }: { batches: ChinaMasterBatchOpt
       <Select
         defaultValue={searchParams.get("batchId") ?? ""}
         onChange={(e) => updateParams({ batchId: e.target.value })}
-        className="w-auto max-w-[280px]"
+        className="!w-auto max-w-[280px]"
       >
         <option value="">Batches zote</option>
         {batches.map((b) => (
@@ -77,7 +77,7 @@ export function ChinaMasterFilterBar({ batches }: { batches: ChinaMasterBatchOpt
       <Select
         defaultValue={searchParams.get("sort") ?? "batch"}
         onChange={(e) => updateParams({ sort: e.target.value })}
-        className="w-auto"
+        className="!w-auto"
       >
         <option value="batch">Sort: Default (Batch)</option>
         <option value="description_asc">Sort: Bidhaa (A–Z)</option>
