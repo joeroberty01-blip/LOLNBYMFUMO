@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Search, Bell, Settings, LogOut } from "lucide-react";
-import { useTranslations } from "@/lib/i18n/I18nProvider";
+import { Bell, Settings, LogOut } from "lucide-react";
 
 export function Topbar({ userName, userRole }: { userName: string; userRole: string }) {
-  const t = useTranslations();
   const initials = userName
     .split(" ")
     .map((p) => p[0])
@@ -15,20 +13,7 @@ export function Topbar({ userName, userRole }: { userName: string; userRole: str
     .toUpperCase();
 
   return (
-    <header className="flex items-center justify-between gap-4 border-b border-border bg-surface px-6 py-3">
-      <div className="relative w-full max-w-sm">
-        <Search
-          size={16}
-          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-secondary"
-        />
-        <input
-          type="text"
-          placeholder={t.adminOps.topbar.searchPlaceholder}
-          disabled
-          className="w-full rounded-control border border-border bg-surface-elevated py-2 pr-3 pl-9 text-sm text-primary placeholder:text-secondary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-70"
-        />
-      </div>
-
+    <header className="flex items-center justify-end gap-4 border-b border-border bg-surface px-6 py-3">
       <div className="flex items-center gap-1.5">
         <button
           type="button"
