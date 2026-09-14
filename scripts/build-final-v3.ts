@@ -5,12 +5,15 @@
  * PartNumber="PRADO 120", not Name="BODY MOUNTING PRADO"). */
 import ExcelJS from "exceljs";
 
-export function cellToString(value: any): string {
+/** ExcelJS hands back a different shape per cell kind: a plain primitive, a formula cell with a
+ * `result`, a rich-text cell with a `richText` run list, or a hyperlink cell with `text`. */
+export function cellToString(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "object") {
-    if ("result" in value && value.result !== undefined) return cellToString(value.result);
-    if ("richText" in value && Array.isArray(value.richText)) return value.richText.map((t: any) => t.text).join("");
-    if ("text" in value && typeof value.text === "string") return value.text;
+    const cell = value as { result?: unknown; richText?: { text: string }[]; text?: unknown };
+    if (cell.result !== undefined) return cellToString(cell.result);
+    if (Array.isArray(cell.richText)) return cell.richText.map((t) => t.text).join("");
+    if (typeof cell.text === "string") return cell.text;
     return "";
   }
   return String(value).trim();
@@ -219,12 +222,6 @@ export function splitWordsThenCode(text: string): { name: string; code: string }
   // result when there is no actual code in the row at all.
   if (!/\d/.test(code)) return null;
   return { name: tokens.slice(0, i).join(" "), code };
-}
-
-function looksLikeBareCode(name: string, partNumber: string): boolean {
-  if (name === "-") return false;
-  if (name.trim().toLowerCase() === partNumber.trim().toLowerCase()) return false;
-  return !/[A-Za-z]/.test(name);
 }
 
 export const NESTED_PAREN_FIXES: Record<string, { partNumber: string; name: string }> = {
