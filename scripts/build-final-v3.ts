@@ -366,6 +366,35 @@ async function main() {
   // it the wizard's auto-mapper matches the "No" serial column to oemNumber (its alias "oemno"
   // contains "no"), which would file 1, 2, 3... as OEM numbers. With the column present
   // oemNumber is claimed exactly and "No" stays unmapped, which is what we want.
+  // No two rows may land in the catalogue as the same entry. Part Number alone is deliberately
+  // NOT the test: Book3 legitimately reuses one order code across several products
+  // ("E0C00-2021" covers a REVO back door, bumper, fan, fog lamp and grille), and the app itself
+  // treats those as distinct parts. A genuine duplicate is the same Part Number AND the same
+  // Name — that is one product written twice, which Book3 does at rows 144/145 ("04466-42060 GP
+  // BRAKE PAD" and "04466-42060=GP BRAKE PAD", priced 40,000 and 35,000). Keeping both would put
+  // two identical-looking entries in the catalogue, so the later one is held out for review
+  // rather than silently dropped or silently merged at one of the two prices.
+  const firstSeen = new Map<string, (typeof ready)[number]>();
+  const deduped: typeof ready = [];
+  for (const row of ready) {
+    const key = `${row.partNumber.trim().toLowerCase()}|${row.name.trim().toLowerCase()}`;
+    const earlier = firstSeen.get(key);
+    if (earlier) {
+      review.push({
+        excelRow: row.excelRow,
+        original: `${row.name}  |  ${row.partNumber}`,
+        outCode: `hii: nunua ${row.buying}, uza ${row.selling}, qty ${row.qty}`,
+        inCode: `ya kwanza (Excel row ${earlier.excelRow}): nunua ${earlier.buying}, uza ${earlier.selling}, qty ${earlier.qty}`,
+        reason: "Part Number na Name ni sawa na row nyingine - chagua bei ipi ni sahihi",
+      });
+      continue;
+    }
+    firstSeen.set(key, row);
+    deduped.push(row);
+  }
+  ready.length = 0;
+  ready.push(...deduped);
+
   ready.sort(
     (a, b) =>
       sortKey(a.name).localeCompare(sortKey(b.name)) ||
