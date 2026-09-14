@@ -2,24 +2,42 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getBranches } from "@/lib/data/branches";
 import { PartForm } from "@/components/admin/PartForm";
 import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function EditPartPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  /** The Parts list renders one row per store, so its Edit link carries the store of the row that
+   * was clicked — that is the stock this page's Store field will move if the admin changes it. */
+  searchParams: Promise<{ branchId?: string }>;
 }) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const { id } = await params;
-  const part = await prisma.part.findUnique({ where: { id } });
+  const [{ id }, { branchId }] = await Promise.all([params, searchParams]);
+  const [part, branches] = await Promise.all([
+    prisma.part.findUnique({
+      where: { id },
+      include: { inventory: { select: { branchId: true, quantity: true } } },
+    }),
+    getBranches(),
+  ]);
   if (!part) {
     notFound();
   }
+
+  // Fall back to whichever store actually holds this part when the link carried no store (a part
+  // opened from somewhere other than the list), so the field never starts on the wrong one.
+  const currentBranchId =
+    part.inventory.find((i) => i.branchId === branchId)?.branchId ??
+    part.inventory[0]?.branchId ??
+    undefined;
 
   const { t } = await getServerDictionary();
 
@@ -34,6 +52,8 @@ export default async function EditPartPage({
       <PartForm
         mode="edit"
         partId={part.id}
+        branches={branches}
+        currentBranchId={currentBranchId}
         defaultValues={{
           partNumber: part.partNumber,
           oemNumber: part.oemNumber ?? undefined,

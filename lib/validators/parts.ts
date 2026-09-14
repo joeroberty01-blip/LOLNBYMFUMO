@@ -58,10 +58,6 @@ function bareCodeCheck(data: { name: string; partNumber: string }, ctx: z.Refine
 export const partSchema = basePartObject.superRefine(bareCodeCheck);
 export type PartInput = z.infer<typeof partSchema>;
 
-/** Create-only: lets the admin stock the new part in one step instead of saving it and then
- * making a separate stock adjustment. Not part of partSchema because editing a part must never
- * silently overwrite stock — changing quantity later goes through adjustStock, which records a
- * StockAdjustment and an audit entry. */
 /** The five fields the Credit Purchase "New Product" modal asks for. Built by narrowing
  * basePartObject and re-applying the check, NOT by `partSchema.pick(...)` — Zod refuses `.pick()`
  * on a schema that already carries refinements and throws at module-evaluation time, which took
@@ -71,6 +67,10 @@ export const quickPartSchema = basePartObject
   .superRefine(bareCodeCheck);
 export type QuickPartInput = z.infer<typeof quickPartSchema>;
 
+/** Create-only: lets the admin stock the new part in one step instead of saving it and then
+ * making a separate stock adjustment. Not part of partSchema because editing a part must never
+ * silently overwrite stock — changing quantity later goes through adjustStock, which records a
+ * StockAdjustment and an audit entry. */
 export const createPartSchema = basePartObject
   .extend({
     openingQuantity: z.coerce.number().int().min(0, "Isiwe hasi").optional(),
@@ -82,3 +82,47 @@ export const createPartSchema = basePartObject
   })
   .superRefine(bareCodeCheck);
 export type CreatePartInput = z.infer<typeof createPartSchema>;
+
+/** Edit-only: which store this part's stock should live in. `fromBranchId` is the store row the
+ * admin opened the part from (a part can hold stock in several stores at once, so the page has to
+ * say which one it is editing); `toBranchId` is where they want it. Both are optional because a
+ * part that has no stock anywhere yet has no store to move from. */
+export const editPartSchema = basePartObject
+  .extend({
+    fromBranchId: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? v : undefined)),
+    toBranchId: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? v : undefined)),
+  })
+  .superRefine(bareCodeCheck);
+export type EditPartInput = z.infer<typeof editPartSchema>;
+
+/** The shape PartForm binds to. It carries the extra fields of BOTH modes because one component
+ * renders both; whichever action receives it re-validates with its own schema, and Zod drops the
+ * keys that schema doesn't declare. */
+export const partFormSchema = basePartObject
+  .extend({
+    openingQuantity: z.coerce.number().int().min(0, "Isiwe hasi").optional(),
+    openingBranchId: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? v : undefined)),
+    fromBranchId: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? v : undefined)),
+    toBranchId: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? v : undefined)),
+  })
+  .superRefine(bareCodeCheck);

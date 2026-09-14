@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { createPartSchema, type PartInput } from "@/lib/validators/parts";
+import { partFormSchema, type PartInput } from "@/lib/validators/parts";
 import { createPart, updatePart } from "@/lib/actions/parts";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Input, Select, Label } from "@/components/ui/Input";
@@ -16,24 +16,37 @@ type Props = {
   partId?: string;
   defaultValues?: Partial<PartInput>;
   branches?: { id: string; name: string }[];
+  /** Edit mode: the store whose row the admin opened this part from. A part can hold stock in
+   * several stores at once, so the page has to say which one is being edited — picking a
+   * different store in the form moves that store's stock to the new one. */
+  currentBranchId?: string;
 };
 
-export function PartForm({ mode, partId, defaultValues, branches = [] }: Props) {
+export function PartForm({
+  mode,
+  partId,
+  defaultValues,
+  branches = [],
+  currentBranchId,
+}: Props) {
   const t = useTranslations();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
-  // createPartSchema in both modes: its two extra fields are optional and only rendered on
-  // create, and updatePart re-validates with partSchema, which drops them.
+  // partFormSchema carries the extra fields of both modes; each one is optional and only
+  // rendered in the mode it belongs to, and the receiving action re-validates with its own
+  // schema, which drops the keys it doesn't declare.
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<z.input<typeof createPartSchema>, unknown, z.output<typeof createPartSchema>>({
-    resolver: zodResolver(createPartSchema),
+  } = useForm<z.input<typeof partFormSchema>, unknown, z.output<typeof partFormSchema>>({
+    resolver: zodResolver(partFormSchema),
     defaultValues: {
       lowStockThreshold: 5,
       openingQuantity: 0,
       openingBranchId: branches[0]?.id ?? "",
+      fromBranchId: currentBranchId ?? "",
+      toBranchId: currentBranchId ?? "",
       ...defaultValues,
     },
   });
@@ -106,6 +119,25 @@ export function PartForm({ mode, partId, defaultValues, branches = [] }: Props) 
           <p className="mt-1 text-sm text-danger">{errors.lowStockThreshold.message}</p>
         )}
       </div>
+
+      {mode === "edit" && branches.length > 0 && (
+        <div>
+          <Label>Store</Label>
+          <input type="hidden" {...register("fromBranchId")} />
+          <Select id="toBranchId" {...register("toBranchId")}>
+            {!currentBranchId && <option value="">Chagua store</option>}
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-secondary">
+            Ukibadilisha store, stock yote ya part hii inahama kwenda store mpya. Jumla ya stock
+            haibadiliki.
+          </p>
+        </div>
+      )}
 
       {mode === "create" && branches.length > 0 && (
         <div className="grid grid-cols-2 gap-4">

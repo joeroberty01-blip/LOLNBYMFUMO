@@ -91,7 +91,13 @@ export function PartsTable({
                   <Eye size={15} />
                 </Link>
                 <Link
-                  href={`/dashboard/admin/parts/${row.partId}/edit`}
+                  // Carries this row's store so the edit page's Store field starts on the right
+                  // one — the same part can appear on several rows, one per store.
+                  href={
+                    row.branchId
+                      ? `/dashboard/admin/parts/${row.partId}/edit?branchId=${row.branchId}`
+                      : `/dashboard/admin/parts/${row.partId}/edit`
+                  }
                   aria-label="Edit"
                   title="Edit"
                   className="rounded-control p-1.5 text-secondary hover:bg-white/[0.06] hover:text-primary"
