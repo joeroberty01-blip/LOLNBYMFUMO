@@ -4,6 +4,7 @@
  * generic product name (e.g. "BODY MOUNTING PRADO 120" -> Name="BODY MOUNTING",
  * PartNumber="PRADO 120", not Name="BODY MOUNTING PRADO"). */
 import ExcelJS from "exceljs";
+import { categorize } from "./categorize";
 
 /** ExcelJS hands back a different shape per cell kind: a plain primitive, a formula cell with a
  * `result`, a rich-text cell with a `richText` run list, or a hyperlink cell with `text`. */
@@ -234,6 +235,27 @@ export const NESTED_PAREN_FIXES: Record<string, { partNumber: string; name: stri
   "YZ-3RZ (21/29/37) 2KD TOP SHAFT (YZ-3RZ (21/29/37) 2KD TOP SHAFT)": { partNumber: "YZ-3RZ", name: "(21/29/37) 2KD TOP SHAFT" },
 };
 
+/** Sort key used to arrange the sheet A-Z by product name, the way JOSEPH 2-6-26.xlsx is
+ * arranged. A name that already starts with a letter sorts on itself. A name that starts with a
+ * code fragment or punctuation ("(04466-60020) BRAKE PADS") sorts from its first real word
+ * instead, so it files under BRAKE with the other brake pads rather than being stranded at the
+ * top of the sheet with the other 113 rows that happen to begin with a symbol. */
+export function sortKey(name: string): string {
+  const upper = name.toUpperCase();
+  if (/^[A-Z]/.test(upper)) return upper;
+  // Start the key at the first run of 3+ letters — the first thing that can be a real word.
+  // "(04466-60020) BRAKE PADS" keys on "BRAKE PADS", "{power steering}" on "POWER STEERING}",
+  // "-LF-17356=FOTON F" on "FOTON F". A row with no such run anywhere ("1HD-T/1", "150-2KD/1K")
+  // has no word to file under at all, so it keeps its own text and lands at the top.
+  const m = upper.match(/[A-Z]{3,}/);
+  return m && m.index !== undefined ? upper.slice(m.index) : upper;
+}
+
+/** The store every Book3 row belongs to. Doubles as the sheet tab name, which is how the Bulk
+ * Upload wizard resolves which store a sheet is for — the Store Name column is for the reader,
+ * the tab name is what the import actually uses. */
+const STORE_NAME = "LOLNBY";
+
 async function main() {
   const inPath = process.argv[2];
   const readyPath = process.argv[3];
@@ -336,12 +358,52 @@ async function main() {
     ready.push({ excelRow: i + 1, partNumber: relocated.partNumber, name: relocated.name, buying: cost, selling: price, qty });
   }
 
+  // Arranged to match the user's own JOSEPH 2-6-26.xlsx, which is the model for this file:
+  // sorted A-Z by product name (its 1,089-row sheet is 99.9% alphabetical) and laid out
+  // No | Name | Part No | Qty | Buying | Selling | Category | Compatibility | Store Name.
+  //
+  // The one deliberate departure is keeping an OEM Number column. JOSEPH has none, and without
+  // it the wizard's auto-mapper matches the "No" serial column to oemNumber (its alias "oemno"
+  // contains "no"), which would file 1, 2, 3... as OEM numbers. With the column present
+  // oemNumber is claimed exactly and "No" stays unmapped, which is what we want.
+  ready.sort(
+    (a, b) =>
+      sortKey(a.name).localeCompare(sortKey(b.name)) ||
+      a.name.toUpperCase().localeCompare(b.name.toUpperCase()) ||
+      a.partNumber.toUpperCase().localeCompare(b.partNumber.toUpperCase())
+  );
+
   const readyWb = new ExcelJS.Workbook();
-  const readySheet = readyWb.addWorksheet("LOLNBY");
-  readySheet.addRow(["Name", "Part Number", "OEM Number", "Category", "Buying Price", "Selling Price", "Vehicle Compatibility", "Quantity"]);
-  for (const r of ready) readySheet.addRow([r.name, r.partNumber, "", "Uncategorized", r.buying, r.selling, "", r.qty]);
+  const readySheet = readyWb.addWorksheet(STORE_NAME);
+  readySheet.addRow([
+    "No",
+    "Name",
+    "Part Number",
+    "OEM Number",
+    "Quantity",
+    "Buying Price",
+    "Selling Price",
+    "Category",
+    "Vehicle Compatibility",
+    "Store Name",
+  ]);
+  ready.forEach((r, i) =>
+    readySheet.addRow([
+      i + 1,
+      r.name,
+      r.partNumber,
+      "",
+      r.qty,
+      r.buying,
+      r.selling,
+      categorize(r.name).category,
+      "",
+      STORE_NAME,
+    ])
+  );
   readySheet.getRow(1).font = { bold: true };
-  readySheet.columns.forEach((c) => (c.width = 22));
+  readySheet.views = [{ state: "frozen", ySplit: 1 }];
+  readySheet.columns.forEach((c, i) => (c.width = i === 0 ? 6 : i === 1 || i === 2 ? 34 : 18));
   await readyWb.xlsx.writeFile(readyPath);
 
   const reviewWb = new ExcelJS.Workbook();
