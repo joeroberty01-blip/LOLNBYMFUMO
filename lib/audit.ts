@@ -7,6 +7,7 @@ export type AuditAction =
   | "SALE_VOIDED"
   | "STOCK_ADJUSTED"
   | "PART_STORE_CHANGED"
+  | "DEBT_REMINDERS_SENT"
   | "MANUAL_ITEM_CONVERTED"
   | "PARTS_BULK_IMPORTED"
   | "STORE_CREATED"
@@ -41,7 +42,10 @@ export type AuditEntityType =
   | "User"
   | "Purchase"
   | "SupplierInvoice"
-  | "StockMovement";
+  | "StockMovement"
+  /// A run of debt reminders is not about one customer, so the log row is anchored to the admin
+  /// who triggered it rather than to any single record.
+  | "ReminderRun";
 
 /**
  * Writes one audit log row inside the same transaction as the operation it's recording, so the

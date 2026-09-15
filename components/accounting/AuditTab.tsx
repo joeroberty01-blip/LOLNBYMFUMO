@@ -21,6 +21,7 @@ const ACTION_LABEL: Record<string, string> = {
   SUPPLIER_PAYMENT_DELETED: "Malipo kwa supplier yamefutwa",
   STOCK_ADJUSTED: "Stock imerekebishwa",
   PART_STORE_CHANGED: "Part imehamishwa store",
+  DEBT_REMINDERS_SENT: "Vikumbusho vya deni vimetumwa",
   PARTS_BULK_IMPORTED: "Parts zimeingizwa kwa wingi",
   MANUAL_ITEM_CONVERTED: "Manual item imebadilishwa",
   BACKUP_RESTORED: "Backup imerudishwa",

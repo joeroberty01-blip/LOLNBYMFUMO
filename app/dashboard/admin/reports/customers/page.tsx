@@ -8,6 +8,9 @@ import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
 import { CreditCard } from "lucide-react";
 import { BUSINESS_NAME } from "@/config/app";
+import { SendRemindersButton } from "@/components/admin/SendRemindersButton";
+import { toWhatsAppNumber } from "@/lib/messaging";
+import { isSmsGatewayConfigured } from "@/lib/smsGateway";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -21,6 +24,7 @@ export default async function CustomersDebtReportPage() {
 
   const [debtors, branches] = await Promise.all([getCustomerDebtItems(), getBranches()]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
+  const reachable = debtors.filter((d) => toWhatsAppNumber(d.phone) !== null).length;
 
   return (
     <div>
@@ -31,6 +35,17 @@ export default async function CustomersDebtReportPage() {
       </p>
 
       <ReportActions reportType="customers" title={t.reports.customers.title} />
+
+      {/* Only offered once the gateway is actually configured — a button that can only ever
+          report "not set up" is noise on a page the admin uses every day. */}
+      {isSmsGatewayConfigured() && (
+        <div className="mb-6">
+          <SendRemindersButton
+            reachableCount={reachable}
+            noPhoneCount={debtors.length - reachable}
+          />
+        </div>
+      )}
 
       <div className="mb-6 w-fit">
         <StatCard
