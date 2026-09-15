@@ -91,6 +91,9 @@ export function POSTerminal({
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerNameError, setCustomerNameError] = useState<string | null>(null);
+  /** Optional at the till, but it is the only place most customers are ever created — without it
+   * the catalogue ends up with no way to reach anyone (see lib/whatsapp.ts). */
+  const [customerPhone, setCustomerPhone] = useState("");
   const [isSavingCustomerName, setIsSavingCustomerName] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
@@ -224,6 +227,7 @@ export function POSTerminal({
     setIsCredit(false);
     setCustomerId(null);
     setCustomerSearch("");
+    setCustomerPhone("");
     setPaymentMethod("CASH");
     if (branchId) {
       void selectBranch(branchId);
@@ -239,7 +243,7 @@ export function POSTerminal({
     setCustomerNameError(null);
     setIsSavingCustomerName(true);
     try {
-      const result = await findOrCreateCustomerByName(name);
+      const result = await findOrCreateCustomerByName(name, customerPhone.trim() || undefined);
       if (!result.success) {
         setCustomerNameError(result.error);
         return null;
@@ -247,7 +251,7 @@ export function POSTerminal({
       setCustomers((prev) =>
         prev.some((c) => c.id === result.customerId)
           ? prev
-          : [...prev, { id: result.customerId, name, phone: null }]
+          : [...prev, { id: result.customerId, name, phone: customerPhone.trim() || null }]
       );
       setCustomerId(result.customerId);
       return result.customerId;
@@ -517,6 +521,25 @@ export function POSTerminal({
             {customerNameError && (
               <p className="mt-1 text-sm text-danger">{customerNameError}</p>
             )}
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-primary">
+              Namba ya simu ({t.common.optional})
+            </p>
+            <Input
+              type="tel"
+              inputMode="tel"
+              placeholder="0712345678"
+              value={customerPhone}
+              onChange={(e) => {
+                setCustomerPhone(e.target.value);
+                setCustomerNameError(null);
+              }}
+            />
+            <p className="mt-1 text-xs text-secondary">
+              Inatumika kutuma invoice na kumbusho la deni kwa WhatsApp.
+            </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-primary">

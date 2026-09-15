@@ -130,3 +130,22 @@ export async function getCustomerPayments(customerId: string) {
     userName: r.user.name,
   }));
 }
+
+export type MessagingCustomer = {
+  id: string;
+  name: string;
+  phone: string | null;
+  balance: number;
+};
+
+/** Every active customer, for the offers screen. Customers WITHOUT a phone number are included
+ * on purpose: the screen's job is as much to show which ones cannot be reached yet as it is to
+ * message the ones that can. */
+export async function getCustomersForMessaging(): Promise<MessagingCustomer[]> {
+  const rows = await prisma.customer.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, phone: true, balance: true },
+    orderBy: { name: "asc" },
+  });
+  return rows.map((c) => ({ ...c, balance: c.balance.toNumber() }));
+}

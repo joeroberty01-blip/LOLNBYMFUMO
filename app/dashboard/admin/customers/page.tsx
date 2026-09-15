@@ -35,11 +35,18 @@ export default async function AdminCustomersPage({
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-primary">{t.nav.customers}</h1>
-        <Link href="/dashboard/admin/customers/new">
-          <Button type="button" variant="primary">
-            {t.adminCatalog.customers.addNew}
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/admin/customers/offers">
+            <Button type="button" variant="secondary">
+              Tuma Matangazo
+            </Button>
+          </Link>
+          <Link href="/dashboard/admin/customers/new">
+            <Button type="button" variant="primary">
+              {t.adminCatalog.customers.addNew}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">

@@ -52,6 +52,8 @@ export type ReceiptData = {
   paymentMethod: string;
   isCredit: boolean;
   customerName: string | null;
+  /** Needed to offer "send this invoice on WhatsApp" straight from the receipt. */
+  customerPhone: string | null;
   total: number;
   items: {
     name: string;
@@ -197,6 +199,7 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
       paymentMethod: sale.paymentMethod,
       isCredit: sale.isCredit,
       customerName: sale.customer?.name ?? null,
+      customerPhone: sale.customer?.phone ?? null,
       total: sale.total.toNumber(),
       items: sale.items.map((i) => ({
         name: i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part"),

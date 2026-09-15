@@ -206,6 +206,7 @@ export async function getSaleReceipt(saleId: string) {
     paymentMethod: sale.paymentMethod,
     isCredit: sale.isCredit,
     customerName: sale.customer?.name ?? null,
+    customerPhone: sale.customer?.phone ?? null,
     status: sale.status,
     userId: sale.userId,
     total: sale.total.toNumber(),

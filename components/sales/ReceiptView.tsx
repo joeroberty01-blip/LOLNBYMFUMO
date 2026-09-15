@@ -5,6 +5,8 @@ import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { invoiceMessage } from "@/lib/whatsapp";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -94,6 +96,31 @@ export function ReceiptView({
       </div>
 
       <p className="mb-6 text-center text-sm text-secondary">{t.sales.receipt.thankYou}</p>
+
+      {/* Sending the invoice is offered only when there is a customer to send it to. The store
+          signs this one with its own branch name, matching the printed receipt above. */}
+      {receipt.customerName && (
+        <div className="no-print mb-2 flex">
+          <WhatsAppButton
+            phone={receipt.customerPhone}
+            label="Tuma invoice WhatsApp"
+            message={invoiceMessage({
+              customerName: receipt.customerName,
+              storeName: receipt.branchName,
+              storeLocation: receipt.branchLocation,
+              invoiceNumber: receipt.invoiceNumber,
+              date: new Date(receipt.createdAt),
+              items: receipt.items.map((i) => ({
+                name: i.name,
+                quantity: i.quantity,
+                subtotal: i.subtotal,
+              })),
+              total: receipt.total,
+              isCredit: receipt.isCredit,
+            })}
+          />
+        </div>
+      )}
 
       <div className="no-print flex gap-2">
         <Button

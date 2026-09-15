@@ -11,3 +11,14 @@ export const APP_NAME = "LOLNBY MFUMO";
 
 /** Used for the browser tab / metadata description. */
 export const APP_DESCRIPTION = "Mfumo wa usimamizi wa spare parts, mauzo na hesabu";
+
+/**
+ * The trading name customers know this business by. Used ONLY on customer-facing messages —
+ * WhatsApp reminders, invoices and offers — where APP_NAME must never appear (see the rule
+ * above). A printed receipt signs itself with the specific store it was issued at
+ * (Branch.name); a message about a customer's overall account, which can span several stores,
+ * signs itself with this one business name instead.
+ *
+ * Change this to whatever is on the shop signage if it differs.
+ */
+export const BUSINESS_NAME = "LOLNBY";

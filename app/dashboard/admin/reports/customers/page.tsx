@@ -7,6 +7,7 @@ import { CustomerDebtItemsTable } from "@/components/admin/CustomerDebtItemsTabl
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
 import { CreditCard } from "lucide-react";
+import { BUSINESS_NAME } from "@/config/app";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -40,7 +41,7 @@ export default async function CustomersDebtReportPage() {
         />
       </div>
 
-      <CustomerDebtItemsTable groups={debtors} branches={branches} t={t} />
+      <CustomerDebtItemsTable groups={debtors} branches={branches} storeName={BUSINESS_NAME} t={t} />
     </div>
   );
 }

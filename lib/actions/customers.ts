@@ -12,6 +12,7 @@ import {
   type RecordCustomerPaymentInput,
 } from "@/lib/validators/customers";
 import { logAudit } from "@/lib/audit";
+import { toWhatsAppNumber } from "@/lib/whatsapp";
 
 type ActionResult = { success: true; customerId: string } | { success: false; error: string };
 
@@ -37,7 +38,10 @@ export async function createCustomerQuick(input: QuickCustomerInput): Promise<Ac
 /** Typing a customer's name at the start of a POS sale is the fast path — reuse the existing
  * Customer record if that name is already on file (case-insensitive), otherwise create one on
  * the spot with just the name. Either way it shows up on the Customers page like any other. */
-export async function findOrCreateCustomerByName(name: string): Promise<ActionResult> {
+export async function findOrCreateCustomerByName(
+  name: string,
+  phone?: string
+): Promise<ActionResult> {
   const session = await auth();
   if (!session || session.user.status !== "APPROVED") {
     return { success: false, error: "Huna ruhusa ya kufanya hili" };
@@ -48,16 +52,30 @@ export async function findOrCreateCustomerByName(name: string): Promise<ActionRe
     return { success: false, error: "Andika jina la mteja" };
   }
 
+  // A number typed at the POS is only accepted once it can actually be dialled — storing an
+  // unusable one would produce a WhatsApp link that opens a chat with nobody.
+  const typedPhone = phone?.trim() || undefined;
+  if (typedPhone && !toWhatsAppNumber(typedPhone)) {
+    return { success: false, error: "Namba ya simu haisomeki — mfano 0712345678" };
+  }
+
   const existing = await prisma.customer.findFirst({
     where: { name: { equals: trimmed, mode: "insensitive" } },
-    select: { id: true },
+    select: { id: true, phone: true },
   });
   if (existing) {
+    // Fill in a number the customer did not have before, so phone numbers accumulate as people
+    // shop. An existing number is never overwritten here — correcting one is an explicit edit on
+    // the Customers page, not a side effect of ringing up a sale.
+    if (typedPhone && !existing.phone) {
+      await prisma.customer.update({ where: { id: existing.id }, data: { phone: typedPhone } });
+      revalidatePath("/dashboard/admin/customers");
+    }
     return { success: true, customerId: existing.id };
   }
 
   const customer = await prisma.customer.create({
-    data: { name: trimmed, phone: null, creditLimit: 0, balance: 0 },
+    data: { name: trimmed, phone: typedPhone ?? null, creditLimit: 0, balance: 0 },
   });
   revalidatePath("/dashboard/admin/customers");
   return { success: true, customerId: customer.id };

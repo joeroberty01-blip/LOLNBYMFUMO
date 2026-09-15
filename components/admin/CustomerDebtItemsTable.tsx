@@ -11,6 +11,8 @@ import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
+import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { debtReminderMessage } from "@/lib/whatsapp";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -22,10 +24,13 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 export function CustomerDebtItemsTable({
   groups,
   branches,
+  storeName,
   t,
 }: {
   groups: CustomerDebtGroup[];
   branches: { id: string; name: string }[];
+  /** Signed on the customer-facing reminder. The STORE's name, never APP_NAME — see config/app.ts. */
+  storeName: string;
   t: Dictionary;
 }) {
   const [search, setSearch] = useState("");
@@ -109,6 +114,20 @@ export function CustomerDebtItemsTable({
                           customerName={g.name}
                           currentBalance={g.balance}
                           branches={branches}
+                        />
+                        <WhatsAppButton
+                          phone={g.phone}
+                          label="Kumbusha"
+                          message={debtReminderMessage({
+                            customerName: g.name,
+                            storeName,
+                            balance: g.balance,
+                            invoices: g.items.map((it) => ({
+                              invoiceNumber: it.invoiceNumber,
+                              date: it.createdAt,
+                              remaining: it.remaining,
+                            })),
+                          })}
                         />
                         <Link href={`/dashboard/admin/customers/${g.id}`}>
                           <Button type="button" variant="secondary">

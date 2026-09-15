@@ -18,6 +18,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
+import { BUSINESS_NAME } from "@/config/app";
 
 type TabValue = "customers" | "suppliers" | "history";
 
@@ -102,7 +103,12 @@ export default async function CreditPurchasesPage({
               ])
             )}
           />
-          <CustomerDebtItemsTable groups={customerDebtors} branches={branches} t={t} />
+          <CustomerDebtItemsTable
+            groups={customerDebtors}
+            branches={branches}
+            storeName={BUSINESS_NAME}
+            t={t}
+          />
         </>
       )}
 
