@@ -1,5 +1,7 @@
 /**
- * Customer WhatsApp messaging via click-to-chat (wa.me) links.
+ * Customer messaging — the same message text delivered either through WhatsApp click-to-chat
+ * (wa.me) or through the phone's own SMS app (sms: link). Both are free and both end with a
+ * person tapping Send; nothing here sends anything by itself.
  *
  * WHY NOT THE WHATSAPP BUSINESS API: every message this app sends a customer — an invoice, a
  * debt reminder, an offer — is business-initiated, and Meta charges for those from the first
@@ -59,6 +61,27 @@ export function buildWhatsAppLink(phone: string | null | undefined, message: str
   const number = toWhatsAppNumber(phone);
   if (!number) return null;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Builds an `sms:` link that opens the phone's own messaging app with the text already written.
+ * The message then goes out over the staff member's normal SMS bundle, so it costs whatever an
+ * ordinary SMS costs them and needs no gateway account.
+ *
+ * iOS and Android disagree on the separator before `body` — Android wants "?", iOS wants "&" —
+ * so the caller passes which platform it is on. Desktop Chrome, Firefox and Edge on Windows do
+ * not handle `sms:` at all, which is why the button that uses this checks first (see
+ * components/ui/MessageButtons.tsx).
+ */
+export function buildSmsLink(
+  phone: string | null | undefined,
+  message: string,
+  platform: "ios" | "other" = "other"
+): string | null {
+  const number = toWhatsAppNumber(phone);
+  if (!number) return null;
+  const separator = platform === "ios" ? "&" : "?";
+  return `sms:+${number}${separator}body=${encodeURIComponent(message)}`;
 }
 
 export type UnpaidInvoice = {

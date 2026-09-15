@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import type { MessagingCustomer } from "@/lib/data/customers";
-import { offerMessage, toWhatsAppNumber } from "@/lib/whatsapp";
-import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { offerMessage, toWhatsAppNumber } from "@/lib/messaging";
+import { WhatsAppButton, SmsButton } from "@/components/ui/MessageButtons";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -133,12 +133,17 @@ export function OfferBroadcast({
                 </Td>
                 <Td className="text-right">
                   <div
-                    className="flex justify-end"
+                    className="flex justify-end gap-2"
                     onClick={() => setOpened((prev) => new Set(prev).add(c.id))}
                   >
                     <WhatsAppButton
                       phone={c.phone}
-                      label="Tuma"
+                      label="WhatsApp"
+                      message={offerMessage({ customerName: c.name, storeName, body })}
+                    />
+                    <SmsButton
+                      phone={c.phone}
+                      label="SMS"
                       message={offerMessage({ customerName: c.name, storeName, body })}
                     />
                   </div>

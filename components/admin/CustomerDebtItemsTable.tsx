@@ -11,8 +11,8 @@ import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
-import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
-import { debtReminderMessage } from "@/lib/whatsapp";
+import { WhatsAppButton, SmsButton } from "@/components/ui/MessageButtons";
+import { debtReminderMessage } from "@/lib/messaging";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -46,6 +46,21 @@ export function CustomerDebtItemsTable({
         g.items.some((it) => String(it.invoiceNumber).includes(q))
     );
   }, [groups, search]);
+
+  /** One message, two ways to send it — built here so WhatsApp and SMS can never say different
+   * things about the same debt. */
+  function reminderFor(g: CustomerDebtGroup) {
+    return debtReminderMessage({
+      customerName: g.name,
+      storeName,
+      balance: g.balance,
+      invoices: g.items.map((it) => ({
+        invoiceNumber: it.invoiceNumber,
+        date: it.createdAt,
+        remaining: it.remaining,
+      })),
+    });
+  }
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -118,17 +133,9 @@ export function CustomerDebtItemsTable({
                         <WhatsAppButton
                           phone={g.phone}
                           label="Kumbusha"
-                          message={debtReminderMessage({
-                            customerName: g.name,
-                            storeName,
-                            balance: g.balance,
-                            invoices: g.items.map((it) => ({
-                              invoiceNumber: it.invoiceNumber,
-                              date: it.createdAt,
-                              remaining: it.remaining,
-                            })),
-                          })}
+                          message={reminderFor(g)}
                         />
+                        <SmsButton phone={g.phone} label="SMS" message={reminderFor(g)} />
                         <Link href={`/dashboard/admin/customers/${g.id}`}>
                           <Button type="button" variant="secondary">
                             {t.common.view}

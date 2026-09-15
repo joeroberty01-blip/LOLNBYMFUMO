@@ -12,7 +12,7 @@ import {
   type RecordCustomerPaymentInput,
 } from "@/lib/validators/customers";
 import { logAudit } from "@/lib/audit";
-import { toWhatsAppNumber } from "@/lib/whatsapp";
+import { toWhatsAppNumber } from "@/lib/messaging";
 
 type ActionResult = { success: true; customerId: string } | { success: false; error: string };
 
