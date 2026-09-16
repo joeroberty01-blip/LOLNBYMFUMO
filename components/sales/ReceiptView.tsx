@@ -26,6 +26,27 @@ export function ReceiptView({
   onNewSale?: () => void;
 }) {
   const t = useTranslations();
+
+  /** Built once and handed to both send buttons, so WhatsApp and SMS can never describe the same
+   * sale differently. Signed with the branch, matching the printed slip — never APP_NAME. */
+  const invoiceText = receipt.customerName
+    ? invoiceMessage({
+        customerName: receipt.customerName,
+        storeName: receipt.branchName,
+        storeLocation: receipt.branchLocation,
+        invoiceNumber: receipt.invoiceNumber,
+        date: new Date(receipt.createdAt),
+        items: receipt.items.map((i) => ({
+          name: i.name,
+          partNumber: i.partNumber,
+          quantity: i.quantity,
+          subtotal: i.subtotal,
+        })),
+        total: receipt.total,
+        isCredit: receipt.isCredit,
+      })
+    : "";
+
   return (
     <Card className="receipt-sheet mx-auto w-full max-w-sm p-5">
       {/* Customer-facing document: it carries the STORE's identity. The software name
@@ -80,6 +101,7 @@ export function ReceiptView({
                 )}
               </p>
               <p className="text-xs text-secondary">
+                {item.partNumber ? `${item.partNumber} · ` : ""}
                 {item.quantity} x {currency.format(item.unitPrice)}
               </p>
             </div>
@@ -104,39 +126,9 @@ export function ReceiptView({
           <WhatsAppButton
             phone={receipt.customerPhone}
             label="Tuma invoice WhatsApp"
-            message={invoiceMessage({
-              customerName: receipt.customerName,
-              storeName: receipt.branchName,
-              storeLocation: receipt.branchLocation,
-              invoiceNumber: receipt.invoiceNumber,
-              date: new Date(receipt.createdAt),
-              items: receipt.items.map((i) => ({
-                name: i.name,
-                quantity: i.quantity,
-                subtotal: i.subtotal,
-              })),
-              total: receipt.total,
-              isCredit: receipt.isCredit,
-            })}
+            message={invoiceText}
           />
-          <SmsButton
-            phone={receipt.customerPhone}
-            label="Tuma kwa SMS"
-            message={invoiceMessage({
-              customerName: receipt.customerName,
-              storeName: receipt.branchName,
-              storeLocation: receipt.branchLocation,
-              invoiceNumber: receipt.invoiceNumber,
-              date: new Date(receipt.createdAt),
-              items: receipt.items.map((i) => ({
-                name: i.name,
-                quantity: i.quantity,
-                subtotal: i.subtotal,
-              })),
-              total: receipt.total,
-              isCredit: receipt.isCredit,
-            })}
-          />
+          <SmsButton phone={receipt.customerPhone} label="Tuma kwa SMS" message={invoiceText} />
         </div>
       )}
 

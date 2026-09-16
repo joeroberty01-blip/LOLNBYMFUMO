@@ -25,6 +25,14 @@ function money(n: number): string {
 }
 
 /**
+ * Message bodies stay inside the GSM-7 alphabet — plain "-" rather than an em dash, and no other
+ * typographic punctuation. One character outside GSM-7 forces the whole SMS to UCS-2, which cuts
+ * a segment from 160 characters to 70: an em dash alone took the invoice from one segment to
+ * three, tripling what each message costs to send. WhatsApp does not care either way, and the
+ * same text goes out over both channels, so the cheaper alphabet wins.
+ */
+
+/**
  * Normalises a phone number to the digits-only international form wa.me requires (E.164 without
  * the "+"). Tanzanian numbers are written locally as 0712 345 678 and must go out as
  * 255712345678.
@@ -109,7 +117,7 @@ export function debtReminderMessage(args: {
   if (args.invoices && args.invoices.length > 0) {
     lines.push("", "Invoice ambazo hazijalipwa:");
     for (const inv of args.invoices) {
-      lines.push(`  #${inv.invoiceNumber} — ${shortDate(inv.date)} — ${money(inv.remaining)}`);
+      lines.push(`  #${inv.invoiceNumber} - ${shortDate(inv.date)} - ${money(inv.remaining)}`);
     }
   }
 
@@ -117,7 +125,13 @@ export function debtReminderMessage(args: {
   return lines.join("\n");
 }
 
-export type InvoiceLine = { name: string; quantity: number; subtotal: number };
+export type InvoiceLine = {
+  name: string;
+  /** Null for a manual entry, which has no catalogue code. */
+  partNumber: string | null;
+  quantity: number;
+  subtotal: number;
+};
 
 /** The sale itself, sent to the customer right after checkout. */
 export function invoiceMessage(args: {
@@ -132,15 +146,16 @@ export function invoiceMessage(args: {
 }): string {
   const lines = [`Habari ${args.customerName},`, ""];
   lines.push(`Asante kwa manunuzi yako ${args.storeName}${args.storeLocation ? ` (${args.storeLocation})` : ""}.`);
-  lines.push("", `Invoice #${args.invoiceNumber} — ${shortDate(args.date)}`, "");
+  lines.push("", `Invoice #${args.invoiceNumber} - ${shortDate(args.date)}`, "");
 
   for (const it of args.items) {
-    lines.push(`  ${it.quantity} x ${it.name} — ${money(it.subtotal)}`);
+    const code = it.partNumber ? ` (${it.partNumber})` : "";
+    lines.push(`  ${it.quantity} x ${it.name}${code} - ${money(it.subtotal)}`);
   }
 
   lines.push("", `JUMLA: ${money(args.total)}`);
   if (args.isCredit) {
-    lines.push("", "Manunuzi haya ni ya mkopo — kiasi hiki kimeongezwa kwenye salio lako.");
+    lines.push("", "Manunuzi haya ni ya mkopo - kiasi hiki kimeongezwa kwenye salio lako.");
   }
   lines.push("", "Asante.");
   return lines.join("\n");
