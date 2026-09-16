@@ -15,9 +15,10 @@ import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PaySupplierButton } from "@/components/admin/PaySupplierButton";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 import { ListToolbar } from "@/components/ui/ListToolbar";
 import { CreditCard, Package, Boxes, Receipt } from "lucide-react";
+import { getOpenPurchasesForSupplier } from "@/lib/data/outstanding";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -47,6 +48,7 @@ export default async function SupplierDetailPage({
   const branches = await getBranches();
   const history = await getSupplierPartsHistory(id);
   const invoices = await getSupplierInvoices(id);
+  const openPurchases = await getOpenPurchasesForSupplier(id);
 
   const fmtDate = (d: Date) => d.toLocaleDateString("sw-TZ");
 
@@ -71,11 +73,12 @@ export default async function SupplierDetailPage({
         </div>
         <div className="flex gap-2">
           {supplier.balance > 0 && (
-            <PaySupplierButton
-              supplierId={supplier.id}
-              supplierName={supplier.name}
-              currentBalance={supplier.balance}
+            <PayInvoicesButton
+              kind="supplier"
+              partyId={supplier.id}
+              partyName={supplier.name}
               branches={branches}
+              invoices={openPurchases}
             />
           )}
           <Link href={`/dashboard/admin/suppliers/${supplier.id}/edit`}>

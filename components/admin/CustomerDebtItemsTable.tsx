@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { CustomerDebtGroup } from "@/lib/data/reports/customers";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 import { ArchiveCustomerButton } from "@/components/admin/ArchiveCustomerButton";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
@@ -124,11 +124,18 @@ export function CustomerDebtItemsTable({
                     <Td className="text-right tabular-nums">{currency.format(g.creditLimit)}</Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-2">
-                        <PayCustomerButton
-                          customerId={g.id}
-                          customerName={g.name}
-                          currentBalance={g.balance}
+                        <PayInvoicesButton
+                          kind="customer"
+                          partyId={g.id}
+                          partyName={g.name}
                           branches={branches}
+                          invoices={g.items.map((it) => ({
+                            id: it.saleId,
+                            label: `Invoice #${it.invoiceNumber}`,
+                            date: it.createdAt,
+                            total: it.total,
+                            remaining: it.remaining,
+                          }))}
                         />
                         <WhatsAppButton
                           phone={g.phone}
@@ -164,13 +171,31 @@ export function CustomerDebtItemsTable({
                         <Td colSpan={2} className="text-right text-sm font-medium tabular-nums text-danger">
                           Deni: {currency.format(it.remaining)}
                         </Td>
-                        <Td>
-                          <Link
-                            href={`/dashboard/sales/receipt/${it.saleId}`}
-                            className="text-xs text-accent hover:underline"
-                          >
-                            Angalia Invoice
-                          </Link>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <PayInvoicesButton
+                              kind="customer"
+                              partyId={g.id}
+                              partyName={`${g.name} · Invoice #${it.invoiceNumber}`}
+                              branches={branches}
+                              label="Lipa hii"
+                              invoices={[
+                                {
+                                  id: it.saleId,
+                                  label: `Invoice #${it.invoiceNumber}`,
+                                  date: it.createdAt,
+                                  total: it.total,
+                                  remaining: it.remaining,
+                                },
+                              ]}
+                            />
+                            <Link
+                              href={`/dashboard/sales/receipt/${it.saleId}`}
+                              className="text-xs text-accent hover:underline"
+                            >
+                              Angalia
+                            </Link>
+                          </div>
                         </Td>
                       </Tr>
                     ))}

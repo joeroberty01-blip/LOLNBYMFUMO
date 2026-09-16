@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { toCents, fromCents, settleOpenItems } from "@/lib/money";
 
 export type DebtorRow = {
   id: string;
@@ -75,13 +76,22 @@ export async function getCustomerDebtItems(): Promise<CustomerDebtGroup[]> {
     }),
     prisma.customerPayment.findMany({
       where: { customerId: { in: ids } },
-      select: { customerId: true, amount: true },
+      select: { customerId: true, saleId: true, amount: true },
     }),
   ]);
 
-  const paidByCustomer = new Map<string, number>();
+  // A payment that named an invoice settles that invoice. Everything else — lump sums, and every
+  // payment taken before per-invoice collection existed — goes into the customer's pool and is
+  // spread oldest invoice first.
+  const allocatedBySale = new Map<string, number>();
+  const poolByCustomer = new Map<string, number>();
   for (const p of payments) {
-    paidByCustomer.set(p.customerId, (paidByCustomer.get(p.customerId) ?? 0) + p.amount.toNumber());
+    const cents = toCents(p.amount);
+    if (p.saleId) {
+      allocatedBySale.set(p.saleId, (allocatedBySale.get(p.saleId) ?? 0) + cents);
+    } else {
+      poolByCustomer.set(p.customerId, (poolByCustomer.get(p.customerId) ?? 0) + cents);
+    }
   }
 
   const salesByCustomer = new Map<string, typeof sales>();
@@ -93,28 +103,32 @@ export async function getCustomerDebtItems(): Promise<CustomerDebtGroup[]> {
   }
 
   return debtors.map((d) => {
-    let pool = paidByCustomer.get(d.id) ?? 0;
+    const customerSales = salesByCustomer.get(d.id) ?? [];
+    const { remainingById } = settleOpenItems(
+      customerSales.map((s) => ({
+        id: s.id,
+        totalCents: toCents(s.total),
+        allocatedCents: allocatedBySale.get(s.id) ?? 0,
+      })),
+      poolByCustomer.get(d.id) ?? 0
+    );
+
     const items: CustomerDebtItem[] = [];
-    for (const s of salesByCustomer.get(d.id) ?? []) {
-      const total = s.total.toNumber();
-      let remaining = total;
-      if (pool > 0) {
-        const applied = Math.min(pool, total);
-        remaining -= applied;
-        pool -= applied;
-      }
-      // Guards against floating-point dust (e.g. 0.0000000001) showing up as a phantom invoice.
-      if (remaining > 0.5) {
-        items.push({
-          saleId: s.id,
-          invoiceNumber: s.invoiceNumber,
-          createdAt: s.createdAt,
-          branchName: s.branch.name,
-          total,
-          remaining,
-        });
-      }
+    for (const s of customerSales) {
+      const remainingCents = remainingById.get(s.id) ?? 0;
+      // Exact: cents are integers, so a fully settled invoice is exactly 0 and needs no
+      // tolerance for floating-point dust.
+      if (remainingCents <= 0) continue;
+      items.push({
+        saleId: s.id,
+        invoiceNumber: s.invoiceNumber,
+        createdAt: s.createdAt,
+        branchName: s.branch.name,
+        total: s.total.toNumber(),
+        remaining: fromCents(remainingCents),
+      });
     }
+
     return {
       id: d.id,
       name: d.name,

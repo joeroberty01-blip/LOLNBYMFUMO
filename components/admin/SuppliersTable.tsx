@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { RecordPaymentModal } from "@/components/admin/RecordPaymentModal";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ArchiveSupplierButton } from "@/components/admin/ArchiveSupplierButton";
+import type { OpenInvoice } from "@/components/admin/InvoicePaymentModal";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -23,12 +23,14 @@ type Supplier = {
 export function SuppliersTable({
   suppliers,
   branches,
+  openBySupplier,
 }: {
   suppliers: Supplier[];
   branches: { id: string; name: string }[];
+  /** Unpaid purchases per supplier — collection is per purchase, never a lump sum. */
+  openBySupplier: Record<string, OpenInvoice[]>;
 }) {
   const t = useTranslations();
-  const [paying, setPaying] = useState<Supplier | null>(null);
 
   if (suppliers.length === 0) {
     return <EmptyState title={t.adminCatalog.suppliers.empty} />;
@@ -67,9 +69,14 @@ export function SuppliersTable({
                       {t.common.edit}
                     </Button>
                   </Link>
-                  <Button type="button" variant="secondary" onClick={() => setPaying(s)}>
-                    {t.adminCatalog.suppliers.recordPayment}
-                  </Button>
+                  <PayInvoicesButton
+                    kind="supplier"
+                    partyId={s.id}
+                    partyName={s.name}
+                    branches={branches}
+                    label={t.adminCatalog.suppliers.recordPayment}
+                    invoices={openBySupplier[s.id] ?? []}
+                  />
                   <ArchiveSupplierButton supplierId={s.id} />
                 </div>
               </Td>
@@ -78,15 +85,6 @@ export function SuppliersTable({
         </TBody>
       </Table>
 
-      {paying && (
-        <RecordPaymentModal
-          supplierId={paying.id}
-          supplierName={paying.name}
-          currentBalance={paying.balance}
-          branches={branches}
-          onClose={() => setPaying(null)}
-        />
-      )}
     </>
   );
 }

@@ -19,6 +19,8 @@ export type SupplierInput = z.infer<typeof supplierSchema>;
 
 export const recordPaymentSchema = z.object({
   supplierId: z.string().min(1),
+  /** Which purchase this settles. Omitted for a lump sum taken without naming one. */
+  purchaseId: optionalText,
   amount: z.coerce.number().positive("Weka amount zaidi ya 0"),
   paymentMethod: z.enum(paymentMethods),
   branchId: optionalText,

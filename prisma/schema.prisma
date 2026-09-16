@@ -67,8 +67,8 @@ model User {
   branch       Branch?    @relation(fields: [branchId], references: [id])
   createdAt    DateTime   @default(now())
 
-  sales            Sale[]       @relation("SoldBy")
-  voidedSales      Sale[]       @relation("VoidedBy")
+  sales            Sale[]            @relation("SoldBy")
+  voidedSales      Sale[]            @relation("VoidedBy")
   purchases        Purchase[]
   stockAdjustments StockAdjustment[]
   expenses         Expense[]
@@ -115,17 +115,17 @@ model Branch {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  users               User[]
-  inventory           Inventory[]
-  sales               Sale[]
-  salesFulfilledFor   Sale[]            @relation("SaleSourceBranch")
+  users                 User[]
+  inventory             Inventory[]
+  sales                 Sale[]
+  salesFulfilledFor     Sale[]            @relation("SaleSourceBranch")
   saleItemsFulfilledFor SaleItem[]
-  purchases           Purchase[]
-  stockAdjustments    StockAdjustment[]
-  expenses            Expense[]
-  supplierPayments    SupplierPayment[]
-  customerPayments    CustomerPayment[]
-  stockMovements      StockMovement[]
+  purchases             Purchase[]
+  stockAdjustments      StockAdjustment[]
+  expenses              Expense[]
+  supplierPayments      SupplierPayment[]
+  customerPayments      CustomerPayment[]
+  stockMovements        StockMovement[]
 }
 
 model Supplier {
@@ -189,21 +189,21 @@ model StockMovement {
 /// Moving to an object store later means replacing `data` with a URL/key column and porting the
 /// rows; nothing else in the app touches the bytes.
 model SupplierInvoice {
-  id          String   @id @default(cuid())
-  supplierId  String
+  id           String    @id @default(cuid())
+  supplierId   String
   /// Original filename as uploaded, for display and for the download filename.
-  fileName    String
-  mimeType    String
-  sizeBytes   Int
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
   /// Invoice number as printed on the document, when the admin records it.
-  invoiceNo   String?
+  invoiceNo    String?
   /// Date on the invoice itself, which is often earlier than the upload date.
-  invoiceDate DateTime?
-  amount      Decimal? @db.Decimal(12, 2)
-  notes       String?
-  data        Bytes
+  invoiceDate  DateTime?
+  amount       Decimal?  @db.Decimal(12, 2)
+  notes        String?
+  data         Bytes
   uploadedById String
-  createdAt   DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   uploadedBy User     @relation(fields: [uploadedById], references: [id])
@@ -215,18 +215,23 @@ model SupplierInvoice {
 model SupplierPayment {
   id            String        @id @default(cuid())
   supplierId    String
+  /// Which purchase this money was put against; null for a lump sum, exactly as on
+  /// CustomerPayment.saleId. Same rule: never back-fill.
+  purchaseId    String?
   amount        Decimal       @db.Decimal(12, 2)
   paymentMethod PaymentMethod
   branchId      String?
   userId        String
   createdAt     DateTime      @default(now())
 
-  supplier Supplier @relation(fields: [supplierId], references: [id])
-  branch   Branch?  @relation(fields: [branchId], references: [id])
-  user     User     @relation(fields: [userId], references: [id])
+  supplier Supplier  @relation(fields: [supplierId], references: [id])
+  purchase Purchase? @relation(fields: [purchaseId], references: [id])
+  branch   Branch?   @relation(fields: [branchId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
   expense  Expense?
 
   @@index([supplierId])
+  @@index([purchaseId])
   @@index([branchId])
   @@index([userId])
   @@index([createdAt])
@@ -280,6 +285,12 @@ model Customer {
 model CustomerPayment {
   id            String        @id @default(cuid())
   customerId    String
+  /// Which credit sale this money was put against. Null means the payment was taken as a lump
+  /// sum with no invoice named — every payment recorded before per-invoice collection existed
+  /// is null, and those are still spread oldest-invoice-first when the outstanding list is
+  /// worked out (see getCustomerDebtItems). Never back-fill these: doing so would rewrite what
+  /// actually happened at the till.
+  saleId        String?
   amount        Decimal       @db.Decimal(12, 2)
   paymentMethod PaymentMethod
   branchId      String?
@@ -287,10 +298,12 @@ model CustomerPayment {
   createdAt     DateTime      @default(now())
 
   customer Customer @relation(fields: [customerId], references: [id])
+  sale     Sale?    @relation(fields: [saleId], references: [id])
   branch   Branch?  @relation(fields: [branchId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
 
   @@index([customerId])
+  @@index([saleId])
   @@index([branchId])
   @@index([userId])
   @@index([createdAt])
@@ -301,11 +314,11 @@ model CustomerPayment {
 /// content itself is never stored server-side; only that it happened and roughly how much
 /// data it covered.
 model BackupLog {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  userId     String
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  userId      String
   recordCount Int
-  user User @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([createdAt])
 }
@@ -374,29 +387,30 @@ model StockAdjustment {
 }
 
 model Sale {
-  id            String        @id @default(cuid())
-  invoiceNumber Int           @unique @default(autoincrement())
-  customerId    String?
-  branchId      String
+  id             String        @id @default(cuid())
+  invoiceNumber  Int           @unique @default(autoincrement())
+  customerId     String?
+  branchId       String
   /// The store inventory was actually deducted from. Null means "same as branchId" (the
   /// common case — sold and fulfilled at the same store). Only set when a selling point
   /// fulfills a sale from a different (often warehouse-only) store's stock.
   sourceBranchId String?
-  userId        String
-  total         Decimal       @db.Decimal(12, 2)
-  paymentMethod PaymentMethod
-  isCredit      Boolean       @default(false)
-  status        SaleStatus    @default(COMPLETED)
-  createdAt     DateTime      @default(now())
-  voidedAt      DateTime?
-  voidedById    String?
+  userId         String
+  total          Decimal       @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod
+  isCredit       Boolean       @default(false)
+  status         SaleStatus    @default(COMPLETED)
+  createdAt      DateTime      @default(now())
+  voidedAt       DateTime?
+  voidedById     String?
 
-  customer     Customer?  @relation(fields: [customerId], references: [id])
-  branch       Branch     @relation(fields: [branchId], references: [id])
-  sourceBranch Branch?    @relation("SaleSourceBranch", fields: [sourceBranchId], references: [id])
-  user         User       @relation("SoldBy", fields: [userId], references: [id])
-  voidedBy     User?      @relation("VoidedBy", fields: [voidedById], references: [id])
+  customer     Customer?         @relation(fields: [customerId], references: [id])
+  branch       Branch            @relation(fields: [branchId], references: [id])
+  sourceBranch Branch?           @relation("SaleSourceBranch", fields: [sourceBranchId], references: [id])
+  user         User              @relation("SoldBy", fields: [userId], references: [id])
+  voidedBy     User?             @relation("VoidedBy", fields: [voidedById], references: [id])
   items        SaleItem[]
+  payments     CustomerPayment[]
 
   @@index([customerId])
   @@index([branchId])
@@ -443,10 +457,11 @@ model Purchase {
   notes      String?
   createdAt  DateTime  @default(now())
 
-  supplier Supplier       @relation(fields: [supplierId], references: [id])
-  branch   Branch         @relation(fields: [branchId], references: [id])
-  user     User           @relation(fields: [userId], references: [id])
+  supplier Supplier          @relation(fields: [supplierId], references: [id])
+  branch   Branch            @relation(fields: [branchId], references: [id])
+  user     User              @relation(fields: [userId], references: [id])
   items    PurchaseItem[]
+  payments SupplierPayment[]
 
   @@index([supplierId])
   @@index([branchId])

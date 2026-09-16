@@ -10,6 +10,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
+import { getSupplierDebtItems } from "@/lib/data/suppliers";
 
 export default async function SuppliersPage({
   searchParams,
@@ -23,7 +24,25 @@ export default async function SuppliersPage({
 
   const { page: pageParam, pageSize, q } = await searchParams;
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
-  const [suppliers, branches] = await Promise.all([getSuppliers(pageArgs, q), getBranches()]);
+  const [suppliers, branches, debtGroups] = await Promise.all([
+    getSuppliers(pageArgs, q),
+    getBranches(),
+    getSupplierDebtItems(),
+  ]);
+  // One query for the page rather than one per row: each row's Pay button needs that supplier's
+  // own unpaid purchases, because collection is per purchase.
+  const openBySupplier = Object.fromEntries(
+    debtGroups.map((g) => [
+      g.id,
+      g.items.map((it) => ({
+        id: it.purchaseId,
+        label: `Manunuzi ${it.createdAt.toLocaleDateString("sw-TZ")}`,
+        date: it.createdAt,
+        total: it.total,
+        remaining: it.remaining,
+      })),
+    ])
+  );
   const { t } = await getServerDictionary();
 
   return (
@@ -50,7 +69,11 @@ export default async function SuppliersPage({
         rows={suppliers.rows.map((s) => [s.name, s.phone ?? "", s.email ?? "", s.address ?? "", s.balance])}
       />
 
-      <SuppliersTable suppliers={suppliers.rows} branches={branches} />
+      <SuppliersTable
+        suppliers={suppliers.rows}
+        branches={branches}
+        openBySupplier={openBySupplier}
+      />
 
       <Pagination
         baseHref="/dashboard/admin/suppliers"

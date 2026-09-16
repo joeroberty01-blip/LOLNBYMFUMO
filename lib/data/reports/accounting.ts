@@ -678,6 +678,65 @@ export async function getIntegrityChecks(range: DateRange): Promise<IntegrityChe
     where: { isManualEntry: true, manualCostPrice: null },
   });
 
+  // Customer.balance is a running total kept in step by completeSale / voidSale / the payment
+  // actions. It should always equal what the underlying documents say: credit sales less
+  // collections. Any gap means one of those paths wrote one side and not the other, which no
+  // screen would otherwise reveal — the balance would simply be quietly wrong.
+  const customerBalanceDrift = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM (
+      SELECT c.id
+      FROM "Customer" c
+      LEFT JOIN (
+        SELECT "customerId", SUM(total) AS charged FROM "Sale"
+        WHERE "isCredit" = true AND status = 'COMPLETED' GROUP BY "customerId"
+      ) s ON s."customerId" = c.id
+      LEFT JOIN (
+        SELECT "customerId", SUM(amount) AS paid FROM "CustomerPayment" GROUP BY "customerId"
+      ) p ON p."customerId" = c.id
+      WHERE ROUND(c.balance, 2)
+          <> ROUND(COALESCE(s.charged, 0) - COALESCE(p.paid, 0), 2)
+    ) drift
+  `;
+
+  const supplierBalanceDrift = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM (
+      SELECT sup.id
+      FROM "Supplier" sup
+      LEFT JOIN (
+        SELECT "supplierId", SUM(total) AS charged FROM "Purchase" GROUP BY "supplierId"
+      ) pu ON pu."supplierId" = sup.id
+      LEFT JOIN (
+        SELECT "supplierId", SUM(amount) AS paid FROM "SupplierPayment" GROUP BY "supplierId"
+      ) pa ON pa."supplierId" = sup.id
+      WHERE ROUND(sup.balance, 2)
+          <> ROUND(COALESCE(pu.charged, 0) - COALESCE(pa.paid, 0), 2)
+    ) drift
+  `;
+
+  // Payments that name a specific invoice must never add up to more than that invoice. The
+  // payment actions refuse it, so a row here means something wrote around them.
+  const overPaidInvoices = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM (
+      SELECT p."saleId"
+      FROM "CustomerPayment" p
+      JOIN "Sale" s ON s.id = p."saleId"
+      WHERE p."saleId" IS NOT NULL
+      GROUP BY p."saleId", s.total
+      HAVING ROUND(SUM(p.amount), 2) > ROUND(s.total, 2)
+    ) x
+  `;
+
+  const overPaidPurchases = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM (
+      SELECT p."purchaseId"
+      FROM "SupplierPayment" p
+      JOIN "Purchase" pu ON pu.id = p."purchaseId"
+      WHERE p."purchaseId" IS NOT NULL
+      GROUP BY p."purchaseId", pu.total
+      HAVING ROUND(SUM(p.amount), 2) > ROUND(pu.total, 2)
+    ) x
+  `;
+
   return [
     {
       key: "negativeStock",
@@ -723,6 +782,40 @@ export async function getIntegrityChecks(range: DateRange): Promise<IntegrityChe
       count: manualNoCost,
       detail: "Hazina bei ya kununua, kwa hiyo faida yake inaonekana kubwa kuliko ilivyo.",
       severity: manualNoCost > 0 ? "warning" : "ok",
+    },
+    {
+      key: "customerBalanceDrift",
+      label: "Wateja: balance haikubaliani na invoice zao",
+      count: customerBalanceDrift[0]?.n ?? 0,
+      detail:
+        "Deni lililohifadhiwa halilingani na (mauzo ya mkopo - malipo). Moja ya pande mbili haikuandikwa.",
+      severity: (customerBalanceDrift[0]?.n ?? 0) > 0 ? "danger" : "ok",
+      href: "/dashboard/admin/reports/customers",
+    },
+    {
+      key: "supplierBalanceDrift",
+      label: "Suppliers: balance haikubaliani na manunuzi yao",
+      count: supplierBalanceDrift[0]?.n ?? 0,
+      detail:
+        "Deni lililohifadhiwa halilingani na (manunuzi - malipo). Moja ya pande mbili haikuandikwa.",
+      severity: (supplierBalanceDrift[0]?.n ?? 0) > 0 ? "danger" : "ok",
+      href: "/dashboard/admin/suppliers",
+    },
+    {
+      key: "overPaidInvoices",
+      label: "Invoice zilizolipwa zaidi ya deni lake",
+      count: overPaidInvoices[0]?.n ?? 0,
+      detail: "Malipo yaliyotengwa kwa invoice moja yamezidi jumla yake.",
+      severity: (overPaidInvoices[0]?.n ?? 0) > 0 ? "danger" : "ok",
+      href: "/dashboard/admin/reports/customers",
+    },
+    {
+      key: "overPaidPurchases",
+      label: "Manunuzi yaliyolipwa zaidi ya deni lake",
+      count: overPaidPurchases[0]?.n ?? 0,
+      detail: "Malipo yaliyotengwa kwa manunuzi moja yamezidi jumla yake.",
+      severity: (overPaidPurchases[0]?.n ?? 0) > 0 ? "danger" : "ok",
+      href: "/dashboard/admin/suppliers",
     },
   ];
 }

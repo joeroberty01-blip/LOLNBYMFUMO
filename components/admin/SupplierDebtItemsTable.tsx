@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { SupplierDebtGroup } from "@/lib/data/suppliers";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import { PaySupplierButton } from "@/components/admin/PaySupplierButton";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 import { ArchiveSupplierButton } from "@/components/admin/ArchiveSupplierButton";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
@@ -97,11 +97,18 @@ export function SupplierDebtItemsTable({
                     </Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-2">
-                        <PaySupplierButton
-                          supplierId={g.id}
-                          supplierName={g.name}
-                          currentBalance={g.balance}
+                        <PayInvoicesButton
+                          kind="supplier"
+                          partyId={g.id}
+                          partyName={g.name}
                           branches={branches}
+                          invoices={g.items.map((it) => ({
+                            id: it.purchaseId,
+                            label: `Manunuzi ${it.createdAt.toLocaleDateString("sw-TZ")}`,
+                            date: it.createdAt,
+                            total: it.total,
+                            remaining: it.remaining,
+                          }))}
                         />
                         <Link href={`/dashboard/admin/suppliers/${g.id}`}>
                           <Button type="button" variant="secondary">
@@ -129,8 +136,28 @@ export function SupplierDebtItemsTable({
                         <Td className="text-right text-sm tabular-nums text-secondary">
                           Jumla: {currency.format(it.total)}
                         </Td>
-                        <Td colSpan={2} className="text-right text-sm font-medium tabular-nums text-danger">
+                        <Td className="text-right text-sm font-medium tabular-nums text-danger">
                           Deni: {currency.format(it.remaining)}
+                        </Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end">
+                            <PayInvoicesButton
+                              kind="supplier"
+                              partyId={g.id}
+                              partyName={g.name}
+                              branches={branches}
+                              label="Lipa hii"
+                              invoices={[
+                                {
+                                  id: it.purchaseId,
+                                  label: `Manunuzi ${it.createdAt.toLocaleDateString("sw-TZ")}`,
+                                  date: it.createdAt,
+                                  total: it.total,
+                                  remaining: it.remaining,
+                                },
+                              ]}
+                            />
+                          </div>
                         </Td>
                       </Tr>
                     ))}

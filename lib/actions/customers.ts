@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   quickCustomerSchema,
   customerSchema,
@@ -12,6 +13,12 @@ import {
   type RecordCustomerPaymentInput,
 } from "@/lib/validators/customers";
 import { logAudit } from "@/lib/audit";
+import { toCents, fromCents } from "@/lib/money";
+import { customerInvoiceRemainingCents } from "@/lib/data/outstanding";
+
+/** A rejection the admin should see verbatim, as opposed to an unexpected failure. Thrown inside
+ * the transaction so the refusal also rolls back anything already written. */
+class PaymentError extends Error {}
 import { toWhatsAppNumber } from "@/lib/messaging";
 
 type ActionResult = { success: true; customerId: string } | { success: false; error: string };
@@ -176,38 +183,167 @@ export async function recordCustomerPayment(input: RecordCustomerPaymentInput): 
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
-  const { customerId, amount, paymentMethod, branchId } = parsed.data;
+  const { customerId, saleId, amount, paymentMethod, branchId } = parsed.data;
+  const amountCents = toCents(amount);
 
-  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-  if (!customer) return { success: false, error: "Customer haipo" };
-
-  await prisma.$transaction(async (tx) => {
-    const payment = await tx.customerPayment.create({
-      data: {
+  try {
+    await prisma.$transaction((tx) =>
+      applyCustomerPayment(tx, session.user.id, {
         customerId,
+        saleId,
         amount,
+        amountCents,
         paymentMethod,
         branchId,
-        userId: session.user.id,
-      },
-    });
-
-    await tx.customer.update({
-      where: { id: customerId },
-      data: { balance: { decrement: amount } },
-    });
-
-    await logAudit(tx, {
-      userId: session.user.id,
-      action: "CUSTOMER_PAYMENT_RECORDED",
-      entityType: "CustomerPayment",
-      entityId: payment.id,
-      metadata: { customerId, amount, paymentMethod, branchId },
-    });
-  });
+      })
+    );
+  } catch (e) {
+    if (e instanceof PaymentError) return { success: false, error: e.message };
+    return { success: false, error: `Imeshindikana kurekodi malipo: ${(e as Error).message}` };
+  }
 
   revalidatePath("/dashboard/admin/customers");
   revalidatePath(`/dashboard/admin/customers/${customerId}`);
+  revalidatePath("/dashboard/admin/purchases");
+  revalidatePath("/dashboard/admin/reports/customers");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
+
+
+/**
+ * One payment, written on the caller's transaction so a batch of them is all-or-nothing.
+ *
+ * Every guard runs here rather than in the caller: whether the invoice belongs to this customer,
+ * whether it still owes anything, and whether the amount fits both that invoice and the overall
+ * balance. Postgres enforces the last one too (Customer_balance_check), but reaching it would
+ * show the admin a constraint violation instead of a sentence.
+ */
+async function applyCustomerPayment(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  p: {
+    customerId: string;
+    saleId?: string;
+    amount: number;
+    amountCents: number;
+    paymentMethod: RecordCustomerPaymentInput["paymentMethod"];
+    branchId?: string;
+  }
+): Promise<void> {
+  const customer = await tx.customer.findUnique({
+    where: { id: p.customerId },
+    select: { balance: true },
+  });
+  if (!customer) throw new PaymentError("Customer haipo");
+
+  const balanceCents = toCents(customer.balance);
+  if (p.amountCents > balanceCents) {
+    throw new PaymentError(
+      `Kiasi hiki kinazidi deni lote. Deni ni ${fromCents(balanceCents).toLocaleString("sw-TZ")} TZS.`
+    );
+  }
+
+  if (p.saleId) {
+    const remainingCents = await customerInvoiceRemainingCents(tx, p.customerId, p.saleId);
+    if (remainingCents === null) throw new PaymentError("Invoice hii si ya mteja huyu");
+    if (remainingCents <= 0) throw new PaymentError("Invoice hii tayari imelipwa yote");
+    if (p.amountCents > remainingCents) {
+      throw new PaymentError(
+        `Kiasi kinazidi deni la invoice hii. Iliyobaki ni ${fromCents(remainingCents).toLocaleString("sw-TZ")} TZS.`
+      );
+    }
+  }
+
+  const payment = await tx.customerPayment.create({
+    data: {
+      customerId: p.customerId,
+      saleId: p.saleId ?? null,
+      amount: p.amount,
+      paymentMethod: p.paymentMethod,
+      branchId: p.branchId,
+      userId,
+    },
+  });
+
+  await tx.customer.update({
+    where: { id: p.customerId },
+    data: { balance: { decrement: p.amount } },
+  });
+
+  await logAudit(tx, {
+    userId,
+    action: "CUSTOMER_PAYMENT_RECORDED",
+    entityType: "CustomerPayment",
+    entityId: payment.id,
+    metadata: {
+      customerId: p.customerId,
+      saleId: p.saleId ?? null,
+      amount: p.amount,
+      paymentMethod: p.paymentMethod,
+      branchId: p.branchId,
+    },
+  });
+}
+
+/**
+ * Collects against several invoices at once, in ONE transaction. Either every allocation is
+ * recorded or none is — a half-applied collection would leave the balance disagreeing with the
+ * invoices it is made of, which is the exact thing this module exists to prevent.
+ */
+export async function recordCustomerPaymentsPerInvoice(input: {
+  customerId: string;
+  paymentMethod: RecordCustomerPaymentInput["paymentMethod"];
+  branchId?: string;
+  allocations: { saleId: string; amount: number }[];
+}): Promise<SimpleResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const rows = input.allocations.filter((a) => a.amount > 0);
+  if (rows.length === 0) return { success: false, error: "Hakuna kiasi kilichowekwa" };
+
+  const parsedRows: { saleId: string; amount: number; amountCents: number }[] = [];
+  for (const r of rows) {
+    const parsed = recordCustomerPaymentSchema.safeParse({
+      customerId: input.customerId,
+      saleId: r.saleId,
+      amount: r.amount,
+      paymentMethod: input.paymentMethod,
+      branchId: input.branchId,
+    });
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+    }
+    parsedRows.push({ saleId: r.saleId, amount: parsed.data.amount, amountCents: toCents(parsed.data.amount) });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const r of parsedRows) {
+        await applyCustomerPayment(tx, session.user.id, {
+          customerId: input.customerId,
+          saleId: r.saleId,
+          amount: r.amount,
+          amountCents: r.amountCents,
+          paymentMethod: input.paymentMethod,
+          branchId: input.branchId,
+        });
+      }
+    });
+  } catch (e) {
+    if (e instanceof PaymentError) return { success: false, error: e.message };
+    return { success: false, error: `Imeshindikana kurekodi malipo: ${(e as Error).message}` };
+  }
+
+  revalidatePath("/dashboard/admin/customers");
+  revalidatePath(`/dashboard/admin/customers/${input.customerId}`);
+  revalidatePath("/dashboard/admin/purchases");
+  revalidatePath("/dashboard/admin/reports/customers");
   revalidatePath("/dashboard/admin");
   return { success: true };
 }

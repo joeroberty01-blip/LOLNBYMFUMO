@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/Button";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ArchiveCustomerButton } from "@/components/admin/ArchiveCustomerButton";
-import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 import { Pagination } from "@/components/ui/Pagination";
 import { ListToolbar } from "@/components/ui/ListToolbar";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { parsePageParams } from "@/lib/pagination";
+import { getCustomerDebtItems } from "@/lib/data/reports/customers";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -28,7 +29,25 @@ export default async function AdminCustomersPage({
 
   const { page: pageParam, pageSize, q } = await searchParams;
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
-  const [customers, branches] = await Promise.all([getCustomers(pageArgs, q), getBranches()]);
+  const [customers, branches, debtGroups] = await Promise.all([
+    getCustomers(pageArgs, q),
+    getBranches(),
+    getCustomerDebtItems(),
+  ]);
+  // Collection is per invoice, so each row needs that customer's own open invoices. One query for
+  // the whole page rather than one per row.
+  const openByCustomer = new Map(
+    debtGroups.map((g) => [
+      g.id,
+      g.items.map((it) => ({
+        id: it.saleId,
+        label: `Invoice #${it.invoiceNumber}`,
+        date: it.createdAt,
+        total: it.total,
+        remaining: it.remaining,
+      })),
+    ])
+  );
   const { t } = await getServerDictionary();
 
   return (
@@ -96,11 +115,12 @@ export default async function AdminCustomersPage({
                       </Button>
                     </Link>
                     {c.balance > 0 && (
-                      <PayCustomerButton
-                        customerId={c.id}
-                        customerName={c.name}
-                        currentBalance={c.balance}
+                      <PayInvoicesButton
+                        kind="customer"
+                        partyId={c.id}
+                        partyName={c.name}
                         branches={branches}
+                        invoices={openByCustomer.get(c.id) ?? []}
                       />
                     )}
                     <ArchiveCustomerButton customerId={c.id} />

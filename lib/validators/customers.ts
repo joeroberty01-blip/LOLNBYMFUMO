@@ -25,6 +25,8 @@ export type CustomerInput = z.infer<typeof customerSchema>;
 
 export const recordCustomerPaymentSchema = z.object({
   customerId: z.string().min(1),
+  /** Which credit sale this settles. Omitted for a lump sum taken without naming an invoice. */
+  saleId: optionalText,
   amount: z.coerce.number().positive("Weka amount zaidi ya 0"),
   paymentMethod: z.enum(paymentMethods),
   branchId: optionalText,

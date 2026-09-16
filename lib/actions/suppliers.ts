@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { supplierSchema, recordPaymentSchema, type SupplierInput, type RecordPaymentInput } from "@/lib/validators/suppliers";
 import { logAudit } from "@/lib/audit";
+import { toCents, fromCents } from "@/lib/money";
+import { supplierPurchaseRemainingCents } from "@/lib/data/outstanding";
+
+/** A rejection the admin should see verbatim, as opposed to an unexpected failure. Thrown inside
+ * the transaction so the refusal also rolls back anything already written. */
+class PaymentError extends Error {}
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -90,49 +97,171 @@ export async function recordSupplierPayment(input: RecordPaymentInput): Promise<
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
-  const { supplierId, amount, paymentMethod, branchId } = parsed.data;
+  const { supplierId, purchaseId, amount, paymentMethod, branchId } = parsed.data;
+  const amountCents = toCents(amount);
 
-  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
-  if (!supplier) return { success: false, error: "Supplier haipo" };
-
-  await prisma.$transaction(async (tx) => {
-    const payment = await tx.supplierPayment.create({
-      data: {
+  try {
+    await prisma.$transaction((tx) =>
+      applySupplierPayment(tx, session.user.id, {
         supplierId,
+        purchaseId,
         amount,
+        amountCents,
         paymentMethod,
         branchId,
-        userId: session.user.id,
-      },
-    });
-
-    await tx.expense.create({
-      data: {
-        category: "SUPPLIER_PAYMENT",
-        amount,
-        description: `Malipo kwa ${supplier.name}`,
-        paymentMethod,
-        branchId,
-        userId: session.user.id,
-        relatedSupplierPaymentId: payment.id,
-      },
-    });
-
-    await tx.supplier.update({
-      where: { id: supplierId },
-      data: { balance: { decrement: amount } },
-    });
-
-    await logAudit(tx, {
-      userId: session.user.id,
-      action: "SUPPLIER_PAYMENT_RECORDED",
-      entityType: "SupplierPayment",
-      entityId: payment.id,
-      metadata: { supplierId, amount, paymentMethod, branchId },
-    });
-  });
+      })
+    );
+  } catch (e) {
+    if (e instanceof PaymentError) return { success: false, error: e.message };
+    return { success: false, error: `Imeshindikana kurekodi malipo: ${(e as Error).message}` };
+  }
 
   revalidatePath("/dashboard/admin/suppliers");
+  revalidatePath("/dashboard/admin/expenses");
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
+
+/**
+ * One payment, written on the caller's transaction so a batch is all-or-nothing. Also creates the
+ * matching Expense, because paying a supplier is money actually leaving the business (unlike a
+ * customer collection, which is money coming in against revenue already recognised).
+ */
+async function applySupplierPayment(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  p: {
+    supplierId: string;
+    purchaseId?: string;
+    amount: number;
+    amountCents: number;
+    paymentMethod: RecordPaymentInput["paymentMethod"];
+    branchId?: string;
+  }
+): Promise<void> {
+  const supplier = await tx.supplier.findUnique({
+    where: { id: p.supplierId },
+    select: { name: true, balance: true },
+  });
+  if (!supplier) throw new PaymentError("Supplier haipo");
+
+  const balanceCents = toCents(supplier.balance);
+  if (p.amountCents > balanceCents) {
+    throw new PaymentError(
+      `Kiasi hiki kinazidi deni lote. Deni ni ${fromCents(balanceCents).toLocaleString("sw-TZ")} TZS.`
+    );
+  }
+
+  if (p.purchaseId) {
+    const remainingCents = await supplierPurchaseRemainingCents(tx, p.supplierId, p.purchaseId);
+    if (remainingCents === null) throw new PaymentError("Manunuzi haya si ya supplier huyu");
+    if (remainingCents <= 0) throw new PaymentError("Manunuzi haya tayari yamelipwa yote");
+    if (p.amountCents > remainingCents) {
+      throw new PaymentError(
+        `Kiasi kinazidi deni la manunuzi haya. Yaliyobaki ni ${fromCents(remainingCents).toLocaleString("sw-TZ")} TZS.`
+      );
+    }
+  }
+
+  const payment = await tx.supplierPayment.create({
+    data: {
+      supplierId: p.supplierId,
+      purchaseId: p.purchaseId ?? null,
+      amount: p.amount,
+      paymentMethod: p.paymentMethod,
+      branchId: p.branchId,
+      userId,
+    },
+  });
+
+  await tx.expense.create({
+    data: {
+      category: "SUPPLIER_PAYMENT",
+      amount: p.amount,
+      description: `Malipo kwa ${supplier.name}`,
+      paymentMethod: p.paymentMethod,
+      branchId: p.branchId,
+      userId,
+      relatedSupplierPaymentId: payment.id,
+    },
+  });
+
+  await tx.supplier.update({
+    where: { id: p.supplierId },
+    data: { balance: { decrement: p.amount } },
+  });
+
+  await logAudit(tx, {
+    userId,
+    action: "SUPPLIER_PAYMENT_RECORDED",
+    entityType: "SupplierPayment",
+    entityId: payment.id,
+    metadata: {
+      supplierId: p.supplierId,
+      purchaseId: p.purchaseId ?? null,
+      amount: p.amount,
+      paymentMethod: p.paymentMethod,
+      branchId: p.branchId,
+    },
+  });
+}
+
+/** Pays several purchases at once in ONE transaction — all of them or none. */
+export async function recordSupplierPaymentsPerPurchase(input: {
+  supplierId: string;
+  paymentMethod: RecordPaymentInput["paymentMethod"];
+  branchId?: string;
+  allocations: { purchaseId: string; amount: number }[];
+}): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  const rows = input.allocations.filter((a) => a.amount > 0);
+  if (rows.length === 0) return { success: false, error: "Hakuna kiasi kilichowekwa" };
+
+  const parsedRows: { purchaseId: string; amount: number; amountCents: number }[] = [];
+  for (const r of rows) {
+    const parsed = recordPaymentSchema.safeParse({
+      supplierId: input.supplierId,
+      purchaseId: r.purchaseId,
+      amount: r.amount,
+      paymentMethod: input.paymentMethod,
+      branchId: input.branchId,
+    });
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
+    }
+    parsedRows.push({
+      purchaseId: r.purchaseId,
+      amount: parsed.data.amount,
+      amountCents: toCents(parsed.data.amount),
+    });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const r of parsedRows) {
+        await applySupplierPayment(tx, session.user.id, {
+          supplierId: input.supplierId,
+          purchaseId: r.purchaseId,
+          amount: r.amount,
+          amountCents: r.amountCents,
+          paymentMethod: input.paymentMethod,
+          branchId: input.branchId,
+        });
+      }
+    });
+  } catch (e) {
+    if (e instanceof PaymentError) return { success: false, error: e.message };
+    return { success: false, error: `Imeshindikana kurekodi malipo: ${(e as Error).message}` };
+  }
+
+  revalidatePath("/dashboard/admin/suppliers");
+  revalidatePath("/dashboard/admin/purchases");
   revalidatePath("/dashboard/admin/expenses");
   revalidatePath("/dashboard/admin");
   return { success: true };

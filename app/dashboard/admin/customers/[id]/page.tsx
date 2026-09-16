@@ -9,8 +9,9 @@ import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PayCustomerButton } from "@/components/admin/PayCustomerButton";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 import { CreditCard, Wallet } from "lucide-react";
+import { getOpenInvoicesForCustomer } from "@/lib/data/outstanding";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -39,6 +40,7 @@ export default async function CustomerDetailPage({
   const sales = await getCustomerSaleHistory(id);
   const payments = await getCustomerPayments(id);
   const branches = await getBranches();
+  const openInvoices = await getOpenInvoicesForCustomer(id);
 
   return (
     <div>
@@ -60,11 +62,12 @@ export default async function CustomerDetailPage({
         </div>
         <div className="flex gap-2">
           {customer.balance > 0 && (
-            <PayCustomerButton
-              customerId={customer.id}
-              customerName={customer.name}
-              currentBalance={customer.balance}
+            <PayInvoicesButton
+              kind="customer"
+              partyId={customer.id}
+              partyName={customer.name}
               branches={branches}
+              invoices={openInvoices}
             />
           )}
           <Link href={`/dashboard/admin/customers/${customer.id}/edit`}>

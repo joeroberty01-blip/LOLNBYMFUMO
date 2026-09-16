@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { paginated, type PageArgs, type Paginated } from "@/lib/pagination";
+import { toCents, fromCents, settleOpenItems } from "@/lib/money";
 
 export type SupplierRow = {
   id: string;
@@ -83,13 +84,21 @@ export async function getSupplierDebtItems(): Promise<SupplierDebtGroup[]> {
     }),
     prisma.supplierPayment.findMany({
       where: { supplierId: { in: ids } },
-      select: { supplierId: true, amount: true },
+      select: { supplierId: true, purchaseId: true, amount: true },
     }),
   ]);
 
-  const paidBySupplier = new Map<string, number>();
+  // Same two-tier rule as customer debt: a payment that named a purchase settles that purchase,
+  // anything else is spread oldest purchase first. See lib/money.ts.
+  const allocatedByPurchase = new Map<string, number>();
+  const poolBySupplier = new Map<string, number>();
   for (const p of payments) {
-    paidBySupplier.set(p.supplierId, (paidBySupplier.get(p.supplierId) ?? 0) + p.amount.toNumber());
+    const cents = toCents(p.amount);
+    if (p.purchaseId) {
+      allocatedByPurchase.set(p.purchaseId, (allocatedByPurchase.get(p.purchaseId) ?? 0) + cents);
+    } else {
+      poolBySupplier.set(p.supplierId, (poolBySupplier.get(p.supplierId) ?? 0) + cents);
+    }
   }
 
   const purchasesBySupplier = new Map<string, typeof purchases>();
@@ -100,28 +109,31 @@ export async function getSupplierDebtItems(): Promise<SupplierDebtGroup[]> {
   }
 
   return debtors.map((d) => {
-    let pool = paidBySupplier.get(d.id) ?? 0;
+    const supplierPurchases = purchasesBySupplier.get(d.id) ?? [];
+    const { remainingById } = settleOpenItems(
+      supplierPurchases.map((p) => ({
+        id: p.id,
+        totalCents: toCents(p.total),
+        allocatedCents: allocatedByPurchase.get(p.id) ?? 0,
+      })),
+      poolBySupplier.get(d.id) ?? 0
+    );
+
     const items: SupplierDebtItem[] = [];
-    for (const p of purchasesBySupplier.get(d.id) ?? []) {
-      const total = p.total.toNumber();
-      let remaining = total;
-      if (pool > 0) {
-        const applied = Math.min(pool, total);
-        remaining -= applied;
-        pool -= applied;
-      }
-      if (remaining > 0.5) {
-        items.push({
-          purchaseId: p.id,
-          createdAt: p.createdAt,
-          branchName: p.branch.name,
-          total,
-          remaining,
-          dueDate: p.dueDate,
-          notes: p.notes,
-        });
-      }
+    for (const p of supplierPurchases) {
+      const remainingCents = remainingById.get(p.id) ?? 0;
+      if (remainingCents <= 0) continue;
+      items.push({
+        purchaseId: p.id,
+        createdAt: p.createdAt,
+        branchName: p.branch.name,
+        total: p.total.toNumber(),
+        remaining: fromCents(remainingCents),
+        dueDate: p.dueDate,
+        notes: p.notes,
+      });
     }
+
     return {
       id: d.id,
       name: d.name,
