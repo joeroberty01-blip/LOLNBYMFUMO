@@ -124,19 +124,6 @@ export function CustomerDebtItemsTable({
                     <Td className="text-right tabular-nums">{currency.format(g.creditLimit)}</Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-2">
-                        <PayInvoicesButton
-                          kind="customer"
-                          partyId={g.id}
-                          partyName={g.name}
-                          branches={branches}
-                          invoices={g.items.map((it) => ({
-                            id: it.saleId,
-                            label: `Invoice #${it.invoiceNumber}`,
-                            date: it.createdAt,
-                            total: it.total,
-                            remaining: it.remaining,
-                          }))}
-                        />
                         <WhatsAppButton
                           phone={g.phone}
                           label="Kumbusha"

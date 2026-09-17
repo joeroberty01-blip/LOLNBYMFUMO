@@ -97,19 +97,6 @@ export function SupplierDebtItemsTable({
                     </Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-2">
-                        <PayInvoicesButton
-                          kind="supplier"
-                          partyId={g.id}
-                          partyName={g.name}
-                          branches={branches}
-                          invoices={g.items.map((it) => ({
-                            id: it.purchaseId,
-                            label: `Manunuzi ${it.createdAt.toLocaleDateString("sw-TZ")}`,
-                            date: it.createdAt,
-                            total: it.total,
-                            remaining: it.remaining,
-                          }))}
-                        />
                         <Link href={`/dashboard/admin/suppliers/${g.id}`}>
                           <Button type="button" variant="secondary">
                             {t.common.view}
