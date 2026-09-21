@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -22,9 +23,11 @@ import {
   Globe,
   Calculator,
   ArrowLeftRight,
+  X,
 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { APP_NAME } from "@/config/app";
+import { useMobileNav } from "@/components/layout/MobileNav";
 
 type NavItem = {
   href: string;
@@ -40,6 +43,7 @@ type NavSection = {
 export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const t = useTranslations();
+  const { open, setOpen } = useMobileNav();
 
   const adminSections: NavSection[] = [
     {
@@ -120,42 +124,98 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface lg:flex">
-      <div className="flex items-center gap-3 px-5 py-5">
-        <div className="h-8 w-8 shrink-0 rounded-full bg-[linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))]" />
-        <span className="text-sm font-semibold text-primary">{APP_NAME}</span>
-      </div>
+  // While the mobile drawer is open: Escape closes it, and the page behind it cannot scroll —
+  // otherwise the drawer looks open but the user can still scroll the dashboard underneath it.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, setOpen]);
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-6">
-        {sections.map((section) => (
-          <div key={section.label} className="mb-5">
-            <p className="mb-1.5 px-2 text-[11px] font-semibold tracking-wider text-secondary uppercase">
-              {section.label}
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {section.items.map((item) => {
-                const active = isActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
-                      active
-                        ? "bg-white/[0.06] font-medium text-primary"
-                        : "text-secondary hover:bg-white/[0.03] hover:text-primary"
-                    }`}
-                  >
-                    <Icon size={17} className={active ? "text-accent" : "text-secondary"} />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
+  const navList = (
+    <nav className="flex-1 overflow-y-auto px-3 pb-6">
+      {sections.map((section) => (
+        <div key={section.label} className="mb-5">
+          <p className="mb-1.5 px-2 text-[11px] font-semibold tracking-wider text-secondary uppercase">
+            {section.label}
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {section.items.map((item) => {
+              const active = isActive(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
+                    active
+                      ? "bg-white/[0.06] font-medium text-primary"
+                      : "text-secondary hover:bg-white/[0.03] hover:text-primary"
+                  }`}
+                >
+                  <Icon size={17} className={active ? "text-accent" : "text-secondary"} />
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
-        ))}
-      </nav>
-    </aside>
+        </div>
+      ))}
+    </nav>
+  );
+
+  return (
+    <>
+      {/* Desktop: fixed column, always visible at lg and above. */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface lg:flex">
+        <div className="flex items-center gap-3 px-5 py-5">
+          <div className="h-8 w-8 shrink-0 rounded-full bg-[linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))]" />
+          <span className="text-sm font-semibold text-primary">{APP_NAME}</span>
+        </div>
+        {navList}
+      </aside>
+
+      {/* Mobile/tablet: off-canvas drawer opened by the Topbar's hamburger button. Always
+          rendered (not conditionally mounted) so the slide-in/out transition runs both ways;
+          `lg:hidden` removes it entirely once the desktop sidebar takes over. */}
+      <div
+        aria-hidden="true"
+        onClick={() => setOpen(false)}
+        className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 lg:hidden ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={APP_NAME}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-surface transition-transform duration-200 lg:hidden ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center gap-3 px-5 py-5">
+          <div className="h-8 w-8 shrink-0 rounded-full bg-[linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))]" />
+          <span className="flex-1 text-sm font-semibold text-primary">{APP_NAME}</span>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+            className="flex h-8 w-8 items-center justify-center rounded-control text-secondary hover:bg-white/5 hover:text-primary"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {navList}
+      </aside>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { MobileNavProvider } from "@/components/layout/MobileNav";
 
 export default async function SalesLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -17,12 +18,14 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   const roleLabel = isAdmin ? t.adminOps.topbar.adminRole : t.nav.salesStaff;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-page text-primary">
-      <Sidebar isAdmin={isAdmin} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar userName={session.user.name ?? ""} userRole={roleLabel} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+    <MobileNavProvider>
+      <div className="flex h-screen overflow-hidden bg-page text-primary">
+        <Sidebar isAdmin={isAdmin} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar userName={session.user.name ?? ""} userRole={roleLabel} />
+          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </MobileNavProvider>
   );
 }

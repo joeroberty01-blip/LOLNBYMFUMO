@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Bell, Settings, LogOut } from "lucide-react";
+import { Bell, Settings, LogOut, Menu } from "lucide-react";
+import { useMobileNav } from "@/components/layout/MobileNav";
 
 export function Topbar({ userName, userRole }: { userName: string; userRole: string }) {
+  const { setOpen } = useMobileNav();
   const initials = userName
     .split(" ")
     .map((p) => p[0])
@@ -13,7 +15,15 @@ export function Topbar({ userName, userRole }: { userName: string; userRole: str
     .toUpperCase();
 
   return (
-    <header className="flex items-center justify-end gap-4 border-b border-border bg-surface px-6 py-3">
+    <header className="flex items-center justify-between gap-4 border-b border-border bg-surface px-4 py-3 lg:justify-end lg:px-6">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        className="flex h-9 w-9 items-center justify-center rounded-control text-secondary hover:bg-white/5 hover:text-primary lg:hidden"
+      >
+        <Menu size={20} />
+      </button>
       <div className="flex items-center gap-1.5">
         <button
           type="button"
