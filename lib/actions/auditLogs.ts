@@ -10,8 +10,25 @@ import { deleteCustomerPayment } from "@/lib/actions/customers";
 import { deleteSupplierPayment } from "@/lib/actions/suppliers";
 import { deleteExpense } from "@/lib/actions/expenses";
 import { adjustStock } from "@/lib/actions/inventory";
+import { getSaleReceipt } from "@/lib/data/sales";
 
 type ActionResult = { success: true } | { success: false; error: string };
+
+export type SaleAuditDetail = Awaited<ReturnType<typeof getSaleReceipt>>;
+
+/**
+ * The line-item breakdown for a Sale-entity audit row's "View" detail. Audit metadata for
+ * SALE_COMPLETED / SALE_UPDATED / SALE_VOIDED only ever carried the total and an item count
+ * (lib/actions/sales.ts) — never which parts or how many, since that would just duplicate what
+ * SaleItem already records. Reads it straight from the sale itself instead, the same data the
+ * receipt shows. A void only changes status (no hard-delete path anywhere in this app), so this
+ * still works for a voided sale too.
+ */
+export async function getSaleDetailForAudit(saleId: string): Promise<SaleAuditDetail> {
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") return null;
+  return getSaleReceipt(saleId);
+}
 
 /**
  * Reverses whatever an audit log entry recorded, by delegating to the same void/delete action a
