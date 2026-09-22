@@ -38,6 +38,10 @@ export default async function EditPartPage({
     part.inventory.find((i) => i.branchId === branchId)?.branchId ??
     part.inventory[0]?.branchId ??
     undefined;
+  // That same store's quantity — 0 for a part that has never been stocked anywhere — so the new
+  // Quantity field opens on the true current count, not a stray placeholder.
+  const currentQuantity =
+    part.inventory.find((i) => i.branchId === currentBranchId)?.quantity ?? 0;
 
   const { t } = await getServerDictionary();
 
@@ -63,6 +67,7 @@ export default async function EditPartPage({
           costPrice: part.costPrice.toNumber(),
           description: part.description ?? undefined,
           lowStockThreshold: part.lowStockThreshold,
+          quantity: currentQuantity,
         }}
       />
     </div>

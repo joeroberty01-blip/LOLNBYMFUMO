@@ -68,9 +68,8 @@ export const quickPartSchema = basePartObject
 export type QuickPartInput = z.infer<typeof quickPartSchema>;
 
 /** Create-only: lets the admin stock the new part in one step instead of saving it and then
- * making a separate stock adjustment. Not part of partSchema because editing a part must never
- * silently overwrite stock — changing quantity later goes through adjustStock, which records a
- * StockAdjustment and an audit entry. */
+ * making a separate stock adjustment. Not part of partSchema because a brand-new part has no
+ * prior quantity to show or correct — there is nothing yet for "current quantity" to mean. */
 export const createPartSchema = basePartObject
   .extend({
     openingQuantity: z.coerce.number().int().min(0, "Isiwe hasi").optional(),
@@ -83,10 +82,14 @@ export const createPartSchema = basePartObject
   .superRefine(bareCodeCheck);
 export type CreatePartInput = z.infer<typeof createPartSchema>;
 
-/** Edit-only: which store this part's stock should live in. `fromBranchId` is the store row the
- * admin opened the part from (a part can hold stock in several stores at once, so the page has to
- * say which one it is editing); `toBranchId` is where they want it. Both are optional because a
- * part that has no stock anywhere yet has no store to move from. */
+/** Edit-only: which store this part's stock should live in, and what that store's quantity
+ * should read. `fromBranchId` is the store row the admin opened the part from (a part can hold
+ * stock in several stores at once, so the page has to say which one it is editing); `toBranchId`
+ * is where they want it — both optional because a part that has no stock anywhere yet has no
+ * store to move from. `quantity` is always present: an absolute value, like every other field on
+ * this form ("this row now reads N"), not a delta — updatePart is the one place that turns it
+ * back into a StockAdjustment (reason CORRECTION) so it still lands in the same audit trail as
+ * the dedicated Adjust Stock action, never a silent overwrite of Inventory.quantity. */
 export const editPartSchema = basePartObject
   .extend({
     fromBranchId: z
@@ -99,6 +102,7 @@ export const editPartSchema = basePartObject
       .optional()
       .or(z.literal(""))
       .transform((v) => (v ? v : undefined)),
+    quantity: z.coerce.number().int().min(0, "Isiwe hasi"),
   })
   .superRefine(bareCodeCheck);
 export type EditPartInput = z.infer<typeof editPartSchema>;
@@ -124,5 +128,6 @@ export const partFormSchema = basePartObject
       .optional()
       .or(z.literal(""))
       .transform((v) => (v ? v : undefined)),
+    quantity: z.coerce.number().int().min(0, "Isiwe hasi"),
   })
   .superRefine(bareCodeCheck);

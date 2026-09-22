@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { partFormSchema, type PartInput } from "@/lib/validators/parts";
+import { partFormSchema } from "@/lib/validators/parts";
 import { createPart, updatePart } from "@/lib/actions/parts";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Input, Select, Label } from "@/components/ui/Input";
@@ -14,7 +14,9 @@ import { Button } from "@/components/ui/Button";
 type Props = {
   mode: "create" | "edit";
   partId?: string;
-  defaultValues?: Partial<PartInput>;
+  /** Superset of both modes' fields — includes `quantity`, which the edit page fills with that
+   * store row's current count so the field opens on the true value, not a stray 0. */
+  defaultValues?: Partial<z.output<typeof partFormSchema>>;
   branches?: { id: string; name: string }[];
   /** Edit mode: the store whose row the admin opened this part from. A part can hold stock in
    * several stores at once, so the page has to say which one is being edited — picking a
@@ -45,6 +47,7 @@ export function PartForm({
       lowStockThreshold: 5,
       openingQuantity: 0,
       openingBranchId: branches[0]?.id ?? "",
+      quantity: 0,
       fromBranchId: currentBranchId ?? "",
       toBranchId: currentBranchId ?? "",
       ...defaultValues,
@@ -121,21 +124,34 @@ export function PartForm({
       </div>
 
       {mode === "edit" && branches.length > 0 && (
-        <div>
-          <Label>Store</Label>
-          <input type="hidden" {...register("fromBranchId")} />
-          <Select id="toBranchId" {...register("toBranchId")}>
-            {!currentBranchId && <option value="">Chagua store</option>}
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </Select>
-          <p className="mt-1 text-xs text-secondary">
-            Ukibadilisha store, stock yote ya part hii inahama kwenda store mpya. Jumla ya stock
-            haibadiliki.
-          </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>{t.adminCatalog.parts.quantity}</Label>
+            <Input id="quantity" type="number" min={0} {...register("quantity")} />
+            {errors.quantity && (
+              <p className="mt-1 text-sm text-danger">{errors.quantity.message}</p>
+            )}
+            <p className="mt-1 text-xs text-secondary">
+              Ukibadilisha namba hii, inarekodiwa kama stock correction — sio kubadilishwa kimya
+              kimya.
+            </p>
+          </div>
+          <div>
+            <Label>Store</Label>
+            <input type="hidden" {...register("fromBranchId")} />
+            <Select id="toBranchId" {...register("toBranchId")}>
+              {!currentBranchId && <option value="">Chagua store</option>}
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-secondary">
+              Ukibadilisha store, stock yote ya part hii inahama kwenda store mpya. Jumla ya stock
+              haibadiliki.
+            </p>
+          </div>
         </div>
       )}
 
