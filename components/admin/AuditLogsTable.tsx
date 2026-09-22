@@ -6,28 +6,18 @@ import type { AuditLogRow } from "@/lib/data/audit-logs";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { isUndoableAuditAction } from "@/lib/undoableActions";
 import { undoAuditLog } from "@/lib/actions/auditLogs";
+import { actionBadgeVariant, displayMetadata } from "@/lib/auditLogDisplay";
+import { AuditLogDetailModal } from "@/components/admin/AuditLogDetailModal";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
-import { Badge, statusBadgeVariant } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-/** partIds on a PARTS_BULK_IMPORTED entry can run into the thousands — useful for Undo, but
- * dumping the whole array into a table cell/tooltip/CSV row is just noise. Show a count instead. */
+/** The table's own one-line summary of a row's metadata — the untruncated, label/value version of
+ * the same data lives in AuditLogDetailModal, both built from the same displayMetadata(). */
 function summarizeMetadata(metadata: Record<string, unknown> | null): string {
-  if (!metadata) return "—";
-  if (Array.isArray(metadata.partIds)) {
-    const { partIds, ...rest } = metadata;
-    return JSON.stringify({ ...rest, partIds: `${partIds.length} part(s)` });
-  }
-  return JSON.stringify(metadata);
-}
-
-function actionBadgeVariant(action: string): ReturnType<typeof statusBadgeVariant> {
-  if (action.endsWith("_DELETED") || action === "SALE_VOIDED") return "danger";
-  if (action.endsWith("_CREATED") || action.endsWith("_COMPLETED") || action.endsWith("_RECORDED"))
-    return "success";
-  if (action.endsWith("_UPDATED") || action.endsWith("_ADJUSTED")) return "warning";
-  return "neutral";
+  const shown = displayMetadata(metadata);
+  return shown ? JSON.stringify(shown) : "—";
 }
 
 export function AuditLogsTable({ rows, t }: { rows: AuditLogRow[]; t: Dictionary }) {
@@ -35,6 +25,7 @@ export function AuditLogsTable({ rows, t }: { rows: AuditLogRow[]; t: Dictionary
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [viewRow, setViewRow] = useState<AuditLogRow | null>(null);
 
   function handleUndo(row: AuditLogRow) {
     const confirmed = window.confirm(`${t.adminOps.auditLogs.confirmUndo} — ${row.action}?`);
@@ -86,21 +77,28 @@ export function AuditLogsTable({ rows, t }: { rows: AuditLogRow[]; t: Dictionary
                 <span title={summarizeMetadata(r.metadata)}>{summarizeMetadata(r.metadata)}</span>
               </Td>
               <Td>
-                {isUndoableAuditAction(r.action) && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={isPending && pendingId === r.id}
-                    onClick={() => handleUndo(r)}
-                  >
-                    {t.adminOps.auditLogs.undo}
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setViewRow(r)}>
+                    {t.common.view}
                   </Button>
-                )}
+                  {isUndoableAuditAction(r.action) && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={isPending && pendingId === r.id}
+                      onClick={() => handleUndo(r)}
+                    >
+                      {t.adminOps.auditLogs.undo}
+                    </Button>
+                  )}
+                </div>
               </Td>
             </Tr>
           ))}
         </TBody>
       </Table>
+
+      {viewRow && <AuditLogDetailModal row={viewRow} onClose={() => setViewRow(null)} t={t} />}
     </>
   );
 }

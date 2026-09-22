@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getAuditLogs, getAuditLogActionsAndEntityTypes } from "@/lib/data/audit-logs";
+import { displayMetadata } from "@/lib/auditLogDisplay";
 import { AuditLogFilterBar } from "@/components/admin/AuditLogFilterBar";
 import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
 import { getServerDictionary } from "@/lib/i18n/server";
@@ -52,20 +53,17 @@ export default async function AuditLogsPage({
       <ListToolbar
         filename="audit-logs"
         headers={["Date", "Action", "Type", "Entity ID", "Performed By", "Details"]}
-        rows={logs.rows.map((r) => [
-          r.createdAt.toLocaleString("sw-TZ"),
-          r.action,
-          r.entityType,
-          r.entityId,
-          r.userName,
-          r.metadata
-            ? JSON.stringify(
-                Array.isArray(r.metadata.partIds)
-                  ? { ...r.metadata, partIds: `${r.metadata.partIds.length} part(s)` }
-                  : r.metadata
-              )
-            : "",
-        ])}
+        rows={logs.rows.map((r) => {
+          const metadata = displayMetadata(r.metadata);
+          return [
+            r.createdAt.toLocaleString("sw-TZ"),
+            r.action,
+            r.entityType,
+            r.entityId,
+            r.userName,
+            metadata ? JSON.stringify(metadata) : "",
+          ];
+        })}
       />
 
       <AuditLogsTable rows={logs.rows} t={t} />
