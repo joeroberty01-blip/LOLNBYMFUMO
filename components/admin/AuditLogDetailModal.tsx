@@ -9,14 +9,41 @@ import { Badge } from "@/components/ui/Badge";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
+type DeletedSaleItem = { name: string; partNumber: string | null; quantity: number; unitPrice: number };
+
+/** SALE_DELETED's metadata.items, if it looks like the shape deleteSale actually writes
+ * (lib/actions/sales.ts) — never trusted blindly, since metadata is just JSON on an old row. */
+function parseDeletedSaleItems(metadata: Record<string, unknown> | null): DeletedSaleItem[] | null {
+  const items = metadata?.items;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const parsed: DeletedSaleItem[] = [];
+  for (const raw of items) {
+    if (typeof raw !== "object" || raw === null) return null;
+    const item = raw as Record<string, unknown>;
+    if (typeof item.name !== "string" || typeof item.quantity !== "number" || typeof item.unitPrice !== "number") {
+      return null;
+    }
+    parsed.push({
+      name: item.name,
+      partNumber: typeof item.partNumber === "string" ? item.partNumber : null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    });
+  }
+  return parsed;
+}
+
 /** Full detail of one audit log entry — the "View" action next to Undo. The table row already
  * shows a truncated one-line summary of `metadata`; this is the same data, untruncated and laid
  * out as readable label/value pairs instead of a single stringified blob.
  *
- * For a Sale-entity row (SALE_COMPLETED / SALE_UPDATED / SALE_VOIDED) that generic metadata list
- * is not enough — it only ever carried a total and an item count, never what was actually sold —
- * so this additionally fetches and shows the sale's real line items, the same data the receipt
- * shows.
+ * For a Sale-entity row (SALE_COMPLETED / SALE_UPDATED / SALE_VOIDED / SALE_DELETED) that generic
+ * metadata list is not enough — it only ever carried a total and an item count, never what was
+ * actually sold — so this additionally fetches and shows the sale's real line items, the same
+ * data the receipt shows. Once a sale has been hard-deleted (deleteSale), the live fetch returns
+ * null and there is nothing left to read except the snapshot deleteSale wrote into the audit
+ * row's own metadata — that snapshot is used as a fallback below instead of the "not found"
+ * message.
  */
 export function AuditLogDetailModal({
   row,
@@ -27,11 +54,23 @@ export function AuditLogDetailModal({
   onClose: () => void;
   t: Dictionary;
 }) {
-  const metadata = displayMetadata(row.metadata);
-  const entries = metadata ? Object.entries(metadata) : [];
-
   const isSale = row.entityType === "Sale";
+  const deletedSaleItems = isSale ? parseDeletedSaleItems(row.metadata) : null;
+
+  const metadata = displayMetadata(row.metadata);
+  // The raw items array is either rendered above as the sale's line items, or (for a plain
+  // SALE_COMPLETED/SALE_UPDATED row) never carried at all — either way it doesn't belong in the
+  // generic key/value dump below.
+  const entries = metadata ? Object.entries(metadata).filter(([key]) => !(isSale && key === "items")) : [];
+
   const [saleDetail, setSaleDetail] = useState<SaleAuditDetail | null | undefined>(undefined);
+
+  type DisplayItem = { name: string; partNumber: string | null; quantity: number; unitPrice: number; subtotal: number };
+  const displayItems: DisplayItem[] = saleDetail
+    ? saleDetail.items
+    : (deletedSaleItems ?? []).map((item) => ({ ...item, subtotal: item.quantity * item.unitPrice }));
+  const displayTotal =
+    saleDetail?.total ?? (typeof row.metadata?.total === "number" ? row.metadata.total : 0);
 
   useEffect(() => {
     if (!isSale) return;
@@ -88,12 +127,12 @@ export function AuditLogDetailModal({
             </p>
             {saleDetail === undefined ? (
               <p className="text-sm text-secondary">{t.common.loading}</p>
-            ) : saleDetail === null ? (
+            ) : saleDetail === null && !deletedSaleItems ? (
               <p className="text-sm text-secondary">{t.adminOps.auditLogs.saleNotFound}</p>
             ) : (
               <div className="rounded-control border border-border">
                 <div className="flex flex-col divide-y divide-border">
-                  {saleDetail.items.map((item, i) => (
+                  {displayItems.map((item, i) => (
                     <div key={i} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                       <div className="min-w-0">
                         <p className="truncate text-primary">
@@ -112,7 +151,7 @@ export function AuditLogDetailModal({
                 </div>
                 <div className="flex items-center justify-between border-t border-border px-3 py-2 text-sm font-medium">
                   <span className="text-secondary">{t.common.total}</span>
-                  <span className="tabular-nums text-primary">{currency.format(saleDetail.total)}</span>
+                  <span className="tabular-nums text-primary">{currency.format(displayTotal)}</span>
                 </div>
               </div>
             )}

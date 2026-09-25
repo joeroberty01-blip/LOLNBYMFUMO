@@ -51,8 +51,8 @@ export type CustomerDebtGroup = {
  * order and applying each payment FIFO (oldest invoice first), which is the same order the money
  * would have been applied in practice. Pure computation over existing Sale/CustomerPayment rows,
  * no schema change — and sum(items.remaining) reconciles exactly to Customer.balance because that
- * field is only ever adjusted by the very same sale/payment/void events replayed here (see
- * completeSale, voidSale, recordCustomerPayment in lib/actions/). */
+ * field is only ever adjusted by the very same sale/payment/delete events replayed here (see
+ * completeSale, deleteSale, recordCustomerPayment in lib/actions/). */
 export async function getCustomerDebtItems(): Promise<CustomerDebtGroup[]> {
   const debtors = await prisma.customer.findMany({
     where: { balance: { gt: 0 } },

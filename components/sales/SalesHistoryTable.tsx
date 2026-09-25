@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { voidSale } from "@/lib/actions/sales";
+import { deleteSale } from "@/lib/actions/sales";
 import type { SaleListRow } from "@/lib/data/sales";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
@@ -20,7 +20,7 @@ const PAYMENT_LABEL: Record<string, string> = {
   TIGO_LIPA: "Tigo Lipa",
 };
 
-const VOID_WINDOW_MS = 30 * 60 * 1000;
+const DELETE_WINDOW_MS = 30 * 60 * 1000;
 
 export function SalesHistoryTable({
   rows,
@@ -40,14 +40,14 @@ export function SalesHistoryTable({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function handleVoid(saleId: string) {
-    const confirmed = window.confirm(t.sales.historyTable.confirmVoid);
+  function handleDelete(saleId: string) {
+    const confirmed = window.confirm(t.sales.historyTable.confirmDelete);
     if (!confirmed) return;
 
     setError(null);
     setPendingId(saleId);
     startTransition(async () => {
-      const result = await voidSale(saleId);
+      const result = await deleteSale(saleId);
       setPendingId(null);
       if (!result.success) {
         setError(result.error);
@@ -80,10 +80,10 @@ export function SalesHistoryTable({
         </THead>
         <TBody>
           {rows.map((row, i) => {
-            const withinWindow = now - row.createdAt.getTime() <= VOID_WINDOW_MS;
+            const withinWindow = now - row.createdAt.getTime() <= DELETE_WINDOW_MS;
             const isOwnSale = row.userId === currentUserId;
-            const staffCanVoid = isOwnSale && withinWindow;
-            const allowVoid = row.status === "COMPLETED" && (isAdmin || staffCanVoid);
+            const staffCanDelete = isOwnSale && withinWindow;
+            const allowDelete = row.status === "COMPLETED" && (isAdmin || staffCanDelete);
 
             return (
               <Tr key={row.id} index={i}>
@@ -133,14 +133,14 @@ export function SalesHistoryTable({
                         {t.sales.receipt.viewReceipt}
                       </Button>
                     </Link>
-                    {allowVoid && (
+                    {allowDelete && (
                       <Button
                         type="button"
                         variant="danger"
                         disabled={isPending && pendingId === row.id}
-                        onClick={() => handleVoid(row.id)}
+                        onClick={() => handleDelete(row.id)}
                       >
-                        {t.sales.historyTable.voidButton}
+                        {t.sales.historyTable.deleteButton}
                       </Button>
                     )}
                   </div>

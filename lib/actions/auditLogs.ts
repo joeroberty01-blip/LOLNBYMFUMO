@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isUndoableAuditAction } from "@/lib/undoableActions";
-import { voidSale } from "@/lib/actions/sales";
+import { deleteSale } from "@/lib/actions/sales";
 import { deletePurchase } from "@/lib/actions/purchases";
 import { deleteCustomerPayment } from "@/lib/actions/customers";
 import { deleteSupplierPayment } from "@/lib/actions/suppliers";
@@ -21,8 +21,12 @@ export type SaleAuditDetail = Awaited<ReturnType<typeof getSaleReceipt>>;
  * SALE_COMPLETED / SALE_UPDATED / SALE_VOIDED only ever carried the total and an item count
  * (lib/actions/sales.ts) — never which parts or how many, since that would just duplicate what
  * SaleItem already records. Reads it straight from the sale itself instead, the same data the
- * receipt shows. A void only changes status (no hard-delete path anywhere in this app), so this
- * still works for a voided sale too.
+ * receipt shows.
+ *
+ * Returns null once the sale has been hard-deleted (deleteSale) — there is no live row left to
+ * read. AuditLogDetailModal falls back to the item list captured in SALE_DELETED's own metadata
+ * for that case, since that snapshot is the only copy of "what was sold" left once this returns
+ * null.
  */
 export async function getSaleDetailForAudit(saleId: string): Promise<SaleAuditDetail> {
   const session = await auth();
@@ -55,7 +59,10 @@ export async function undoAuditLog(logId: string): Promise<ActionResult> {
 
   switch (log.action) {
     case "SALE_COMPLETED":
-      result = await voidSale(log.entityId);
+      // Undo now fully removes the sale (deleteSale), same as the Delete button in Sales
+      // History — the old void-only behaviour was replaced everywhere it reversed a sale, not
+      // just on that one screen.
+      result = await deleteSale(log.entityId);
       break;
 
     case "PURCHASE_CREATED":

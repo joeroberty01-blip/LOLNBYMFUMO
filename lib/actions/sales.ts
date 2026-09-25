@@ -18,7 +18,7 @@ import { logAudit } from "@/lib/audit";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-const VOID_WINDOW_MS = 30 * 60 * 1000;
+const SALE_DELETE_WINDOW_MS = 30 * 60 * 1000;
 
 async function requireApprovedSalesStaff() {
   const session = await auth();
@@ -371,24 +371,57 @@ export async function updateSale(saleId: string, input: EditSaleInput): Promise<
   return { success: true };
 }
 
-export async function voidSale(saleId: string): Promise<ActionResult> {
+/**
+ * Reverses a completed sale's effects — restocks inventory, reverses the customer's balance if it
+ * was a credit sale — then permanently removes the sale and its items. Replaces the old "void"
+ * behaviour (mark VOIDED, keep the row): the explicit choice, made after flagging two real risks
+ * it carries, since neither is something to silently paper over:
+ *
+ *   - It leaves a permanent gap in the invoice number sequence. A customer holding a printed or
+ *     WhatsApp-shared receipt for this invoice will find nothing if they ever ask about it again.
+ *   - It could otherwise orphan a CustomerPayment recorded directly against this invoice (the
+ *     per-invoice collection feature in lib/actions/customers.ts) — the foreign key would just
+ *     null it out, silently turning "paid against invoice #46" into an unallocated payment that
+ *     gets re-spread across the customer's OTHER open invoices. Refused outright below instead:
+ *     there is no safe way to guess what should happen to money already paid against a specific
+ *     invoice that no longer exists.
+ *
+ * What was actually sold is captured into the audit log's metadata before the row disappears,
+ * since that becomes the only place it survives — AuditLogDetailModal falls back to it once the
+ * live sale can no longer be found.
+ */
+export async function deleteSale(saleId: string): Promise<ActionResult> {
   const session = await auth();
   if (!session) return { success: false, error: "Not authorized" };
 
-  const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
+  const sale = await prisma.sale.findUnique({
+    where: { id: saleId },
+    include: { items: { include: { part: true } } },
+  });
   if (!sale) return { success: false, error: "Sale not found" };
-  if (sale.status === "VOIDED") return { success: false, error: "This sale has already been voided" };
+  if (sale.status === "VOIDED") {
+    return { success: false, error: "This sale was already voided under the old system" };
+  }
 
   const isAdmin = session.user.role === "ADMIN";
   const isOwnerWithinWindow =
     session.user.role === "SALES_STAFF" &&
     sale.userId === session.user.id &&
-    Date.now() - sale.createdAt.getTime() <= VOID_WINDOW_MS;
+    Date.now() - sale.createdAt.getTime() <= SALE_DELETE_WINDOW_MS;
 
   if (!isAdmin && !isOwnerWithinWindow) {
     return {
       success: false,
-      error: "You cannot void this sale (30 minutes have passed since the sale, or it is not your sale)",
+      error: "You cannot delete this sale (30 minutes have passed since the sale, or it is not your sale)",
+    };
+  }
+
+  const directPayments = await prisma.customerPayment.count({ where: { saleId } });
+  if (directPayments > 0) {
+    return {
+      success: false,
+      error:
+        "Mauzo haya yana malipo yaliyorekodiwa moja kwa moja dhidi yake — huwezi kuyafuta. Angalia malipo hayo kwanza (Customers → invoice hii).",
     };
   }
 
@@ -413,18 +446,28 @@ export async function voidSale(saleId: string): Promise<ActionResult> {
         });
       }
 
-      await tx.sale.update({
-        where: { id: saleId },
-        data: { status: "VOIDED", voidedAt: new Date(), voidedById: session.user.id },
-      });
-
       await logAudit(tx, {
         userId: session.user.id,
-        action: "SALE_VOIDED",
+        action: "SALE_DELETED",
         entityType: "Sale",
         entityId: saleId,
-        metadata: { total: sale.total.toNumber(), branchId: sale.branchId, defaultRestockBranchId },
+        metadata: {
+          invoiceNumber: sale.invoiceNumber,
+          total: sale.total.toNumber(),
+          branchId: sale.branchId,
+          customerId: sale.customerId,
+          isCredit: sale.isCredit,
+          items: sale.items.map((i) => ({
+            name: i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part"),
+            partNumber: i.isManualEntry ? (i.manualPartNumber ?? null) : (i.part?.partNumber ?? null),
+            quantity: i.quantity,
+            unitPrice: i.unitPrice.toNumber(),
+          })),
+        },
       });
+
+      // SaleItem cascades automatically (onDelete: Cascade in schema.prisma).
+      await tx.sale.delete({ where: { id: saleId } });
     });
   } catch (e) {
     return { success: false, error: (e as Error).message };
@@ -432,5 +475,7 @@ export async function voidSale(saleId: string): Promise<ActionResult> {
 
   revalidatePath("/dashboard/sales/history");
   revalidatePath("/dashboard/admin/sales");
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/admin/logs");
   return { success: true };
 }

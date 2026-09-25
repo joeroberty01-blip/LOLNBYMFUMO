@@ -80,11 +80,11 @@ export const en = {
     paymentHeader: "Payment",
     completed: "Completed",
     voided: "Voided",
-    voidButton: "Void",
+    deleteButton: "Delete",
     manualBadge: "Manual",
     creditSuffix: "Credit",
     noResults: "No sales found.",
-    confirmVoid: "Are you sure you want to void this sale?",
+    confirmDelete: "Are you sure you want to delete this sale? This cannot be undone — stock will be restored and the invoice number will be permanently gone.",
   },
 };
 
@@ -170,10 +170,10 @@ export const sw = {
     paymentHeader: "Payment",
     completed: "Completed",
     voided: "Voided",
-    voidButton: "Void",
+    deleteButton: "Futa",
     manualBadge: "Manual",
     creditSuffix: "Credit",
     noResults: "Hakuna mauzo yaliyopatikana.",
-    confirmVoid: "Una uhakika unataka kufuta (void) mauzo haya?",
+    confirmDelete: "Una uhakika unataka kufuta mauzo haya? Hii haiwezi kurudishwa — stock itarudi lakini namba ya invoice itapotea milele.",
   },
 };

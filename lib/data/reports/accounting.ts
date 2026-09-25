@@ -573,6 +573,7 @@ export type AuditSummary = {
  * to review; routine creates are just normal trading. */
 const SENSITIVE_ACTIONS = [
   "SALE_VOIDED",
+  "SALE_DELETED",
   "SALE_UPDATED",
   "PURCHASE_DELETED",
   "PURCHASE_UPDATED",
@@ -668,9 +669,16 @@ export async function getIntegrityChecks(range: DateRange): Promise<IntegrityChe
     WHERE "isActive" = true AND "creditLimit" > 0 AND balance > "creditLimit"
   `;
 
-  const voided = await prisma.sale.count({
+  // Sale.status can no longer reach "VOIDED" going forward (deleteSale removes the row
+  // outright), so historical voids and new deletions are counted together here — otherwise
+  // this check would silently go quiet the moment the old void path stopped being used.
+  const voidedOld = await prisma.sale.count({
     where: { status: "VOIDED", createdAt: { gte: range.start, lte: range.end } },
   });
+  const deletedNew = await prisma.auditLog.count({
+    where: { action: "SALE_DELETED", createdAt: { gte: range.start, lte: range.end } },
+  });
+  const voided = voidedOld + deletedNew;
   const negativeCustomerBalance = await prisma.customer.count({
     where: { isActive: true, balance: { lt: 0 } },
   });
@@ -678,7 +686,7 @@ export async function getIntegrityChecks(range: DateRange): Promise<IntegrityChe
     where: { isManualEntry: true, manualCostPrice: null },
   });
 
-  // Customer.balance is a running total kept in step by completeSale / voidSale / the payment
+  // Customer.balance is a running total kept in step by completeSale / deleteSale / the payment
   // actions. It should always equal what the underlying documents say: credit sales less
   // collections. Any gap means one of those paths wrote one side and not the other, which no
   // screen would otherwise reveal — the balance would simply be quietly wrong.
@@ -771,7 +779,7 @@ export async function getIntegrityChecks(range: DateRange): Promise<IntegrityChe
     },
     {
       key: "voidedSales",
-      label: "Mauzo yaliyofutwa (kipindi hiki)",
+      label: "Mauzo yaliyofutwa/yaliyoondolewa (kipindi hiki)",
       count: voided,
       detail: "Si kosa lenyewe, lakini idadi kubwa inastahili kuangaliwa.",
       severity: voided > 0 ? "warning" : "ok",

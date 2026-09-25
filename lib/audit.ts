@@ -5,6 +5,10 @@ export type AuditAction =
   | "SALE_COMPLETED"
   | "SALE_UPDATED"
   | "SALE_VOIDED"
+  /// Replaces SALE_VOIDED going forward — the sale is fully removed (see deleteSale in
+  /// lib/actions/sales.ts), not just marked VOIDED. SALE_VOIDED stays in this union only to
+  /// describe historical entries already in the database from before this change.
+  | "SALE_DELETED"
   | "STOCK_ADJUSTED"
   | "PART_STORE_CHANGED"
   | "DEBT_REMINDERS_SENT"

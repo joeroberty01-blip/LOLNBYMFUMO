@@ -7,7 +7,8 @@ import { Section } from "@/components/accounting/Section";
 
 const ACTION_LABEL: Record<string, string> = {
   SALE_COMPLETED: "Mauzo yamekamilika",
-  SALE_VOIDED: "Mauzo yamefutwa",
+  SALE_VOIDED: "Mauzo yamefutwa (void)",
+  SALE_DELETED: "Mauzo yamefutwa kabisa",
   SALE_UPDATED: "Mauzo yamehaririwa",
   PURCHASE_CREATED: "Manunuzi yameongezwa",
   PURCHASE_UPDATED: "Manunuzi yamehaririwa",
