@@ -11,8 +11,10 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 /** Fixed column widths so the row never reflows as content length varies from page to page —
  * the two free-text columns absorb the slack and truncate, everything else is sized to its
- * widest realistic value. Actions are icon-only to keep the row on one line on small screens. */
-const COL_WIDTHS = ["8%", "22%", "16%", "11%", "11%", "12%", "10%", "10%"];
+ * widest realistic value. Actions are icon-only to keep the row on one line on small screens.
+ * Picture is a fixed pixel width (not a %) — a percentage column leaves a growing band of empty
+ * space around a thumbnail that doesn't scale with the table on wide screens. */
+const COL_WIDTHS = ["72px", "24%", "17%", "12%", "12%", "13%", "11%", "11%"];
 
 export function PartsTable({
   rows,
@@ -34,7 +36,7 @@ export function PartsTable({
       </colgroup>
       <THead>
         <THeadRow>
-          <Th>Picture</Th>
+          <Th className="px-2">Picture</Th>
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Buying</Th>
@@ -47,7 +49,7 @@ export function PartsTable({
       <TBody>
         {rows.map((row, i) => (
           <Tr key={`${row.partId}-${row.branchId ?? "none"}-${i}`} index={i}>
-            <Td>
+            <Td className="px-2 py-2">
               <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
             </Td>
             <Td className="max-w-0 truncate" title={row.name}>

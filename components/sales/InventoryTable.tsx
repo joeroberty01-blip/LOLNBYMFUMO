@@ -15,7 +15,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
     <Table>
       <THead>
         <THeadRow>
-          <Th>Picture</Th>
+          <Th className="px-2">Picture</Th>
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Selling Price</Th>
@@ -26,7 +26,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
       <TBody>
         {rows.map((row, i) => (
           <Tr key={`${row.partId}-${i}`} index={i}>
-            <Td>
+            <Td className="px-2 py-2">
               <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
             </Td>
             <Td className="font-medium text-primary">{row.name}</Td>
