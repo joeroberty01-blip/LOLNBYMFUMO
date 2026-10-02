@@ -10,7 +10,7 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * auto resizes columns from content and leaves uneven gaps the percentages don't control. Price
  * and Quantity are kept narrow since a right-aligned number doesn't need an even column share.
  * Picture is last, not first — matches the admin Parts table's ordering. */
-const COL_WIDTHS = ["40%", "26%", "10%", "16%", "8%", "72px"];
+const COL_WIDTHS = ["40%", "26%", "10%", "16%", "8%", "100px"];
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {

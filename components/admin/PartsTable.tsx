@@ -15,9 +15,9 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * column leaves a growing band of dead space around short, fixed-size content (a thumbnail, a
  * row of icon buttons) that doesn't scale with the table on wide screens. The numeric columns
  * (Buying/Selling/Qty) are kept narrow for the same reason — a six-digit right-aligned number
- * doesn't need anywhere near an even share of the table's width. Picture is last, not first —
- * the identifying columns (name, part number) come first so the row reads left to right. */
-const COL_WIDTHS = ["36%", "24%", "9%", "9%", "13%", "9%", "160px", "72px"];
+ * doesn't need anywhere near an even share of the table's width. Picture sits right after Qty,
+ * before Actions, and is wide enough to show the thumbnail clearly rather than a cramped icon. */
+const COL_WIDTHS = ["36%", "24%", "9%", "9%", "13%", "9%", "100px", "160px"];
 
 export function PartsTable({
   rows,
@@ -45,8 +45,8 @@ export function PartsTable({
           <Th className="text-right">Selling</Th>
           <Th>Branch</Th>
           <Th className="text-right">Qty</Th>
-          <Th className="text-right">Actions</Th>
           <Th className="px-2">Picture</Th>
+          <Th className="text-right">Actions</Th>
         </THeadRow>
       </THead>
       <TBody>
@@ -87,6 +87,9 @@ export function PartsTable({
                 {row.quantity}
               </span>
             </Td>
+            <Td className="px-2 py-2">
+              <PartThumbnailButton partId={row.partId} hasPhoto={row.hasPhoto} name={row.name} />
+            </Td>
             <Td className="text-right">
               <div className="no-print flex items-center justify-end gap-1">
                 <Link
@@ -121,9 +124,6 @@ export function PartsTable({
                 />
                 <DeletePartButton partId={row.partId} compact />
               </div>
-            </Td>
-            <Td className="px-2 py-2">
-              <PartThumbnailButton partId={row.partId} hasPhoto={row.hasPhoto} name={row.name} />
             </Td>
           </Tr>
         ))}
