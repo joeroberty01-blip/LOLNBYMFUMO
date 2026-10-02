@@ -12,8 +12,8 @@ export function THead({ children }: { children: ReactNode }) {
   return <thead className="sticky top-0 z-10 bg-surface-elevated">{children}</thead>;
 }
 
-export function THeadRow({ children }: { children: ReactNode }) {
-  return <tr className="text-left">{children}</tr>;
+export function THeadRow({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <tr className={`text-left ${className}`}>{children}</tr>;
 }
 
 export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {

@@ -16,8 +16,10 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * row of icon buttons) that doesn't scale with the table on wide screens. The numeric columns
  * (Buying/Selling/Qty) are kept narrow for the same reason — a six-digit right-aligned number
  * doesn't need anywhere near an even share of the table's width. Picture sits right after Qty,
- * before Actions, and is wide enough to show the thumbnail clearly rather than a cramped icon. */
-const COL_WIDTHS = ["36%", "24%", "9%", "9%", "13%", "9%", "100px", "160px"];
+ * before Actions. Name is deliberately narrower than Part Number — most part names here are
+ * short ("Air Filter", "Oil Filter"), so a wide Name column just left a dead gap before Part
+ * Number started; Part Number gets the room instead since those codes run longer. */
+const COL_WIDTHS = ["20%", "30%", "10%", "10%", "16%", "14%", "80px", "160px"];
 
 export function PartsTable({
   rows,
@@ -38,7 +40,7 @@ export function PartsTable({
         ))}
       </colgroup>
       <THead>
-        <THeadRow>
+        <THeadRow className="divide-x divide-border">
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Buying</Th>
@@ -51,7 +53,11 @@ export function PartsTable({
       </THead>
       <TBody>
         {rows.map((row, i) => (
-          <Tr key={`${row.partId}-${row.branchId ?? "none"}-${i}`} index={i}>
+          <Tr
+            key={`${row.partId}-${row.branchId ?? "none"}-${i}`}
+            index={i}
+            className="divide-x divide-border"
+          >
             <Td className="max-w-0 truncate" title={row.name}>
               {row.name}
             </Td>

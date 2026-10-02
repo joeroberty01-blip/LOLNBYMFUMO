@@ -7,10 +7,10 @@ import { Package } from "lucide-react";
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 /** Fixed pixel/percentage widths + table-fixed (see PartsTable.tsx) — without it, table-layout:
- * auto resizes columns from content and leaves uneven gaps the percentages don't control. Price
- * and Quantity are kept narrow since a right-aligned number doesn't need an even column share.
- * Picture is last, not first — matches the admin Parts table's ordering. */
-const COL_WIDTHS = ["40%", "26%", "10%", "16%", "8%", "100px"];
+ * auto resizes columns from content and leaves uneven gaps the percentages don't control. Name
+ * is narrower than Part Number since most names here are short ("Air Filter") and a wide Name
+ * column just left a dead gap before Part Number started. */
+const COL_WIDTHS = ["24%", "36%", "10%", "18%", "12%", "80px"];
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {
@@ -25,7 +25,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
         ))}
       </colgroup>
       <THead>
-        <THeadRow>
+        <THeadRow className="divide-x divide-border">
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Selling Price</Th>
@@ -36,7 +36,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
       </THead>
       <TBody>
         {rows.map((row, i) => (
-          <Tr key={`${row.partId}-${i}`} index={i}>
+          <Tr key={`${row.partId}-${i}`} index={i} className="divide-x divide-border">
             <Td className="max-w-0 truncate font-medium text-primary" title={row.name}>
               {row.name}
             </Td>
