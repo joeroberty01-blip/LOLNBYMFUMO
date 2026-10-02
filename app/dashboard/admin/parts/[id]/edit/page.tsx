@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getBranches } from "@/lib/data/branches";
 import { PartForm } from "@/components/admin/PartForm";
+import { PartPhotoUpload } from "@/components/admin/PartPhotoUpload";
 import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function EditPartPage({
@@ -24,7 +25,10 @@ export default async function EditPartPage({
   const [part, branches] = await Promise.all([
     prisma.part.findUnique({
       where: { id },
-      include: { inventory: { select: { branchId: true, quantity: true } } },
+      include: {
+        inventory: { select: { branchId: true, quantity: true } },
+        photo: { select: { id: true } },
+      },
     }),
     getBranches(),
   ]);
@@ -53,6 +57,7 @@ export default async function EditPartPage({
       <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
         {t.adminCatalog.parts.editTitle}
       </h1>
+      <PartPhotoUpload partId={part.id} hasPhoto={part.photo !== null} />
       <PartForm
         mode="edit"
         partId={part.id}

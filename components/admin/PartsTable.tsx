@@ -5,13 +5,14 @@ import { DeletePartButton } from "@/components/admin/DeletePartButton";
 import { StockAdjustmentModal } from "@/components/admin/StockAdjustmentModal";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PartThumbnail } from "@/components/ui/PartThumbnail";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 /** Fixed column widths so the row never reflows as content length varies from page to page —
  * the two free-text columns absorb the slack and truncate, everything else is sized to its
  * widest realistic value. Actions are icon-only to keep the row on one line on small screens. */
-const COL_WIDTHS = ["24%", "18%", "12%", "12%", "14%", "10%", "10%"];
+const COL_WIDTHS = ["8%", "22%", "16%", "11%", "11%", "12%", "10%", "10%"];
 
 export function PartsTable({
   rows,
@@ -33,6 +34,7 @@ export function PartsTable({
       </colgroup>
       <THead>
         <THeadRow>
+          <Th>Picture</Th>
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Buying</Th>
@@ -45,6 +47,9 @@ export function PartsTable({
       <TBody>
         {rows.map((row, i) => (
           <Tr key={`${row.partId}-${row.branchId ?? "none"}-${i}`} index={i}>
+            <Td>
+              <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
+            </Td>
             <Td className="max-w-0 truncate" title={row.name}>
               {row.name}
             </Td>

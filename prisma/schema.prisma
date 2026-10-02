@@ -343,6 +343,7 @@ model Part {
   saleItems        SaleItem[]
   purchaseItems    PurchaseItem[]
   stockAdjustments StockAdjustment[]
+  photo            PartPhoto?
 
   @@index([partNumber])
   @@index([oemNumber])
@@ -352,6 +353,22 @@ model Part {
   /// Serves the paginated list query: WHERE isActive ORDER BY name, so Postgres can walk the
   /// index for the requested page instead of sorting the whole table on every request.
   @@index([isActive, name])
+}
+
+/// One photo per Part, isolated on its own table for the same reason as SupplierInvoice.data:
+/// `data` must never be dragged along by an ordinary `prisma.part.findMany()`/`findUnique()`.
+/// Every Part list/detail query selects columns explicitly and omits this relation entirely;
+/// only the single-photo route (app/api/parts/[id]/photo) ever reads `data`.
+model PartPhoto {
+  id        String   @id @default(cuid())
+  partId    String   @unique
+  mimeType  String
+  sizeBytes Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
 }
 
 model Inventory {

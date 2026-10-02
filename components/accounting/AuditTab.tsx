@@ -24,6 +24,8 @@ const ACTION_LABEL: Record<string, string> = {
   PART_STORE_CHANGED: "Part imehamishwa store",
   DEBT_REMINDERS_SENT: "Vikumbusho vya deni vimetumwa",
   PARTS_BULK_IMPORTED: "Parts zimeingizwa kwa wingi",
+  PART_PHOTO_UPLOADED: "Picha ya part imepakiwa",
+  PART_PHOTO_DELETED: "Picha ya part imefutwa",
   MANUAL_ITEM_CONVERTED: "Manual item imebadilishwa",
   BACKUP_RESTORED: "Backup imerudishwa",
   USER_CREATED: "Mtumiaji ameongezwa",

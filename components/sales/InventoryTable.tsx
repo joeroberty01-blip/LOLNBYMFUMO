@@ -1,6 +1,7 @@
 import type { SalesInventoryRow } from "@/lib/data/parts";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PartThumbnail } from "@/components/ui/PartThumbnail";
 import { Package } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -14,6 +15,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
     <Table>
       <THead>
         <THeadRow>
+          <Th>Picture</Th>
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Selling Price</Th>
@@ -24,6 +26,9 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
       <TBody>
         {rows.map((row, i) => (
           <Tr key={`${row.partId}-${i}`} index={i}>
+            <Td>
+              <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
+            </Td>
             <Td className="font-medium text-primary">{row.name}</Td>
             <Td className="text-secondary">{row.partNumber}</Td>
             <Td className="text-right tabular-nums">{currency.format(row.unitPrice)}</Td>
