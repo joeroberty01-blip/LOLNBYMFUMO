@@ -7,11 +7,10 @@ import { Package } from "lucide-react";
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 /** Fixed pixel/percentage widths + table-fixed (see PartsTable.tsx) — without it, table-layout:
- * auto resizes columns from content and leaves uneven gaps the percentages don't control. Name
- * is narrower than Part Number since most names here are short ("Air Filter") and a wide Name
- * column just left a dead gap before Part Number started. Quantity is kept tight so Picture can
- * be wider — the thumbnail itself stays a fixed square (PartThumbnail), never stretched. */
-const COL_WIDTHS = ["24%", "36%", "14%", "18%", "8%", "110px"];
+ * auto resizes columns from content and leaves uneven gaps the percentages don't control. Part
+ * Number is truncated (title tooltip on hover) rather than given a wide column — that space goes
+ * to Picture instead, whose thumbnail stays a fixed square (PartThumbnail), never stretched. */
+const COL_WIDTHS = ["24%", "20%", "14%", "18%", "8%", "200px"];
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {
