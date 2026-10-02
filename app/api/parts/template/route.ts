@@ -3,8 +3,8 @@ import { buildTemplateWorkbook } from "@/lib/bulk/parse";
 import { TEMPLATE_HEADERS } from "@/lib/bulk/schema";
 
 const EXAMPLE_ROW = [
-  "BRK-PAD-002",
   "Brake Pad Set - Rear",
+  "BRK-PAD-002",
   "OEM-55231",
   "Brakes",
   "30000",

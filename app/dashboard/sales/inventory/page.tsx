@@ -35,8 +35,8 @@ export default async function SalesInventoryPage({
 
       <ListToolbar
         filename="inventory"
-        headers={["Part Number", "Name", "Branch", "Quantity", "Unit Price"]}
-        rows={inventory.rows.map((p) => [p.partNumber, p.name, p.branchName, p.quantity, p.unitPrice])}
+        headers={["Name", "Part Number", "Branch", "Quantity", "Unit Price"]}
+        rows={inventory.rows.map((p) => [p.name, p.partNumber, p.branchName, p.quantity, p.unitPrice])}
       />
 
       <InventoryTable rows={inventory.rows} />

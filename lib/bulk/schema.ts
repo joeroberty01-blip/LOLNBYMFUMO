@@ -41,8 +41,8 @@ export const FIELD_LABELS: Record<BulkField, string> = {
 
 /** The exact header row written into the downloadable template (single-sheet, one store). */
 export const TEMPLATE_HEADERS = [
-  "Part Number",
   "Name",
+  "Part Number",
   "OEM Number",
   "Category",
   "Buying Price",

@@ -138,10 +138,10 @@ export default async function AdminPartsPage({
 
           <ListToolbar
             filename="parts"
-            headers={["Part Number", "Name", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
+            headers={["Name", "Part Number", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
             rows={parts.rows.map((p) => [
-              p.partNumber,
               p.name,
+              p.partNumber,
               p.branchName,
               p.quantity,
               p.costPrice,
