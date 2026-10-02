@@ -7,8 +7,10 @@ import { Package } from "lucide-react";
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 /** Fixed pixel/percentage widths + table-fixed (see PartsTable.tsx) — without it, table-layout:
- * auto resizes columns from content and leaves uneven gaps the percentages don't control. */
-const COL_WIDTHS = ["72px", "30%", "22%", "16%", "16%", "16%"];
+ * auto resizes columns from content and leaves uneven gaps the percentages don't control. Price
+ * and Quantity are kept narrow since a right-aligned number doesn't need an even column share.
+ * Picture is last, not first — matches the admin Parts table's ordering. */
+const COL_WIDTHS = ["40%", "26%", "10%", "16%", "8%", "72px"];
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {
@@ -24,20 +26,17 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
       </colgroup>
       <THead>
         <THeadRow>
-          <Th className="px-2">Picture</Th>
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Selling Price</Th>
           <Th>Branch</Th>
           <Th className="text-right">Quantity</Th>
+          <Th className="px-2">Picture</Th>
         </THeadRow>
       </THead>
       <TBody>
         {rows.map((row, i) => (
           <Tr key={`${row.partId}-${i}`} index={i}>
-            <Td className="px-2 py-2">
-              <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
-            </Td>
             <Td className="max-w-0 truncate font-medium text-primary" title={row.name}>
               {row.name}
             </Td>
@@ -51,6 +50,9 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
               {row.branchName}
             </Td>
             <Td className="text-right tabular-nums">{row.quantity}</Td>
+            <Td className="px-2 py-2">
+              <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
+            </Td>
           </Tr>
         ))}
       </TBody>
