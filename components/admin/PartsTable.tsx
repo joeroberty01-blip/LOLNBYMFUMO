@@ -18,8 +18,10 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * doesn't need anywhere near an even share of the table's width. Picture sits right after Qty,
  * before Actions. Name is deliberately narrower than Part Number — most part names here are
  * short ("Air Filter", "Oil Filter"), so a wide Name column just left a dead gap before Part
- * Number started; Part Number gets the room instead since those codes run longer. */
-const COL_WIDTHS = ["20%", "30%", "10%", "10%", "16%", "14%", "80px", "160px"];
+ * Number started; Part Number gets the room instead since those codes run longer. Qty is kept
+ * tight (it's a short number) so Picture can be wider — the thumbnail itself stays a fixed
+ * square (PartThumbnail), so a wider column just gives it breathing room, never stretches it. */
+const COL_WIDTHS = ["20%", "30%", "13%", "13%", "16%", "8%", "110px", "160px"];
 
 export function PartsTable({
   rows,
