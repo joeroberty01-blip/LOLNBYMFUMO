@@ -1,9 +1,9 @@
 import type { MouseEvent, ReactNode } from "react";
 
-export function Table({ children }: { children: ReactNode }) {
+export function Table({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div className="overflow-x-auto rounded-card border border-border bg-surface">
-      <table className="w-full border-collapse text-sm">{children}</table>
+      <table className={`w-full border-collapse text-sm ${className}`}>{children}</table>
     </div>
   );
 }

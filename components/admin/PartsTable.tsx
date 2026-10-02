@@ -28,7 +28,7 @@ export function PartsTable({
   }
 
   return (
-    <Table>
+    <Table className="table-fixed">
       <colgroup>
         {COL_WIDTHS.map((w, i) => (
           <col key={i} style={{ width: w }} />
