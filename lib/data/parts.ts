@@ -303,10 +303,14 @@ export type PartDetail = {
   lowStockThreshold: number;
   isActive: boolean;
   createdAt: Date;
+  hasPhoto: boolean;
 };
 
 export async function getPartDetail(id: string): Promise<PartDetail | null> {
-  const part = await prisma.part.findUnique({ where: { id } });
+  const part = await prisma.part.findUnique({
+    where: { id },
+    include: { photo: { select: { id: true } } },
+  });
   if (!part) return null;
 
   return {
@@ -321,6 +325,7 @@ export async function getPartDetail(id: string): Promise<PartDetail | null> {
     lowStockThreshold: part.lowStockThreshold,
     isActive: part.isActive,
     createdAt: part.createdAt,
+    hasPhoto: part.photo !== null,
   };
 }
 

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StockAdjustmentModal } from "@/components/admin/StockAdjustmentModal";
+import { PartDetailPhoto } from "@/components/admin/PartDetailPhoto";
 import { getBranches } from "@/lib/data/branches";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -48,18 +49,21 @@ export default async function PartDetailPage({
         {t.adminCatalog.parts.backToParts}
       </Link>
 
-      <div className="mt-4 mb-6 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-primary">{part.name}</h1>
-            <Badge status={part.isActive ? "success" : "neutral"}>
-              {part.isActive ? t.common.active : t.common.archived}
-            </Badge>
+      <div className="mt-4 mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start gap-4">
+          <PartDetailPhoto partId={part.id} hasPhoto={part.hasPhoto} name={part.name} />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-primary">{part.name}</h1>
+              <Badge status={part.isActive ? "success" : "neutral"}>
+                {part.isActive ? t.common.active : t.common.archived}
+              </Badge>
+            </div>
+            <p className="text-sm text-secondary">
+              {part.partNumber}
+              {part.oemNumber ? ` · OEM: ${part.oemNumber}` : ""} · {part.category}
+            </p>
           </div>
-          <p className="text-sm text-secondary">
-            {part.partNumber}
-            {part.oemNumber ? ` · OEM: ${part.oemNumber}` : ""} · {part.category}
-          </p>
         </div>
         <Link href={`/dashboard/admin/parts/${part.id}/edit`}>
           <Button type="button" variant="secondary">
