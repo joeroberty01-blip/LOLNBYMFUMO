@@ -8,6 +8,13 @@ import { BackupSection } from "@/components/settings/BackupSection";
 import { RestoreSection } from "@/components/settings/RestoreSection";
 import { getLastBackupInfo } from "@/lib/data/backup";
 
+// commitBackupRestore (lib/actions/backupRestore.ts) wraps its writes in one Prisma transaction
+// with timeout: 180_000 — but a Server Action's actual ceiling is set by the PAGE that calls it,
+// not by the action file (same rule as bulk-upload/page.tsx). Without this, that 180s Prisma
+// timeout was moot: Vercel was killing the function long before Prisma would've. Hobby is fixed
+// at 10s regardless of this value; this raises the ceiling on Pro/Enterprise.
+export const maxDuration = 180;
+
 export default async function SettingsPage() {
   const session = await auth();
   const isApprovedSalesStaff =
