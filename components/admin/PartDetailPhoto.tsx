@@ -6,12 +6,16 @@ import { Camera, ImageOff, Trash2, X } from "lucide-react";
 import { uploadPartPhoto, deletePartPhoto } from "@/lib/actions/partPhotos";
 import { MAX_PART_PHOTO_BYTES } from "@/lib/validators/partPhotos";
 import { Button } from "@/components/ui/Button";
+import { PhotoCropModal } from "@/components/admin/PhotoCropModal";
 
 /** Large photo on the Part detail (View) page. Clicking the image itself does whichever of the
  * two actions makes sense given its current state — upload when there's nothing to look at yet,
  * or a full-size lightbox when there is — rather than one click target trying to do both. The
  * "Badilisha Picha" button below is the explicit, always-visible way to upload/replace either
- * way, for anyone who'd rather not rely on guessing what clicking the image will do. */
+ * way, for anyone who'd rather not rely on guessing what clicking the image will do.
+ *
+ * Picking a file opens PhotoCropModal before anything is uploaded — the file that reaches
+ * uploadPartPhoto is always the cropped square, never the raw pick. */
 export function PartDetailPhoto({
   partId,
   hasPhoto,
@@ -25,26 +29,35 @@ export function PartDetailPhoto({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   // Bumped on every successful upload/delete so the <img> src changes and the browser refetches
   // instead of showing its cached copy of the old photo at the same URL.
   const [version, setVersion] = useState(0);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     if (file.size > MAX_PART_PHOTO_BYTES) {
       window.alert(`Picha ni kubwa mno (${(file.size / 1024 / 1024).toFixed(1)} MB). Kikomo ni 4 MB.`);
-      e.target.value = "";
       return;
     }
+    // Crop first (PhotoCropModal) — handleCropped does the actual upload once the admin confirms
+    // the crop, so the file picked here never goes to the server unmodified.
+    setPendingFile(file);
+  }
+
+  function handleCropped(blob: Blob) {
+    if (!pendingFile) return;
+    const croppedFile = new File([blob], pendingFile.name, { type: pendingFile.type || "image/jpeg" });
+    setPendingFile(null);
 
     const data = new FormData();
     data.set("partId", partId);
-    data.set("file", file);
+    data.set("file", croppedFile);
 
     startTransition(async () => {
       const result = await uploadPartPhoto(data);
-      e.target.value = "";
       if (!result.success) {
         window.alert(result.error);
         return;
@@ -133,6 +146,14 @@ export function PartDetailPhoto({
             <X size={20} />
           </button>
         </div>
+      )}
+
+      {pendingFile && (
+        <PhotoCropModal
+          file={pendingFile}
+          onCancel={() => setPendingFile(null)}
+          onCropped={handleCropped}
+        />
       )}
     </div>
   );
