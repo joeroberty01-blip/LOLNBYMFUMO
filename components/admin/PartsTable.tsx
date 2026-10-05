@@ -17,9 +17,10 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * (Buying/Selling/Qty) are kept narrow for the same reason — a six-digit right-aligned number
  * doesn't need anywhere near an even share of the table's width. Picture sits right after Qty,
  * before Actions. Part Number is truncated (title tooltip on hover) rather than given a wide
- * column — that space goes to Picture instead, whose thumbnail stays a fixed square
- * (PartThumbnail) and just gets more breathing room from the extra width, never stretched. */
-const COL_WIDTHS = ["22%", "20%", "13%", "13%", "16%", "8%", "80px", "160px"];
+ * column. Picture is a small, compact square icon (PartThumbnail) — a real uploaded photo reads
+ * as visually "big" even at modest pixel sizes, so this stays deliberately small/modern rather
+ * than growing to show more detail. */
+const COL_WIDTHS = ["23%", "21%", "13%", "13%", "16%", "8%", "56px", "160px"];
 
 export function PartsTable({
   rows,
@@ -47,7 +48,7 @@ export function PartsTable({
           <Th className="text-right">Selling</Th>
           <Th>Branch</Th>
           <Th className="text-right">Qty</Th>
-          <Th className="px-2">Picture</Th>
+          <Th className="!px-2">Picture</Th>
           <Th className="text-right">Actions</Th>
         </THeadRow>
       </THead>
@@ -93,7 +94,7 @@ export function PartsTable({
                 {row.quantity}
               </span>
             </Td>
-            <Td className="px-2 py-2">
+            <Td className="!px-2 !py-2">
               <PartThumbnailButton partId={row.partId} hasPhoto={row.hasPhoto} name={row.name} />
             </Td>
             <Td className="text-right">

@@ -8,9 +8,9 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
 /** Fixed pixel/percentage widths + table-fixed (see PartsTable.tsx) — without it, table-layout:
  * auto resizes columns from content and leaves uneven gaps the percentages don't control. Part
- * Number is truncated (title tooltip on hover) rather than given a wide column — that space goes
- * to Picture instead, whose thumbnail stays a fixed square (PartThumbnail), never stretched. */
-const COL_WIDTHS = ["28%", "22%", "14%", "18%", "8%", "80px"];
+ * Number is truncated (title tooltip on hover) rather than given a wide column. Picture is a
+ * small, compact square icon (PartThumbnail) — kept deliberately small/modern. */
+const COL_WIDTHS = ["29%", "23%", "14%", "18%", "8%", "56px"];
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {
@@ -31,7 +31,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
           <Th className="text-right">Selling Price</Th>
           <Th>Branch</Th>
           <Th className="text-right">Quantity</Th>
-          <Th className="px-2">Picture</Th>
+          <Th className="!px-2">Picture</Th>
         </THeadRow>
       </THead>
       <TBody>
@@ -50,7 +50,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
               {row.branchName}
             </Td>
             <Td className="text-right tabular-nums">{row.quantity}</Td>
-            <Td className="px-2 py-2">
+            <Td className="!px-2 !py-2">
               <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
             </Td>
           </Tr>
