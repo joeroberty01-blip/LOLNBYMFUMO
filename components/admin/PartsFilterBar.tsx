@@ -115,14 +115,14 @@ export function PartsFilterBar({ categories }: Props) {
           placeholder={t.adminCatalog.parts.searchPlaceholder}
           value={q}
           onChange={(e) => handleQChange(e.target.value)}
-          className="min-w-[200px] flex-1"
+          className="min-w-[200px] flex-1 !py-1.5 !text-xs"
         />
 
         <div ref={catRef} className="relative">
           <button
             type="button"
             onClick={() => setCatOpen((v) => !v)}
-            className="flex h-full items-center gap-2 rounded-control border border-border bg-surface px-3 py-2 text-sm text-primary hover:border-accent"
+            className="flex h-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 py-1.5 text-xs text-primary hover:border-accent"
           >
             {catLabel}
             <ChevronDown size={14} className="text-secondary" />
@@ -156,7 +156,7 @@ export function PartsFilterBar({ categories }: Props) {
         <Select
           value={searchParams.get("stock") ?? ""}
           onChange={(e) => updateParams({ stock: e.target.value })}
-          className="!w-auto"
+          className="!w-auto !py-1.5 !text-xs"
         >
           {STOCK_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -168,7 +168,7 @@ export function PartsFilterBar({ categories }: Props) {
         <Select
           value={searchParams.get("sort") ?? "name_asc"}
           onChange={(e) => updateParams({ sort: e.target.value })}
-          className="!w-auto"
+          className="!w-auto !py-1.5 !text-xs"
         >
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -180,7 +180,7 @@ export function PartsFilterBar({ categories }: Props) {
         <Select
           value={searchParams.get("pageSize") ?? "50"}
           onChange={(e) => updateParams({ pageSize: e.target.value })}
-          className="!w-auto"
+          className="!w-auto !py-1.5 !text-xs"
         >
           {PAGE_SIZES.map((n) => (
             <option key={n} value={n}>

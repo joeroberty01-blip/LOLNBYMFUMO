@@ -7,35 +7,45 @@ import { uploadPartPhoto, deletePartPhoto } from "@/lib/actions/partPhotos";
 import { MAX_PART_PHOTO_BYTES } from "@/lib/validators/partPhotos";
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/Input";
+import { PhotoCropModal } from "@/components/admin/PhotoCropModal";
 
-/** Separate mini-form from the main PartForm (same pattern as SupplierInvoices.tsx) — PartForm
- * submits a plain validated object through a server action, not FormData, so a file input can't
- * ride along with it without carrying its own upload flow. */
+/** Part photo widget on the Edit Part page — separate mini-form from the main PartForm (same
+ * pattern as SupplierInvoices.tsx), since PartForm submits a plain validated object through a
+ * server action, not FormData, so a file input can't ride along with it.
+ *
+ * Picking a file opens PhotoCropModal immediately (same as PartDetailPhoto on the View page and
+ * PartThumbnailButton on the Parts table) — uploads here go through the same crop-first flow as
+ * every other entry point, so there's no path in the app that stores an uncropped photo. */
 export function PartPhotoUpload({ partId, hasPhoto }: { partId: string; hasPhoto: boolean }) {
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   // Bumped on every successful upload/delete so the <img> src changes and the browser refetches
   // instead of showing its cached copy of the old photo at the same URL.
   const [version, setVersion] = useState(0);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
     setError(null);
-    const form = e.currentTarget;
-    const data = new FormData(form);
-    data.set("partId", partId);
-
-    const file = data.get("file");
-    if (!(file instanceof File) || file.size === 0) {
-      setError("Chagua picha");
-      return;
-    }
     if (file.size > MAX_PART_PHOTO_BYTES) {
       setError(`Picha ni kubwa mno (${(file.size / 1024 / 1024).toFixed(1)} MB). Kikomo ni 4 MB.`);
       return;
     }
+    setPendingFile(file);
+  }
+
+  function handleCropped(blob: Blob) {
+    if (!pendingFile) return;
+    const croppedFile = new File([blob], pendingFile.name, { type: pendingFile.type || "image/jpeg" });
+    setPendingFile(null);
+
+    const data = new FormData();
+    data.set("partId", partId);
+    data.set("file", croppedFile);
 
     startTransition(async () => {
       const result = await uploadPartPhoto(data);
@@ -43,7 +53,6 @@ export function PartPhotoUpload({ partId, hasPhoto }: { partId: string; hasPhoto
         setError(result.error);
         return;
       }
-      form.reset();
       setVersion((v) => v + 1);
       router.refresh();
     });
@@ -79,15 +88,14 @@ export function PartPhotoUpload({ partId, hasPhoto }: { partId: string; hasPhoto
           </div>
         )}
 
-        <form ref={formRef} onSubmit={handleSubmit} className="flex flex-1 flex-col gap-2">
-          <input
-            type="file"
-            name="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-primary file:mr-3 file:rounded-control file:border-0 file:bg-white/[0.08] file:px-3 file:py-1 file:text-sm file:text-primary"
-          />
+        <div className="flex flex-1 flex-col gap-2">
           <div className="flex gap-2">
-            <Button type="submit" variant="secondary" disabled={isPending}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isPending}
+              onClick={() => inputRef.current?.click()}
+            >
               <Upload size={14} /> {isPending ? "Inapakia..." : hasPhoto ? "Badilisha" : "Pakia"}
             </Button>
             {hasPhoto && (
@@ -97,8 +105,23 @@ export function PartPhotoUpload({ partId, hasPhoto }: { partId: string; hasPhoto
             )}
           </div>
           {error && <p className="text-sm text-danger">{error}</p>}
-        </form>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
       </div>
+
+      {pendingFile && (
+        <PhotoCropModal
+          file={pendingFile}
+          onCancel={() => setPendingFile(null)}
+          onCropped={handleCropped}
+        />
+      )}
     </div>
   );
 }

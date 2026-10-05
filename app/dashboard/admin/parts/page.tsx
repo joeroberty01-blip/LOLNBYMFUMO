@@ -137,6 +137,7 @@ export default async function AdminPartsPage({
           </div>
 
           <ListToolbar
+            compact
             filename="parts"
             headers={["Name", "Part Number", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
             rows={parts.rows.map((p) => [
