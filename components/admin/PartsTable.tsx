@@ -34,7 +34,7 @@ export function PartsTable({
   }
 
   return (
-    <Table className="table-fixed">
+    <Table className="table-fixed min-w-[760px]">
       <colgroup>
         {COL_WIDTHS.map((w, i) => (
           <col key={i} style={{ width: w }} />

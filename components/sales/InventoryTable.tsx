@@ -18,7 +18,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   }
 
   return (
-    <Table className="table-fixed">
+    <Table className="table-fixed min-w-[560px]">
       <colgroup>
         {COL_WIDTHS.map((w, i) => (
           <col key={i} style={{ width: w }} />
