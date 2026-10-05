@@ -19,7 +19,7 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * before Actions. Part Number is truncated (title tooltip on hover) rather than given a wide
  * column — that space goes to Picture instead, whose thumbnail stays a fixed square
  * (PartThumbnail) and just gets more breathing room from the extra width, never stretched. */
-const COL_WIDTHS = ["20%", "18%", "13%", "13%", "16%", "8%", "200px", "160px"];
+const COL_WIDTHS = ["22%", "20%", "13%", "13%", "16%", "8%", "80px", "160px"];
 
 export function PartsTable({
   rows,

@@ -10,7 +10,7 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * auto resizes columns from content and leaves uneven gaps the percentages don't control. Part
  * Number is truncated (title tooltip on hover) rather than given a wide column — that space goes
  * to Picture instead, whose thumbnail stays a fixed square (PartThumbnail), never stretched. */
-const COL_WIDTHS = ["24%", "20%", "14%", "18%", "8%", "200px"];
+const COL_WIDTHS = ["28%", "22%", "14%", "18%", "8%", "80px"];
 
 export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
   if (rows.length === 0) {

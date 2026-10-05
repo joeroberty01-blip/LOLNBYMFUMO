@@ -16,10 +16,10 @@ export function PartThumbnail({
   if (!hasPhoto) {
     return (
       <div
-        className="flex h-28 w-28 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-secondary"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-secondary"
         aria-hidden
       >
-        <ImageOff size={32} />
+        <ImageOff size={16} />
       </div>
     );
   }
@@ -29,7 +29,7 @@ export function PartThumbnail({
       src={`/api/parts/${partId}/photo`}
       alt={alt}
       loading="lazy"
-      className="h-28 w-28 shrink-0 rounded-control border border-border object-cover"
+      className="h-12 w-12 shrink-0 rounded-control border border-border object-cover"
     />
   );
 }
