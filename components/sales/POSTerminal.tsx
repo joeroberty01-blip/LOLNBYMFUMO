@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Search, Plus, X } from "lucide-react";
 import {
   getPOSInventory,
@@ -21,6 +21,10 @@ import { Input, Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
+
+/** Matches PartsFilterBar's live-search debounce — the search box queries the server a short
+ * beat after typing stops, instead of fetching on every keystroke. */
+const SEARCH_DEBOUNCE_MS = 300;
 
 /** Sales above this trigger an extra warning in the confirm dialog — not a hard limit, just a
  * "did you mean to type an extra zero" nudge before the money/stock actually moves. */
@@ -80,9 +84,14 @@ export function POSTerminal({
   const t = useTranslations();
   const [branchId, setBranchId] = useState<string | null>(null);
   const [sourceBranchId, setSourceBranchId] = useState<string | null>(null);
-  const [inventory, setInventory] = useState<POSInventoryItem[]>([]);
+  const [results, setResults] = useState<POSInventoryItem[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Guards against a slower, earlier search response overwriting a faster, later one — the
+  // store switch or the next keystroke can both fire a new search before the previous one
+  // resolves.
+  const searchSeqRef = useRef(0);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [customers, setCustomers] = useState(initialCustomers);
@@ -103,13 +112,18 @@ export function POSTerminal({
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
   const customerName = customers.find((c) => c.id === customerId)?.name ?? "";
 
-  async function loadInventoryFrom(id: string) {
+  // Searches the server for just this store (or every store) instead of fetching the whole
+  // catalog's stock and filtering it in the browser — that doesn't scale as the parts catalog
+  // grows, and this screen is hit by every cashier on every store switch, every day.
+  async function runSearch(scopeId: string, query: string) {
+    const seq = ++searchSeqRef.current;
     setLoadingInventory(true);
     try {
-      const items = id === ALL_STORES ? await getPOSInventoryAllStores() : await getPOSInventory(id);
-      setInventory(items);
+      const items =
+        scopeId === ALL_STORES ? await getPOSInventoryAllStores(query) : await getPOSInventory(scopeId, query);
+      if (seq === searchSeqRef.current) setResults(items);
     } finally {
-      setLoadingInventory(false);
+      if (seq === searchSeqRef.current) setLoadingInventory(false);
     }
   }
 
@@ -118,22 +132,28 @@ export function POSTerminal({
     setSourceBranchId(ALL_STORES);
     setCart([]);
     setSearchQuery("");
-    await loadInventoryFrom(ALL_STORES);
+    await runSearch(ALL_STORES, "");
   }
 
   async function selectSourceBranch(id: string) {
     setSourceBranchId(id);
     setSearchQuery("");
-    await loadInventoryFrom(id);
+    await runSearch(id, "");
   }
 
-  const filteredInventory = useMemo(() => {
-    if (!searchQuery.trim()) return inventory.slice(0, 20);
-    const q = searchQuery.trim().toLowerCase();
-    return inventory
-      .filter((i) => i.name.toLowerCase().includes(q) || i.partNumber.toLowerCase().includes(q))
-      .slice(0, 20);
-  }, [inventory, searchQuery]);
+  function handleSearchChange(value: string) {
+    setSearchQuery(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      if (sourceBranchId) void runSearch(sourceBranchId, value);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
 
   const total = useMemo(
     () => cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0),
@@ -374,7 +394,7 @@ export function POSTerminal({
               type="text"
               placeholder={t.sales.pos.searchPlaceholder}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -388,10 +408,10 @@ export function POSTerminal({
           <p className="text-sm text-secondary">{t.common.loading}</p>
         ) : (
           <div className="flex max-h-[520px] flex-col gap-2 overflow-y-auto">
-            {filteredInventory.length === 0 && (
+            {results.length === 0 && (
               <p className="text-sm text-secondary">{t.sales.pos.noPartsFound}</p>
             )}
-            {filteredInventory.map((item) => (
+            {results.map((item) => (
               <button
                 key={`${item.partId}-${item.branchId ?? ""}`}
                 type="button"

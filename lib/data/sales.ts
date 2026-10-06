@@ -16,14 +16,38 @@ export type POSInventoryItem = {
   branchName?: string;
 };
 
-export async function getBranchInventoryForPOS(branchId: string): Promise<POSInventoryItem[]> {
+/** Cashier-facing search only ever needs a handful of matches at a time — matches the old
+ * client-side slice(0, 20) behavior, just applied in the database instead of after fetching
+ * everything. Keeps the query fast and the payload small no matter how large the catalog gets. */
+const POS_SEARCH_LIMIT = 20;
+
+function partSearchFilter(query?: string) {
+  const q = query?.trim();
+  if (!q) return {};
+  return {
+    OR: [
+      { name: { contains: q, mode: "insensitive" as const } },
+      { partNumber: { contains: q, mode: "insensitive" as const } },
+    ],
+  };
+}
+
+export async function getBranchInventoryForPOS(
+  branchId: string,
+  query?: string
+): Promise<POSInventoryItem[]> {
   const rows = await prisma.inventory.findMany({
-    where: { branchId, quantity: { gt: 0 }, part: { isActive: true } },
+    where: {
+      branchId,
+      quantity: { gt: 0 },
+      part: { isActive: true, ...partSearchFilter(query) },
+    },
     select: {
       quantity: true,
       part: { select: { id: true, name: true, partNumber: true, unitPrice: true } },
     },
     orderBy: { part: { name: "asc" } },
+    take: POS_SEARCH_LIMIT,
   });
 
   return rows.map((r) => ({
@@ -39,15 +63,19 @@ export async function getBranchInventoryForPOS(branchId: string): Promise<POSInv
  * business's inventory instead of only what happens to be stocked at its own store. Each row is
  * one (part, branch) combination, since the same part can sit at several stores with different
  * quantities; the cashier picks which store's stock to actually pull from. */
-export async function getAllStoresInventoryForPOS(): Promise<POSInventoryItem[]> {
+export async function getAllStoresInventoryForPOS(query?: string): Promise<POSInventoryItem[]> {
   const rows = await prisma.inventory.findMany({
-    where: { quantity: { gt: 0 }, part: { isActive: true } },
+    where: {
+      quantity: { gt: 0 },
+      part: { isActive: true, ...partSearchFilter(query) },
+    },
     select: {
       quantity: true,
       branch: { select: { id: true, name: true } },
       part: { select: { id: true, name: true, partNumber: true, unitPrice: true } },
     },
     orderBy: [{ part: { name: "asc" } }, { branch: { name: "asc" } }],
+    take: POS_SEARCH_LIMIT,
   });
 
   return rows.map((r) => ({

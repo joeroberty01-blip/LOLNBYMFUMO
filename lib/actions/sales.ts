@@ -31,14 +31,14 @@ async function requireApprovedSalesStaff() {
   return session;
 }
 
-export async function getPOSInventory(branchId: string): Promise<POSInventoryItem[]> {
+export async function getPOSInventory(branchId: string, query?: string): Promise<POSInventoryItem[]> {
   await requireApprovedSalesStaff();
-  return getBranchInventoryForPOS(branchId);
+  return getBranchInventoryForPOS(branchId, query);
 }
 
-export async function getPOSInventoryAllStores(): Promise<POSInventoryItem[]> {
+export async function getPOSInventoryAllStores(query?: string): Promise<POSInventoryItem[]> {
   await requireApprovedSalesStaff();
-  return getAllStoresInventoryForPOS();
+  return getAllStoresInventoryForPOS(query);
 }
 
 export type ReceiptData = {
