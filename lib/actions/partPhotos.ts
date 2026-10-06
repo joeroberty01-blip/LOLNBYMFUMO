@@ -9,6 +9,11 @@ import {
   ALLOWED_PART_PHOTO_TYPES,
   sniffPartPhotoType,
 } from "@/lib/validators/partPhotos";
+import {
+  getPartsWithoutPhoto,
+  countPartsWithoutPhoto,
+  type PartPhotoQueueItem,
+} from "@/lib/data/parts";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -84,6 +89,7 @@ export async function uploadPartPhoto(formData: FormData): Promise<ActionResult>
 
   revalidatePath(`/dashboard/admin/parts/${partId}/edit`);
   revalidatePath("/dashboard/admin/parts");
+  revalidatePath("/dashboard/admin/parts/photo-queue");
   revalidatePath("/dashboard/sales/inventory");
   return { success: true };
 }
@@ -121,4 +127,25 @@ export async function deletePartPhoto(partId: string): Promise<ActionResult> {
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/sales/inventory");
   return { success: true };
+}
+
+type PhotoQueueBatchResult =
+  | { success: true; items: PartPhotoQueueItem[] }
+  | { success: false; error: string };
+
+/** Next batch for the Photo Queue page — pass the last item's id from the previous batch as
+ * `cursorId` to continue; omit it to start from the beginning. */
+export async function getPhotoQueueBatch(cursorId?: string): Promise<PhotoQueueBatchResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+  const items = await getPartsWithoutPhoto(cursorId);
+  return { success: true, items };
+}
+
+export async function getPhotoQueueCount(): Promise<number> {
+  await requireAdmin();
+  return countPartsWithoutPhoto();
 }

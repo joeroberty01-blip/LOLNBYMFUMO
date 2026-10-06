@@ -291,6 +291,28 @@ export async function getPartCategories(): Promise<string[]> {
   return rows.map((r) => r.category);
 }
 
+export type PartPhotoQueueItem = { id: string; name: string; partNumber: string; category: string };
+
+const PHOTO_QUEUE_PAGE_SIZE = 50;
+
+/** Cursor-paginated, not offset — the Photo Queue page's whole point is that each upload removes
+ * a row from this exact WHERE clause while the admin works through it, so an offset-based "page
+ * 2" would skip rows that shifted up after "page 1"'s rows got photographed. Cursoring on `id`
+ * (unique, so not affected by other rows leaving the result set) avoids that. */
+export async function getPartsWithoutPhoto(cursorId?: string): Promise<PartPhotoQueueItem[]> {
+  return prisma.part.findMany({
+    where: { isActive: true, photo: null },
+    select: { id: true, name: true, partNumber: true, category: true },
+    orderBy: [{ category: "asc" }, { name: "asc" }, { id: "asc" }],
+    take: PHOTO_QUEUE_PAGE_SIZE,
+    ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+  });
+}
+
+export async function countPartsWithoutPhoto(): Promise<number> {
+  return prisma.part.count({ where: { isActive: true, photo: null } });
+}
+
 export type PartDetail = {
   id: string;
   partNumber: string;

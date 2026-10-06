@@ -92,6 +92,11 @@ export default async function AdminPartsPage({
           <p className="text-sm text-secondary">{t.adminCatalog.parts.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard/admin/parts/photo-queue">
+            <Button type="button" variant="secondary">
+              Picha za Parts
+            </Button>
+          </Link>
           <Link href="/dashboard/admin/parts/bulk-upload">
             <Button type="button" variant="secondary">
               {t.nav.bulkUpload}
