@@ -19,7 +19,10 @@ const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maxi
  * reference (Sale.traReceiptNo) and the customer's registration details (address/TIN/VRN).
  * Line items and amounts come from the sale itself — change those on the sale's own Edit page,
  * not here, so the invoice never drifts from what was actually sold. */
+type DocType = "tax" | "proforma";
+
 export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
+  const [docType, setDocType] = useState<DocType>("tax");
   const [traReceiptNo, setTraReceiptNo] = useState(invoice.traReceiptNo ?? "");
   const [customerAddress, setCustomerAddress] = useState(invoice.customerAddress ?? "");
   const [customerTin, setCustomerTin] = useState(invoice.customerTin ?? "");
@@ -60,6 +63,22 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
           ← Rudi kwa Sale
         </Link>
         <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-control border border-border">
+            <button
+              type="button"
+              onClick={() => setDocType("proforma")}
+              className={`px-3 py-1.5 text-xs font-medium ${docType === "proforma" ? "bg-accent text-white" : "bg-surface text-secondary"}`}
+            >
+              Profoma
+            </button>
+            <button
+              type="button"
+              onClick={() => setDocType("tax")}
+              className={`px-3 py-1.5 text-xs font-medium ${docType === "tax" ? "bg-accent text-white" : "bg-surface text-secondary"}`}
+            >
+              Tax Invoice
+            </button>
+          </div>
           {saveError && <span className="text-sm text-danger">{saveError}</span>}
           {savedAt && !saveError && <span className="text-sm text-success">Imehifadhiwa</span>}
           <Button type="button" variant="secondary" disabled={isSaving} onClick={handleSave}>
@@ -89,23 +108,40 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
             <span className="ml-4 font-semibold">VRN:</span> {COMPANY_INFO.vrn}
           </div>
           <div className="text-right">
-            <p className="text-xl font-bold text-red-600">TAX INVOICE</p>
+            <p className="text-xl font-bold text-red-600">
+              {docType === "tax" ? "TAX INVOICE" : "PROFORMA INVOICE"}
+            </p>
             <p className="text-sm">
-              No. <span className="font-bold">{String(invoice.invoiceNumber).padStart(4, "0")}</span>
+              No.{" "}
+              <span className="font-bold">
+                {docType === "proforma" ? "PF-" : ""}
+                {String(invoice.invoiceNumber).padStart(4, "0")}
+              </span>
             </p>
             <p className="text-sm font-bold">Date: {format(invoice.createdAt, "d MMM yyyy")}</p>
-            <p className="no-print text-xs text-secondary">
-              <input
-                type="text"
-                value={traReceiptNo}
-                onChange={(e) => setTraReceiptNo(e.target.value)}
-                placeholder="TRA Receipt No."
-                className="w-36 rounded border border-gray-300 px-1.5 py-0.5 text-right text-xs"
-              />
-            </p>
-            {traReceiptNo && <p className="hidden text-xs text-gray-500 print:block">Ref: TRA Receipt No. {traReceiptNo}</p>}
+            {docType === "tax" && (
+              <>
+                <p className="no-print text-xs text-secondary">
+                  <input
+                    type="text"
+                    value={traReceiptNo}
+                    onChange={(e) => setTraReceiptNo(e.target.value)}
+                    placeholder="TRA Receipt No."
+                    className="w-36 rounded border border-gray-300 px-1.5 py-0.5 text-right text-xs"
+                  />
+                </p>
+                {traReceiptNo && (
+                  <p className="hidden text-xs text-gray-500 print:block">Ref: TRA Receipt No. {traReceiptNo}</p>
+                )}
+              </>
+            )}
           </div>
         </div>
+        {docType === "proforma" && (
+          <p className="no-print mb-4 text-xs text-warning">
+            Profoma haina TRA Receipt No — hii si tax document rasmi, ni quote kwa customer kabla ya malipo.
+          </p>
+        )}
 
         <div className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
           <span className="font-semibold text-blue-700">M/S</span>
