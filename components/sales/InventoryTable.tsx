@@ -1,7 +1,7 @@
 import type { SalesInventoryRow } from "@/lib/data/parts";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PartThumbnail } from "@/components/ui/PartThumbnail";
+import { PartThumbnailZoom } from "@/components/sales/PartThumbnailZoom";
 import { Package } from "lucide-react";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
@@ -51,7 +51,7 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
             </Td>
             <Td className="text-right tabular-nums">{row.quantity}</Td>
             <Td className="!px-2 !py-2">
-              <PartThumbnail partId={row.partId} hasPhoto={row.hasPhoto} alt={row.name} />
+              <PartThumbnailZoom partId={row.partId} hasPhoto={row.hasPhoto} name={row.name} />
             </Td>
           </Tr>
         ))}
