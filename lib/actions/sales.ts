@@ -479,3 +479,26 @@ export async function deleteSale(saleId: string): Promise<ActionResult> {
   revalidatePath("/dashboard/admin/logs");
   return { success: true };
 }
+
+/** The one Sale-level field the Tax Invoice page edits directly — an EFD/TRA receipt reference
+ * the admin types in by hand (no EFD integration exists). Everything else on that invoice either
+ * comes straight from the sale/items (not editable there — use the sale's own Edit page) or from
+ * the Customer record (tin/vrn/address — updated via updateCustomer). */
+export async function updateSaleTraReceiptNo(saleId: string, traReceiptNo: string): Promise<ActionResult> {
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return { success: false, error: "You are not authorized to do this" };
+  }
+
+  try {
+    await prisma.sale.update({
+      where: { id: saleId },
+      data: { traReceiptNo: traReceiptNo.trim() || null },
+    });
+  } catch {
+    return { success: false, error: "Sale hii haipo tena" };
+  }
+
+  revalidatePath(`/dashboard/admin/sales/${saleId}/invoice`);
+  return { success: true };
+}

@@ -210,6 +210,72 @@ export async function getSaleWithItems(saleId: string) {
   });
 }
 
+export type SaleInvoiceItem = { description: string; quantity: number; unitPrice: number; amount: number };
+
+export type SaleInvoiceData = {
+  id: string;
+  invoiceNumber: number;
+  createdAt: Date;
+  traReceiptNo: string | null;
+  customerId: string | null;
+  customerName: string;
+  customerAddress: string | null;
+  customerTin: string | null;
+  customerVrn: string | null;
+  items: SaleInvoiceItem[];
+  /** VAT-inclusive, same figure as Sale.total — no separate VAT step exists in the sales flow,
+   * so the invoice backs Sub Total/VAT out of this one number (see lib/companyInfo.ts). */
+  total: number;
+};
+
+export async function getSaleInvoiceData(saleId: string): Promise<SaleInvoiceData | null> {
+  const sale = await prisma.sale.findUnique({
+    where: { id: saleId },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      createdAt: true,
+      traReceiptNo: true,
+      total: true,
+      customer: { select: { id: true, name: true, address: true, tin: true, vrn: true } },
+      items: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+          isManualEntry: true,
+          manualItemName: true,
+          manualPartNumber: true,
+          part: { select: { name: true, partNumber: true } },
+        },
+      },
+    },
+  });
+  if (!sale) return null;
+
+  return {
+    id: sale.id,
+    invoiceNumber: sale.invoiceNumber,
+    createdAt: sale.createdAt,
+    traReceiptNo: sale.traReceiptNo,
+    customerId: sale.customer?.id ?? null,
+    customerName: sale.customer?.name ?? "",
+    customerAddress: sale.customer?.address ?? null,
+    customerTin: sale.customer?.tin ?? null,
+    customerVrn: sale.customer?.vrn ?? null,
+    items: sale.items.map((i) => {
+      const name = i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part");
+      const partNumber = i.isManualEntry ? i.manualPartNumber : i.part?.partNumber;
+      return {
+        description: partNumber ? `${name} (${partNumber})` : name,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice.toNumber(),
+        amount: i.quantity * i.unitPrice.toNumber(),
+      };
+    }),
+    total: sale.total.toNumber(),
+  };
+}
+
 /** Rebuilds the same ReceiptData shape completeSale returns, for any past sale, so the receipt
  * can be viewed/reprinted later instead of existing only once right after checkout. */
 export async function getSaleReceipt(saleId: string) {

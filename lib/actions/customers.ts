@@ -141,6 +141,34 @@ export async function updateCustomer(
 
 type SimpleResult = { success: true } | { success: false; error: string };
 
+/** Just the three fields the Tax Invoice page edits (see app/dashboard/admin/sales/[id]/invoice)
+ * — deliberately bypasses the full customerSchema/updateCustomer path, which would otherwise
+ * require resending name/phone/email/creditLimit unchanged just to touch these. */
+export async function updateCustomerTaxDetails(
+  customerId: string,
+  input: { address?: string; tin?: string; vrn?: string }
+): Promise<SimpleResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  try {
+    await prisma.customer.update({
+      where: { id: customerId },
+      data: {
+        address: input.address?.trim() || null,
+        tin: input.tin?.trim() || null,
+        vrn: input.vrn?.trim() || null,
+      },
+    });
+  } catch {
+    return { success: false, error: "Customer huyu hayupo tena" };
+  }
+  return { success: true };
+}
+
 export async function archiveCustomer(customerId: string): Promise<SimpleResult> {
   try {
     await requireAdmin();

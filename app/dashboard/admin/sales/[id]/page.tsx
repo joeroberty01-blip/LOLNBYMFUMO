@@ -57,6 +57,11 @@ export default async function SaleDetailPage({
               Receipt
             </Button>
           </Link>
+          <Link href={`/dashboard/admin/sales/${sale.id}/invoice`}>
+            <Button type="button" variant="secondary">
+              Tax Invoice
+            </Button>
+          </Link>
         </div>
       </div>
 

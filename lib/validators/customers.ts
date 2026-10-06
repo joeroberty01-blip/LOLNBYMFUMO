@@ -19,6 +19,9 @@ export const customerSchema = z.object({
   name: z.string().trim().min(1, "Weka jina la customer"),
   phone: optionalText,
   email: optionalText,
+  address: optionalText,
+  tin: optionalText,
+  vrn: optionalText,
   creditLimit: z.coerce.number().min(0, "Isiwe hasi"),
 });
 export type CustomerInput = z.infer<typeof customerSchema>;

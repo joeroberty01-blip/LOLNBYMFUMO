@@ -275,17 +275,20 @@ export async function restoreBackupData(
     data.customers,
     (chunk) =>
       Prisma.sql`
-        INSERT INTO "Customer" ("id","name","phone","email","creditLimit","balance","isActive","createdAt")
+        INSERT INTO "Customer" ("id","name","phone","email","address","tin","vrn","creditLimit","balance","isActive","createdAt")
         VALUES ${Prisma.join(
           chunk.map(
             (r) =>
-              Prisma.sql`(${r.id as string}, ${r.name as string}, ${(r.phone as string | null) ?? null}, ${(r.email as string | null) ?? null}, ${r.creditLimit as string}::numeric, ${r.balance as string}::numeric, ${r.isActive === undefined ? true : Boolean(r.isActive)}, ${toDate(r.createdAt) ?? new Date()})`
+              Prisma.sql`(${r.id as string}, ${r.name as string}, ${(r.phone as string | null) ?? null}, ${(r.email as string | null) ?? null}, ${(r.address as string | null) ?? null}, ${(r.tin as string | null) ?? null}, ${(r.vrn as string | null) ?? null}, ${r.creditLimit as string}::numeric, ${r.balance as string}::numeric, ${r.isActive === undefined ? true : Boolean(r.isActive)}, ${toDate(r.createdAt) ?? new Date()})`
           )
         )}
         ON CONFLICT ("id") DO UPDATE SET
           "name" = excluded."name",
           "phone" = excluded."phone",
           "email" = excluded."email",
+          "address" = excluded."address",
+          "tin" = excluded."tin",
+          "vrn" = excluded."vrn",
           "creditLimit" = excluded."creditLimit",
           "balance" = excluded."balance",
           "isActive" = excluded."isActive"
@@ -298,6 +301,9 @@ export async function restoreBackupData(
           name: r.name as string,
           phone: (r.phone as string | null) ?? null,
           email: (r.email as string | null) ?? null,
+          address: (r.address as string | null) ?? null,
+          tin: (r.tin as string | null) ?? null,
+          vrn: (r.vrn as string | null) ?? null,
           creditLimit: r.creditLimit as string,
           balance: r.balance as string,
           isActive: r.isActive === undefined ? true : Boolean(r.isActive),
@@ -307,6 +313,9 @@ export async function restoreBackupData(
           name: r.name as string,
           phone: (r.phone as string | null) ?? null,
           email: (r.email as string | null) ?? null,
+          address: (r.address as string | null) ?? null,
+          tin: (r.tin as string | null) ?? null,
+          vrn: (r.vrn as string | null) ?? null,
           creditLimit: r.creditLimit as string,
           balance: r.balance as string,
           isActive: r.isActive === undefined ? true : Boolean(r.isActive),
@@ -419,12 +428,12 @@ export async function restoreBackupData(
     data.sales,
     (chunk) =>
       Prisma.sql`
-        INSERT INTO "Sale" ("id","invoiceNumber","customerId","branchId","sourceBranchId","userId","total","paymentMethod","isCredit","status","createdAt","voidedAt","voidedById")
+        INSERT INTO "Sale" ("id","invoiceNumber","customerId","branchId","sourceBranchId","userId","total","paymentMethod","isCredit","status","createdAt","voidedAt","voidedById","traReceiptNo")
         VALUES ${Prisma.join(
           chunk.map((r) => {
             const sourceBranchId = r.sourceBranchId as string | null;
             const voidedById = r.voidedById as string | null;
-            return Prisma.sql`(${r.id as string}, ${r.invoiceNumber as number}, ${(r.customerId as string | null) ?? null}, ${r.branchId as string}, ${sourceBranchId && knownBranchIds.has(sourceBranchId) ? sourceBranchId : null}, ${r.userId as string}, ${r.total as string}::numeric, ${r.paymentMethod as string}::"PaymentMethod", ${Boolean(r.isCredit)}, ${r.status as string}::"SaleStatus", ${toDate(r.createdAt) ?? new Date()}, ${toDate(r.voidedAt)}, ${voidedById && currentUserIds.has(voidedById) ? voidedById : null})`;
+            return Prisma.sql`(${r.id as string}, ${r.invoiceNumber as number}, ${(r.customerId as string | null) ?? null}, ${r.branchId as string}, ${sourceBranchId && knownBranchIds.has(sourceBranchId) ? sourceBranchId : null}, ${r.userId as string}, ${r.total as string}::numeric, ${r.paymentMethod as string}::"PaymentMethod", ${Boolean(r.isCredit)}, ${r.status as string}::"SaleStatus", ${toDate(r.createdAt) ?? new Date()}, ${toDate(r.voidedAt)}, ${voidedById && currentUserIds.has(voidedById) ? voidedById : null}, ${(r.traReceiptNo as string | null) ?? null})`;
           })
         )}
         ON CONFLICT ("id") DO NOTHING
@@ -448,6 +457,7 @@ export async function restoreBackupData(
           createdAt: toDate(r.createdAt) ?? undefined,
           voidedAt: toDate(r.voidedAt),
           voidedById: voidedById && currentUserIds.has(voidedById) ? voidedById : null,
+          traReceiptNo: (r.traReceiptNo as string | null) ?? null,
         },
         update: {},
       });
