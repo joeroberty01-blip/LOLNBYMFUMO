@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { Search, Plus, X } from "lucide-react";
 import {
   getPOSInventory,
@@ -43,7 +44,7 @@ const PAYMENT_LABEL: Record<(typeof paymentMethods)[number], string> = {
 };
 
 type Branch = { id: string; name: string };
-type Customer = { id: string; name: string; phone: string | null };
+type Customer = { id: string; name: string; phone: string | null; balance: number };
 
 type CartLine =
   | {
@@ -100,6 +101,9 @@ export function POSTerminal({
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerNameError, setCustomerNameError] = useState<string | null>(null);
+  // Which typed name the cashier has already dismissed the debt warning for — cleared whenever
+  // the text changes, so switching to a different (or no) customer re-arms it.
+  const [dismissedDebtFor, setDismissedDebtFor] = useState<string | null>(null);
   /** Optional at the till, but it is the only place most customers are ever created — without it
    * the catalogue ends up with no way to reach anyone (see lib/whatsapp.ts). */
   const [customerPhone, setCustomerPhone] = useState("");
@@ -111,6 +115,17 @@ export function POSTerminal({
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
   const customerName = customers.find((c) => c.id === customerId)?.name ?? "";
+
+  // Matches as soon as the typed text exactly equals a known customer's name — which happens
+  // reliably once the cashier picks the name from the <datalist> suggestions below, even though
+  // customerId itself isn't resolved until checkout (resolveCustomer).
+  const matchedDebtCustomer = useMemo(() => {
+    const typed = customerSearch.trim().toLowerCase();
+    if (!typed) return null;
+    const match = customers.find((c) => c.name.trim().toLowerCase() === typed);
+    return match && match.balance > 0 ? match : null;
+  }, [customerSearch, customers]);
+  const showDebtWarning = matchedDebtCustomer && dismissedDebtFor !== matchedDebtCustomer.name;
 
   // Searches the server for just this store (or every store) instead of fetching the whole
   // catalog's stock and filtering it in the browser — that doesn't scale as the parts catalog
@@ -271,7 +286,7 @@ export function POSTerminal({
       setCustomers((prev) =>
         prev.some((c) => c.id === result.customerId)
           ? prev
-          : [...prev, { id: result.customerId, name, phone: customerPhone.trim() || null }]
+          : [...prev, { id: result.customerId, name, phone: customerPhone.trim() || null, balance: 0 }]
       );
       setCustomerId(result.customerId);
       return result.customerId;
@@ -540,6 +555,32 @@ export function POSTerminal({
             </datalist>
             {customerNameError && (
               <p className="mt-1 text-sm text-danger">{customerNameError}</p>
+            )}
+            {showDebtWarning && matchedDebtCustomer && (
+              <div className="mt-1.5 rounded-control border border-warning/40 bg-warning/[0.08] px-3 py-2 text-sm">
+                <p className="text-warning">
+                  {matchedDebtCustomer.name} ana deni la{" "}
+                  <span className="font-semibold tabular-nums">
+                    {currency.format(matchedDebtCustomer.balance)}
+                  </span>
+                </p>
+                <div className="mt-1.5 flex gap-2">
+                  <Link
+                    href={`/dashboard/sales/customer-debts?q=${encodeURIComponent(matchedDebtCustomer.name)}`}
+                    target="_blank"
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Angalia Deni
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedDebtFor(matchedDebtCustomer.name)}
+                    className="text-xs text-secondary hover:underline"
+                  >
+                    Endelea
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 

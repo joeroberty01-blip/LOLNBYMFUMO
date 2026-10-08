@@ -14,7 +14,11 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * table (minus View/Edit/Archive, which are admin-only customer-record actions this page has no
  * business offering), so sales staff can look up a customer's open invoices and collect payment
  * against them directly, without needing an admin account. */
-export default async function SalesCustomerDebtsPage() {
+export default async function SalesCustomerDebtsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const session = await auth();
   const isApprovedSalesStaff =
     session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
@@ -23,6 +27,7 @@ export default async function SalesCustomerDebtsPage() {
     redirect("/login/sales-staff");
   }
 
+  const { q } = await searchParams;
   const { t } = await getServerDictionary();
   const [debtors, branches] = await Promise.all([getCustomerDebtItems(), getBranches()]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
@@ -50,6 +55,7 @@ export default async function SalesCustomerDebtsPage() {
         storeName={BUSINESS_NAME}
         t={t}
         canManage={false}
+        initialSearch={q}
       />
     </div>
   );

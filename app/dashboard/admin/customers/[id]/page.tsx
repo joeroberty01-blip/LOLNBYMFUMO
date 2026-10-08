@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
+import { CustomerSaleHistoryTable } from "@/components/admin/CustomerSaleHistoryTable";
 import { CreditCard, Wallet } from "lucide-react";
 import { getOpenInvoicesForCustomer } from "@/lib/data/outstanding";
 
@@ -97,37 +98,7 @@ export default async function CustomerDetailPage({
       {sales.length === 0 ? (
         <EmptyState title={t.reports.customers.noCreditSales} />
       ) : (
-        <Table>
-          <THead>
-            <THeadRow>
-              <Th>{t.reports.customers.invoice}</Th>
-              <Th>{t.common.date}</Th>
-              <Th>{t.common.branch}</Th>
-              <Th>{t.common.paymentMethod}</Th>
-              <Th className="text-right">{t.common.total}</Th>
-              <Th>{t.common.status}</Th>
-            </THeadRow>
-          </THead>
-          <TBody>
-            {sales.map((s, i) => (
-              <Tr key={s.id} index={i}>
-                <Td>#{s.invoiceNumber}</Td>
-                <Td className="text-secondary">{s.createdAt.toLocaleString("sw-TZ")}</Td>
-                <Td>{s.branchName}</Td>
-                <Td>
-                  {PAYMENT_LABEL[s.paymentMethod] ?? s.paymentMethod}
-                  {s.isCredit ? ` (${t.reports.sales.credit})` : ""}
-                </Td>
-                <Td className="text-right tabular-nums">{currency.format(s.total)}</Td>
-                <Td>
-                  <Badge status={s.status === "VOIDED" ? "danger" : "success"}>
-                    {s.status === "VOIDED" ? t.reports.customers.voided : t.reports.customers.completed}
-                  </Badge>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
+        <CustomerSaleHistoryTable sales={sales} t={t} />
       )}
 
       <h2 className="mt-6 mb-2 text-sm font-semibold text-primary">

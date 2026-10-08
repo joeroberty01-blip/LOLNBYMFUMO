@@ -27,6 +27,7 @@ export function CustomerDebtItemsTable({
   storeName,
   t,
   canManage = true,
+  initialSearch,
 }: {
   groups: CustomerDebtGroup[];
   branches: { id: string; name: string }[];
@@ -37,9 +38,14 @@ export function CustomerDebtItemsTable({
    * copy of this table (app/dashboard/sales/customer-debts), which only needs to view debts and
    * collect payment, not manage the customer record itself. */
   canManage?: boolean;
+  /** Pre-fills the search box — used by POSTerminal's "Angalia Deni" link (?q=customer name) so
+   * landing here goes straight to the right customer instead of an empty list. */
+  initialSearch?: string;
 }) {
-  const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState(initialSearch ?? "");
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(initialSearch ? groups.filter((g) => g.name === initialSearch).map((g) => g.id) : [])
+  );
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {

@@ -44,15 +44,15 @@ export async function getCustomers(page: PageArgs, q?: string): Promise<Paginate
   return paginated(mapped, total, page);
 }
 
-export type POSCustomer = { id: string; name: string; phone: string | null };
+export type POSCustomer = { id: string; name: string; phone: string | null; balance: number };
 
 export async function getCustomersForPOS(): Promise<POSCustomer[]> {
   const rows = await prisma.customer.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, phone: true },
+    select: { id: true, name: true, phone: true, balance: true },
     orderBy: { name: "asc" },
   });
-  return rows;
+  return rows.map((r) => ({ id: r.id, name: r.name, phone: r.phone, balance: r.balance.toNumber() }));
 }
 
 export async function getCustomerDetail(id: string) {
@@ -71,6 +71,8 @@ export async function getCustomerDetail(id: string) {
   };
 }
 
+export type CustomerSaleItemRow = { description: string; quantity: number; unitPrice: number; amount: number };
+
 export type CustomerSaleRow = {
   id: string;
   invoiceNumber: number;
@@ -80,6 +82,7 @@ export type CustomerSaleRow = {
   paymentMethod: string;
   isCredit: boolean;
   status: "COMPLETED" | "VOIDED";
+  items: CustomerSaleItemRow[];
 };
 
 export async function getCustomerSaleHistory(customerId: string): Promise<CustomerSaleRow[]> {
@@ -95,6 +98,16 @@ export async function getCustomerSaleHistory(customerId: string): Promise<Custom
       isCredit: true,
       status: true,
       branch: { select: { name: true } },
+      items: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+          isManualEntry: true,
+          manualItemName: true,
+          manualPartNumber: true,
+          part: { select: { name: true, partNumber: true } },
+        },
+      },
     },
   });
 
@@ -107,6 +120,16 @@ export async function getCustomerSaleHistory(customerId: string): Promise<Custom
     paymentMethod: r.paymentMethod,
     isCredit: r.isCredit,
     status: r.status,
+    items: r.items.map((i) => {
+      const name = i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part");
+      const partNumber = i.isManualEntry ? i.manualPartNumber : i.part?.partNumber;
+      return {
+        description: partNumber ? `${name} (${partNumber})` : name,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice.toNumber(),
+        amount: i.quantity * i.unitPrice.toNumber(),
+      };
+    }),
   }));
 }
 
