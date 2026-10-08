@@ -3,9 +3,11 @@
 import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { CustomerSaleRow } from "@/lib/data/customers";
+import type { OpenDocument } from "@/lib/data/outstanding";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
+import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 const PAYMENT_LABEL: Record<string, string> = {
@@ -18,9 +20,26 @@ const PAYMENT_LABEL: Record<string, string> = {
 
 /** Credit Sales History on the customer detail page — each row expands to show exactly what was
  * sold (parts/quantities), not just the invoice total, matching the same expand-to-see-items
- * pattern as the Customer Debts list. */
-export function CustomerSaleHistoryTable({ sales, t }: { sales: CustomerSaleRow[]; t: Dictionary }) {
+ * pattern as the Customer Debts list. Invoices still owing money also get their own "Lipa hii"
+ * button, same per-invoice payment flow as the Customer Debts list — openInvoices (already
+ * remaining > 0 only, see getOpenInvoicesForCustomer) says which rows qualify and for how much. */
+export function CustomerSaleHistoryTable({
+  sales,
+  openInvoices,
+  branches,
+  customerId,
+  customerName,
+  t,
+}: {
+  sales: CustomerSaleRow[];
+  openInvoices: OpenDocument[];
+  branches: { id: string; name: string }[];
+  customerId: string;
+  customerName: string;
+  t: Dictionary;
+}) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const openBySaleId = new Map(openInvoices.map((inv) => [inv.id, inv]));
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -42,6 +61,7 @@ export function CustomerSaleHistoryTable({ sales, t }: { sales: CustomerSaleRow[
           <Th>{t.common.paymentMethod}</Th>
           <Th className="text-right">{t.common.total}</Th>
           <Th>{t.common.status}</Th>
+          <Th>{t.common.actions}</Th>
         </THeadRow>
       </THead>
       <TBody>
@@ -70,11 +90,23 @@ export function CustomerSaleHistoryTable({ sales, t }: { sales: CustomerSaleRow[
                     {s.status === "VOIDED" ? t.reports.customers.voided : t.reports.customers.completed}
                   </Badge>
                 </Td>
+                <Td onClick={(e) => e.stopPropagation()}>
+                  {openBySaleId.has(s.id) && (
+                    <PayInvoicesButton
+                      kind="customer"
+                      partyId={customerId}
+                      partyName={`${customerName} · Invoice #${s.invoiceNumber}`}
+                      branches={branches}
+                      label="Lipa hii"
+                      invoices={[openBySaleId.get(s.id)!]}
+                    />
+                  )}
+                </Td>
               </Tr>
               {isOpen && (
                 <Tr className="bg-white/[0.02]">
                   <Td></Td>
-                  <Td colSpan={6} className="py-2">
+                  <Td colSpan={7} className="py-2">
                     {s.items.length === 0 ? (
                       <p className="text-xs text-secondary">Hakuna items (manual sale).</p>
                     ) : (

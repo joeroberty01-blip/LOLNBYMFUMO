@@ -98,7 +98,14 @@ export default async function CustomerDetailPage({
       {sales.length === 0 ? (
         <EmptyState title={t.reports.customers.noCreditSales} />
       ) : (
-        <CustomerSaleHistoryTable sales={sales} t={t} />
+        <CustomerSaleHistoryTable
+          sales={sales}
+          openInvoices={openInvoices}
+          branches={branches}
+          customerId={customer.id}
+          customerName={customer.name}
+          t={t}
+        />
       )}
 
       <h2 className="mt-6 mb-2 text-sm font-semibold text-primary">
