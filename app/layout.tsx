@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getPreferences } from "@/lib/settings/preferences";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { APP_NAME, APP_DESCRIPTION } from "@/config/app";
 
-const inter = Inter({
-  variable: "--font-inter",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -49,7 +48,7 @@ export default async function RootLayout({
       lang={language}
       data-font-size={fontSize}
       suppressHydrationWarning
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased ${themeClass}`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased ${themeClass}`}
     >
       {theme === "system" && (
         <head>
