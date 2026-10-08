@@ -216,6 +216,9 @@ export type SaleInvoiceData = {
   id: string;
   invoiceNumber: number;
   createdAt: Date;
+  /** Which store the sale was made at — used only to pick a sensible default company letterhead
+   * (Lolnby vs Woodland, see lib/companyInfo.ts); the admin can still switch it on the page. */
+  branchName: string;
   traReceiptNo: string | null;
   customerId: string | null;
   customerName: string;
@@ -237,6 +240,7 @@ export async function getSaleInvoiceData(saleId: string): Promise<SaleInvoiceDat
       createdAt: true,
       traReceiptNo: true,
       total: true,
+      branch: { select: { name: true } },
       customer: { select: { id: true, name: true, address: true, tin: true, vrn: true } },
       items: {
         select: {
@@ -256,6 +260,7 @@ export async function getSaleInvoiceData(saleId: string): Promise<SaleInvoiceDat
     id: sale.id,
     invoiceNumber: sale.invoiceNumber,
     createdAt: sale.createdAt,
+    branchName: sale.branch.name,
     traReceiptNo: sale.traReceiptNo,
     customerId: sale.customer?.id ?? null,
     customerName: sale.customer?.name ?? "",
