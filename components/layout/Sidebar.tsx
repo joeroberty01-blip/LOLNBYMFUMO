@@ -105,6 +105,7 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
         { href: "/dashboard/sales/pos", label: t.nav.newSale, icon: ShoppingCart },
         { href: "/dashboard/sales/history", label: t.nav.salesHistory, icon: History },
         { href: "/dashboard/sales/inventory", label: t.nav.inventory, icon: Package },
+        { href: "/dashboard/sales/customer-debts", label: t.nav.customerDebts, icon: CreditCard },
         { href: "/dashboard/sales/suppliers", label: t.nav.suppliers, icon: Truck },
         { href: "/dashboard/sales/expenses", label: t.nav.expenses, icon: Wallet },
         {

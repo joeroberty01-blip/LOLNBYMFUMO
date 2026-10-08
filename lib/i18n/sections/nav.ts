@@ -19,6 +19,7 @@ export const en = {
   chinaMasterFile: "China Master File",
   accounting: "Accounting",
   stockMovements: "Stock In & Out",
+  customerDebts: "Customer Debts",
 };
 
 export const sw = {
@@ -42,4 +43,5 @@ export const sw = {
   chinaMasterFile: "China Master File",
   accounting: "Accounting",
   stockMovements: "Stock In & Out",
+  customerDebts: "Madeni ya Wateja",
 };

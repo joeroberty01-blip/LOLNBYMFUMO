@@ -96,6 +96,19 @@ async function requireAdmin() {
   return session;
 }
 
+/** Collecting a debt payment (not managing the customer record itself — see canManage on
+ * CustomerDebtItemsTable) is open to approved sales staff too, same role check as POS. */
+async function requireAdminOrApprovedStaff() {
+  const session = await auth();
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
+    throw new Error("Huna ruhusa ya kufanya hili");
+  }
+  return session;
+}
+
 export async function createCustomer(input: CustomerInput): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -327,7 +340,7 @@ export async function recordCustomerPaymentsPerInvoice(input: {
 }): Promise<SimpleResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireAdminOrApprovedStaff();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -372,6 +385,7 @@ export async function recordCustomerPaymentsPerInvoice(input: {
   revalidatePath(`/dashboard/admin/customers/${input.customerId}`);
   revalidatePath("/dashboard/admin/purchases");
   revalidatePath("/dashboard/admin/reports/customers");
+  revalidatePath("/dashboard/sales/customer-debts");
   revalidatePath("/dashboard/admin");
   return { success: true };
 }

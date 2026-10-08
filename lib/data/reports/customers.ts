@@ -25,6 +25,8 @@ export async function getCustomersWithDebt(): Promise<DebtorRow[]> {
   }));
 }
 
+export type CustomerDebtItemLine = { description: string; quantity: number; unitPrice: number; amount: number };
+
 export type CustomerDebtItem = {
   saleId: string;
   invoiceNumber: number;
@@ -32,6 +34,7 @@ export type CustomerDebtItem = {
   branchName: string;
   total: number;
   remaining: number;
+  items: CustomerDebtItemLine[];
 };
 
 export type CustomerDebtGroup = {
@@ -72,6 +75,16 @@ export async function getCustomerDebtItems(): Promise<CustomerDebtGroup[]> {
         total: true,
         customerId: true,
         branch: { select: { name: true } },
+        items: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+            isManualEntry: true,
+            manualItemName: true,
+            manualPartNumber: true,
+            part: { select: { name: true, partNumber: true } },
+          },
+        },
       },
     }),
     prisma.customerPayment.findMany({
@@ -126,6 +139,16 @@ export async function getCustomerDebtItems(): Promise<CustomerDebtGroup[]> {
         branchName: s.branch.name,
         total: s.total.toNumber(),
         remaining: fromCents(remainingCents),
+        items: s.items.map((i) => {
+          const name = i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part");
+          const partNumber = i.isManualEntry ? i.manualPartNumber : i.part?.partNumber;
+          return {
+            description: partNumber ? `${name} (${partNumber})` : name,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice.toNumber(),
+            amount: i.quantity * i.unitPrice.toNumber(),
+          };
+        }),
       });
     }
 
