@@ -60,6 +60,7 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
         { href: "/dashboard/admin/parts/bulk-upload", label: t.nav.bulkUpload, icon: Upload },
         { href: "/dashboard/admin/stores", label: t.nav.stores, icon: Store },
         { href: "/dashboard/admin/customers", label: t.nav.customers, icon: Users },
+        { href: "/dashboard/admin/debt-management", label: t.nav.debtManagement, icon: CreditCard },
         { href: "/dashboard/admin/suppliers", label: t.nav.suppliers, icon: Truck },
         { href: "/dashboard/admin/purchases", label: t.nav.creditPurchases, icon: CreditCard },
         { href: "/dashboard/admin/china-master-file", label: t.nav.chinaMasterFile, icon: Globe },

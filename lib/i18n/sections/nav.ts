@@ -20,6 +20,7 @@ export const en = {
   accounting: "Accounting",
   stockMovements: "Stock In & Out",
   customerDebts: "Customer Debts",
+  debtManagement: "Debt Management",
 };
 
 export const sw = {
@@ -44,4 +45,5 @@ export const sw = {
   accounting: "Accounting",
   stockMovements: "Stock In & Out",
   customerDebts: "Madeni ya Wateja",
+  debtManagement: "Usimamizi wa Madeni",
 };
