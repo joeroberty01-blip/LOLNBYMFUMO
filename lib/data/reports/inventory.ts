@@ -84,6 +84,103 @@ export async function getSlowMovingParts(minDaysIdle = 30): Promise<SlowMovingPa
     .sort((a, b) => (b.daysSinceLastSale ?? Infinity) - (a.daysSinceLastSale ?? Infinity));
 }
 
+export type PartSaleOccurrence = {
+  saleId: string;
+  invoiceNumber: number;
+  createdAt: Date;
+  branchName: string;
+  customerName: string | null;
+  sellerName: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+};
+
+export type PartSaleSummary = {
+  partId: string;
+  name: string;
+  partNumber: string;
+  timesSold: number;
+  totalQuantity: number;
+  totalValue: number;
+  lastSoldAt: Date | null;
+  occurrences: PartSaleOccurrence[];
+};
+
+/** Matches parts by name/number (same contains-search as POS), then replays every COMPLETED sale
+ * of each match — one row per sale (not per unit), newest first — so an admin can answer "how
+ * many times has this part sold, to/by whom, and when" without exporting the whole ledger. */
+export async function searchPartSaleHistory(query: string, limit = 15): Promise<PartSaleSummary[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  const parts = await prisma.part.findMany({
+    where: {
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { partNumber: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, partNumber: true },
+    orderBy: { name: "asc" },
+    take: limit,
+  });
+  if (parts.length === 0) return [];
+  const partIds = parts.map((p) => p.id);
+
+  const items = await prisma.saleItem.findMany({
+    where: { partId: { in: partIds }, sale: { status: "COMPLETED" } },
+    select: {
+      partId: true,
+      quantity: true,
+      unitPrice: true,
+      sale: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          createdAt: true,
+          branch: { select: { name: true } },
+          customer: { select: { name: true } },
+          user: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { sale: { createdAt: "desc" } },
+  });
+
+  const byPart = new Map<string, PartSaleOccurrence[]>();
+  for (const it of items) {
+    if (!it.partId) continue;
+    const arr = byPart.get(it.partId) ?? [];
+    arr.push({
+      saleId: it.sale.id,
+      invoiceNumber: it.sale.invoiceNumber,
+      createdAt: it.sale.createdAt,
+      branchName: it.sale.branch.name,
+      customerName: it.sale.customer?.name ?? null,
+      sellerName: it.sale.user.name,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice.toNumber(),
+      amount: it.quantity * it.unitPrice.toNumber(),
+    });
+    byPart.set(it.partId, arr);
+  }
+
+  return parts.map((p) => {
+    const occurrences = byPart.get(p.id) ?? [];
+    return {
+      partId: p.id,
+      name: p.name,
+      partNumber: p.partNumber,
+      timesSold: occurrences.length,
+      totalQuantity: occurrences.reduce((sum, o) => sum + o.quantity, 0),
+      totalValue: occurrences.reduce((sum, o) => sum + o.amount, 0),
+      lastSoldAt: occurrences[0]?.createdAt ?? null,
+      occurrences,
+    };
+  });
+}
+
 export type StockAdjustmentRow = {
   id: string;
   createdAt: Date;
