@@ -58,11 +58,6 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
       items: [
         { href: "/dashboard/admin/parts", label: t.nav.parts, icon: Package },
         { href: "/dashboard/admin/parts/bulk-upload", label: t.nav.bulkUpload, icon: Upload },
-        {
-          href: "/dashboard/admin/parts/sales-history",
-          label: t.nav.partSalesHistory,
-          icon: History,
-        },
         { href: "/dashboard/admin/stores", label: t.nav.stores, icon: Store },
         { href: "/dashboard/admin/customers", label: t.nav.customers, icon: Users },
         { href: "/dashboard/admin/debt-management", label: t.nav.debtManagement, icon: CreditCard },
@@ -75,6 +70,11 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
       label: t.adminOps.sidebar.operations,
       items: [
         { href: "/dashboard/admin/sales", label: t.adminOps.salesList.title, icon: Receipt },
+        {
+          href: "/dashboard/admin/parts/sales-history",
+          label: t.nav.partSalesHistory,
+          icon: History,
+        },
         {
           href: "/dashboard/admin/sales/manual-items",
           label: t.nav.manualItems,
