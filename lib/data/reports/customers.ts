@@ -56,9 +56,16 @@ export type CustomerDebtGroup = {
  * no schema change — and sum(items.remaining) reconciles exactly to Customer.balance because that
  * field is only ever adjusted by the very same sale/payment/delete events replayed here (see
  * completeSale, deleteSale, recordCustomerPayment in lib/actions/). */
-export async function getCustomerDebtItems(): Promise<CustomerDebtGroup[]> {
+export async function getCustomerDebtItems(
+  options: { scope?: "native" | "legacy" | "all" } = {}
+): Promise<CustomerDebtGroup[]> {
+  const { scope = "all" } = options;
   const debtors = await prisma.customer.findMany({
-    where: { balance: { gt: 0 } },
+    where: {
+      balance: { gt: 0 },
+      ...(scope === "native" ? { isLegacyImport: false } : {}),
+      ...(scope === "legacy" ? { isLegacyImport: true } : {}),
+    },
     orderBy: { balance: "desc" },
   });
   if (debtors.length === 0) return [];

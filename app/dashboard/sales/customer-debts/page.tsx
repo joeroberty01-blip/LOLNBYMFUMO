@@ -29,7 +29,10 @@ export default async function SalesCustomerDebtsPage({
 
   const { q } = await searchParams;
   const { t } = await getServerDictionary();
-  const [debtors, branches] = await Promise.all([getCustomerDebtItems(), getBranches()]);
+  const [debtors, branches] = await Promise.all([
+    getCustomerDebtItems({ scope: "native" }),
+    getBranches(),
+  ]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
 
   return (

@@ -6,10 +6,12 @@ import { CustomerDebtItemsTable } from "@/components/admin/CustomerDebtItemsTabl
 import { SendRemindersButton } from "@/components/admin/SendRemindersButton";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
-import { CreditCard } from "lucide-react";
+import { CreditCard, History } from "lucide-react";
 import { BUSINESS_NAME } from "@/config/app";
 import { toWhatsAppNumber } from "@/lib/messaging";
 import { isSmsGatewayConfigured } from "@/lib/smsGateway";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
@@ -31,13 +33,24 @@ export default async function DebtManagementPage({
 
   const { q } = await searchParams;
   const { t } = await getServerDictionary();
-  const [debtors, branches] = await Promise.all([getCustomerDebtItems(), getBranches()]);
+  const [debtors, branches] = await Promise.all([
+    getCustomerDebtItems({ scope: "native" }),
+    getBranches(),
+  ]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
   const reachable = debtors.filter((d) => toWhatsAppNumber(d.phone) !== null).length;
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold text-primary">{t.nav.debtManagement}</h1>
+      <div className="mb-1 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-primary">{t.nav.debtManagement}</h1>
+        <Link href="/dashboard/admin/debt-management/mfumo-wa-kale">
+          <Button type="button" variant="secondary">
+            <History size={16} className="mr-1.5 inline" />
+            Madeni ya Mfumo wa Kale
+          </Button>
+        </Link>
+      </div>
       <p className="mb-6 text-sm text-secondary">
         {t.reports.customers.snapshotAsOf}
         {new Date().toLocaleDateString("sw-TZ")}
