@@ -428,12 +428,12 @@ export async function restoreBackupData(
     data.sales,
     (chunk) =>
       Prisma.sql`
-        INSERT INTO "Sale" ("id","invoiceNumber","customerId","branchId","sourceBranchId","userId","total","paymentMethod","isCredit","status","createdAt","voidedAt","voidedById","traReceiptNo")
+        INSERT INTO "Sale" ("id","invoiceNumber","customerId","branchId","sourceBranchId","userId","total","paymentMethod","isCredit","status","createdAt","voidedAt","voidedById","traReceiptNo","notes")
         VALUES ${Prisma.join(
           chunk.map((r) => {
             const sourceBranchId = r.sourceBranchId as string | null;
             const voidedById = r.voidedById as string | null;
-            return Prisma.sql`(${r.id as string}, ${r.invoiceNumber as number}, ${(r.customerId as string | null) ?? null}, ${r.branchId as string}, ${sourceBranchId && knownBranchIds.has(sourceBranchId) ? sourceBranchId : null}, ${r.userId as string}, ${r.total as string}::numeric, ${r.paymentMethod as string}::"PaymentMethod", ${Boolean(r.isCredit)}, ${r.status as string}::"SaleStatus", ${toDate(r.createdAt) ?? new Date()}, ${toDate(r.voidedAt)}, ${voidedById && currentUserIds.has(voidedById) ? voidedById : null}, ${(r.traReceiptNo as string | null) ?? null})`;
+            return Prisma.sql`(${r.id as string}, ${r.invoiceNumber as number}, ${(r.customerId as string | null) ?? null}, ${r.branchId as string}, ${sourceBranchId && knownBranchIds.has(sourceBranchId) ? sourceBranchId : null}, ${r.userId as string}, ${r.total as string}::numeric, ${r.paymentMethod as string}::"PaymentMethod", ${Boolean(r.isCredit)}, ${r.status as string}::"SaleStatus", ${toDate(r.createdAt) ?? new Date()}, ${toDate(r.voidedAt)}, ${voidedById && currentUserIds.has(voidedById) ? voidedById : null}, ${(r.traReceiptNo as string | null) ?? null}, ${(r.notes as string | null) ?? null})`;
           })
         )}
         ON CONFLICT ("id") DO NOTHING
@@ -458,6 +458,7 @@ export async function restoreBackupData(
           voidedAt: toDate(r.voidedAt),
           voidedById: voidedById && currentUserIds.has(voidedById) ? voidedById : null,
           traReceiptNo: (r.traReceiptNo as string | null) ?? null,
+          notes: (r.notes as string | null) ?? null,
         },
         update: {},
       });

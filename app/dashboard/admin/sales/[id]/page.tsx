@@ -43,6 +43,11 @@ export default async function SaleDetailPage({
             <Badge status={sale.status === "VOIDED" ? "danger" : "success"}>{sale.status}</Badge>
           </div>
           <p className="text-sm text-secondary">{sale.createdAt.toLocaleString("sw-TZ")}</p>
+          {sale.notes && (
+            <p className="mt-1 inline-block rounded-control border border-warning/40 bg-warning/[0.08] px-2 py-0.5 text-xs text-warning">
+              {sale.notes}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           {sale.status !== "VOIDED" && (
