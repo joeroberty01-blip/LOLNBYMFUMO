@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { Bot, X, Send, Loader2 } from "lucide-react";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -127,7 +127,7 @@ export function FloatingChatbot() {
         aria-label={open ? "Funga chatbot" : "Fungua chatbot"}
         className="fixed right-5 bottom-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-white shadow-lg hover:brightness-110"
       >
-        {open ? <X size={28} /> : <MessageCircle size={28} />}
+        {open ? <X size={28} /> : <Bot size={28} />}
       </button>
     </>
   );
