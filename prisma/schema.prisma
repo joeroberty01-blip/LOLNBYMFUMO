@@ -348,6 +348,11 @@ model Part {
   lowStockThreshold Int      @default(5)
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
+  /// AI-generated generic/illustrative image for this part's NAME (not a photo of this specific
+  /// item) — shown only as a fallback when no real PartPhoto exists yet, and must never be
+  /// confused with one: Photo Queue still lists a Part as needing a photo regardless of this
+  /// field. Sourced from a shared {part_name -> image_url} catalog built across sibling projects.
+  genericImageUrl   String?
 
   inventory        Inventory[]
   saleItems        SaleItem[]

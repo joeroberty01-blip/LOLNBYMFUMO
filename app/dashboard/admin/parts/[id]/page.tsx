@@ -51,7 +51,12 @@ export default async function PartDetailPage({
 
       <div className="mt-4 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-wrap items-start gap-4">
-          <PartDetailPhoto partId={part.id} hasPhoto={part.hasPhoto} name={part.name} />
+          <PartDetailPhoto
+            partId={part.id}
+            hasPhoto={part.hasPhoto}
+            genericImageUrl={part.genericImageUrl}
+            name={part.name}
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold text-primary">{part.name}</h1>

@@ -51,7 +51,12 @@ export function InventoryTable({ rows }: { rows: SalesInventoryRow[] }) {
             </Td>
             <Td className="text-right tabular-nums">{row.quantity}</Td>
             <Td className="!px-2 !py-2">
-              <PartThumbnailZoom partId={row.partId} hasPhoto={row.hasPhoto} name={row.name} />
+              <PartThumbnailZoom
+                partId={row.partId}
+                hasPhoto={row.hasPhoto}
+                genericImageUrl={row.genericImageUrl}
+                name={row.name}
+              />
             </Td>
           </Tr>
         ))}

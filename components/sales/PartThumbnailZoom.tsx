@@ -11,16 +11,18 @@ import { PartThumbnail } from "@/components/ui/PartThumbnail";
 export function PartThumbnailZoom({
   partId,
   hasPhoto,
+  genericImageUrl,
   name,
 }: {
   partId: string;
   hasPhoto: boolean;
+  genericImageUrl?: string | null;
   name: string;
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (!hasPhoto) {
-    return <PartThumbnail partId={partId} hasPhoto={false} alt={name} />;
+    return <PartThumbnail partId={partId} hasPhoto={false} genericImageUrl={genericImageUrl} alt={name} />;
   }
 
   return (
@@ -31,7 +33,7 @@ export function PartThumbnailZoom({
         title="Bonyeza kuona picha kubwa"
         className="rounded-control"
       >
-        <PartThumbnail partId={partId} hasPhoto={hasPhoto} alt={name} />
+        <PartThumbnail partId={partId} hasPhoto={hasPhoto} genericImageUrl={genericImageUrl} alt={name} />
       </button>
 
       {lightboxOpen && (

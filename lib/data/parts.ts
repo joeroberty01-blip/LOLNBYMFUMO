@@ -71,6 +71,7 @@ export type AdminPartRow = {
   quantity: number;
   isLowStock: boolean;
   hasPhoto: boolean;
+  genericImageUrl: string | null;
 };
 
 /** Whitelisted ORDER BY fragments. User input only ever selects a key here — it is never
@@ -97,6 +98,7 @@ type AdminPartSqlRow = {
   unitPrice: Prisma.Decimal;
   lowStockThreshold: number;
   has_photo: boolean;
+  generic_image_url: string | null;
   branch_id: string | null;
   branch_name: string | null;
   branch_qty: number | null;
@@ -155,6 +157,7 @@ export async function getPartsForAdminTable(
       SELECT p.id, p.name, p."partNumber", p."costPrice", p."unitPrice",
              p."lowStockThreshold", p."createdAt",
              EXISTS(SELECT 1 FROM "PartPhoto" ph WHERE ph."partId" = p.id) AS has_photo,
+             p."genericImageUrl" AS generic_image_url,
              COALESCE(agg.total_qty, 0) AS total_qty,
              COALESCE(agg.any_low, true) AS any_low,
              COALESCE(agg.any_negative, false) AS any_negative,
@@ -175,7 +178,7 @@ export async function getPartsForAdminTable(
       LIMIT ${page.take} OFFSET ${page.skip}
     )
     SELECT f.id, f.name, f."partNumber", f."costPrice", f."unitPrice", f."lowStockThreshold",
-           f.has_photo, f.total_count,
+           f.has_photo, f.generic_image_url, f.total_count,
            b.id   AS branch_id,
            b.name AS branch_name,
            i.quantity AS branch_qty
@@ -202,6 +205,7 @@ export async function getPartsForAdminTable(
       quantity,
       isLowStock: quantity < r.lowStockThreshold,
       hasPhoto: r.has_photo,
+      genericImageUrl: r.generic_image_url,
     };
   });
 
@@ -216,6 +220,7 @@ export type SalesInventoryRow = {
   branchName: string;
   quantity: number;
   hasPhoto: boolean;
+  genericImageUrl: string | null;
 };
 
 /**
@@ -240,6 +245,7 @@ export async function getInventoryForSalesTable(
         name: true,
         partNumber: true,
         unitPrice: true,
+        genericImageUrl: true,
         photo: { select: { id: true } },
         inventory: {
           select: { quantity: true, branch: { select: { name: true } } },
@@ -252,6 +258,7 @@ export async function getInventoryForSalesTable(
   const rows = parts.flatMap((part): SalesInventoryRow[] => {
     const unitPrice = part.unitPrice.toNumber();
     const hasPhoto = part.photo !== null;
+    const genericImageUrl = part.genericImageUrl;
 
     if (part.inventory.length === 0) {
       return [
@@ -263,6 +270,7 @@ export async function getInventoryForSalesTable(
           branchName: "—",
           quantity: 0,
           hasPhoto,
+          genericImageUrl,
         },
       ];
     }
@@ -275,6 +283,7 @@ export async function getInventoryForSalesTable(
       branchName: inv.branch.name,
       quantity: inv.quantity,
       hasPhoto,
+      genericImageUrl,
     }));
   });
 
@@ -326,6 +335,7 @@ export type PartDetail = {
   isActive: boolean;
   createdAt: Date;
   hasPhoto: boolean;
+  genericImageUrl: string | null;
 };
 
 export async function getPartDetail(id: string): Promise<PartDetail | null> {
@@ -348,6 +358,7 @@ export async function getPartDetail(id: string): Promise<PartDetail | null> {
     isActive: part.isActive,
     createdAt: part.createdAt,
     hasPhoto: part.photo !== null,
+    genericImageUrl: part.genericImageUrl,
   };
 }
 

@@ -95,7 +95,12 @@ export function PartsTable({
               </span>
             </Td>
             <Td className="!px-2 !py-2">
-              <PartThumbnailButton partId={row.partId} hasPhoto={row.hasPhoto} name={row.name} />
+              <PartThumbnailButton
+                partId={row.partId}
+                hasPhoto={row.hasPhoto}
+                genericImageUrl={row.genericImageUrl}
+                name={row.name}
+              />
             </Td>
             <Td className="text-right">
               <div className="no-print flex items-center justify-end gap-1">

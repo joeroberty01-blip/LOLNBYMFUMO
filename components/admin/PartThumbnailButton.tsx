@@ -16,10 +16,12 @@ import { PhotoCropModal } from "@/components/admin/PhotoCropModal";
 export function PartThumbnailButton({
   partId,
   hasPhoto,
+  genericImageUrl,
   name,
 }: {
   partId: string;
   hasPhoto: boolean;
+  genericImageUrl?: string | null;
   name: string;
 }) {
   const router = useRouter();
@@ -73,7 +75,7 @@ export function PartThumbnailButton({
         title={hasPhoto ? "Bonyeza kuona picha kubwa" : "Bonyeza kupakia picha"}
         className="rounded-control disabled:opacity-50"
       >
-        <PartThumbnail partId={partId} hasPhoto={hasPhoto} alt={name} />
+        <PartThumbnail partId={partId} hasPhoto={hasPhoto} genericImageUrl={genericImageUrl} alt={name} />
         <input
           ref={inputRef}
           type="file"
