@@ -4,6 +4,7 @@ import { getServerDictionary } from "@/lib/i18n/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileNavProvider } from "@/components/layout/MobileNav";
+import { FloatingChatbot } from "@/components/admin/FloatingChatbot";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -22,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>
+      <FloatingChatbot />
     </MobileNavProvider>
   );
 }
