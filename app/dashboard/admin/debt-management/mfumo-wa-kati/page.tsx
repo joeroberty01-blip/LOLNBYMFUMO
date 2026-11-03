@@ -11,10 +11,11 @@ import { BUSINESS_NAME } from "@/config/app";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
-/** Debts carried over from the old Base44 "Woodland Core ERP" system (see Sale.notes), kept on
- * their own page rather than mixed into the main Debt Management list (getCustomerDebtItems'
- * `scope: "native"` there) -- these customers have no phone numbers from the old system, so no
- * WhatsApp/SMS reminders here, and no new-customer-record actions beyond collecting payment. */
+/** Debts carried over from the old Base44 "Woodland Core ERP" system (see Sale.notes, tagged
+ * "MADENI YA MFUMO WA KATI"), kept on their own page rather than mixed into the main Debt
+ * Management list (getCustomerDebtItems' `scope: "native"` there) -- these customers have no
+ * phone numbers from the old system, so no WhatsApp/SMS reminders here, and no new-customer-record
+ * actions beyond collecting payment. */
 export default async function LegacyDebtsPage({
   searchParams,
 }: {
@@ -39,7 +40,7 @@ export default async function LegacyDebtsPage({
         ← Madeni ya Wateja
       </Link>
 
-      <h1 className="mt-4 mb-1 text-xl font-semibold text-primary">Madeni ya Mfumo wa Kale</h1>
+      <h1 className="mt-4 mb-1 text-xl font-semibold text-primary">Madeni ya Mfumo wa Kati</h1>
       <p className="mb-6 text-sm text-secondary">
         Madeni yaliyohamishwa kutoka mfumo wa zamani (Woodland Core ERP). Hayana namba za simu —
         ongeza mwenyewe kwenye ukurasa wa mteja ili arifa za WhatsApp/SMS ziweze kufanya kazi.
@@ -48,7 +49,7 @@ export default async function LegacyDebtsPage({
       <div className="mb-6 w-fit">
         <StatCard
           icon={<CreditCard size={18} />}
-          label="Jumla ya Madeni ya Mfumo wa Kale"
+          label="Jumla ya Madeni ya Mfumo wa Kati"
           value={currency.format(totalDebt)}
           alert
         />
