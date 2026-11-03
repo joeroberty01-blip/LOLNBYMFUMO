@@ -271,11 +271,16 @@ model Customer {
   creditLimit Decimal  @default(0) @db.Decimal(12, 2)
   balance     Decimal  @default(0) @db.Decimal(12, 2)
   isActive    Boolean  @default(true)
-  /// True only for the batch of customers created from the old Base44 "Woodland Core ERP" debt
-  /// import (see Sale.notes). Keeps that batch out of the main Debt Management / Customer Debts
-  /// lists by default (see getCustomerDebtItems' `scope`) so it doesn't mix with debt recorded
-  /// natively in this app; it still appears in the full Customers directory like any other.
+  /// True only for a batch of customers created from an old external system's debt import (see
+  /// Sale.notes). Keeps that batch out of the main Debt Management / Customer Debts lists by
+  /// default (see getCustomerDebtItems' `scope`) so it doesn't mix with debt recorded natively
+  /// in this app; it still appears in the full Customers directory like any other.
   isLegacyImport Boolean @default(false)
+  /// Which old system a legacy-imported customer came from (e.g. "BASE44", "QUICKBOOKS") — null
+  /// for everyone else. Each source gets its own page under Debt Management
+  /// (getCustomerDebtItems' `legacySource` filter) so unrelated legacy batches never mix
+  /// together either, per the user's explicit instruction to keep them independent.
+  legacySource   String?
   createdAt   DateTime @default(now())
 
   sales    Sale[]

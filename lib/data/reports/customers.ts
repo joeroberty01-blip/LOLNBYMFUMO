@@ -57,14 +57,15 @@ export type CustomerDebtGroup = {
  * field is only ever adjusted by the very same sale/payment/delete events replayed here (see
  * completeSale, deleteSale, recordCustomerPayment in lib/actions/). */
 export async function getCustomerDebtItems(
-  options: { scope?: "native" | "legacy" | "all" } = {}
+  options: { scope?: "native" | "legacy" | "all"; legacySource?: string } = {}
 ): Promise<CustomerDebtGroup[]> {
-  const { scope = "all" } = options;
+  const { scope = "all", legacySource } = options;
   const debtors = await prisma.customer.findMany({
     where: {
       balance: { gt: 0 },
       ...(scope === "native" ? { isLegacyImport: false } : {}),
       ...(scope === "legacy" ? { isLegacyImport: true } : {}),
+      ...(legacySource ? { legacySource } : {}),
     },
     orderBy: { balance: "desc" },
   });

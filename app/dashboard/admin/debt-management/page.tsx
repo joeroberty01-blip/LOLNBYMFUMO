@@ -44,12 +44,20 @@ export default async function DebtManagementPage({
     <div>
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-primary">{t.nav.debtManagement}</h1>
-        <Link href="/dashboard/admin/debt-management/mfumo-wa-kati">
-          <Button type="button" variant="secondary">
-            <History size={16} className="mr-1.5 inline" />
-            Madeni ya Mfumo wa Kati
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/admin/debt-management/mfumo-wa-kati">
+            <Button type="button" variant="secondary">
+              <History size={16} className="mr-1.5 inline" />
+              Madeni ya Mfumo wa Kati
+            </Button>
+          </Link>
+          <Link href="/dashboard/admin/debt-management/mfumo-wa-kale">
+            <Button type="button" variant="secondary">
+              <History size={16} className="mr-1.5 inline" />
+              Madeni ya Mfumo wa Kale
+            </Button>
+          </Link>
+        </div>
       </div>
       <p className="mb-6 text-sm text-secondary">
         {t.reports.customers.snapshotAsOf}

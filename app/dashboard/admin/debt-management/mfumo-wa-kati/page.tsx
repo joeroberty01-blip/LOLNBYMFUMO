@@ -29,7 +29,7 @@ export default async function LegacyDebtsPage({
   const { q } = await searchParams;
   const { t } = await getServerDictionary();
   const [debtors, branches] = await Promise.all([
-    getCustomerDebtItems({ scope: "legacy" }),
+    getCustomerDebtItems({ scope: "legacy", legacySource: "BASE44" }),
     getBranches(),
   ]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
