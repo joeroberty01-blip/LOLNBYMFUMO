@@ -53,7 +53,7 @@ export function FloatingChatbot() {
   return (
     <>
       {open && (
-        <div className="fixed right-5 bottom-20 z-50 flex h-[28rem] w-80 flex-col overflow-hidden rounded-card border border-border bg-surface shadow-xl sm:w-96">
+        <div className="fixed right-5 bottom-24 z-50 flex h-[28rem] w-80 flex-col overflow-hidden rounded-card border border-border bg-surface shadow-xl sm:w-96">
           <div className="flex items-center justify-between border-b border-border bg-surface-elevated px-3 py-2">
             <p className="text-sm font-semibold text-primary">Uliza Data</p>
             <button
@@ -125,9 +125,9 @@ export function FloatingChatbot() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Funga chatbot" : "Fungua chatbot"}
-        className="fixed right-5 bottom-5 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-white shadow-lg hover:brightness-110"
+        className="fixed right-5 bottom-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-white shadow-lg hover:brightness-110"
       >
-        {open ? <X size={20} /> : <MessageCircle size={20} />}
+        {open ? <X size={28} /> : <MessageCircle size={28} />}
       </button>
     </>
   );
