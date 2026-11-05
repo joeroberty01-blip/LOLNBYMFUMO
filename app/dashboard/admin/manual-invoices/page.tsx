@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { Eye, Pencil } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { listManualInvoices } from "@/lib/data/manualInvoices";
 import { COMPANY_PROFILES } from "@/lib/companyInfo";
 import { Button } from "@/components/ui/Button";
+import { DeleteManualInvoiceButton } from "@/components/invoices/DeleteManualInvoiceButton";
 
 const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -46,6 +48,7 @@ export default async function ManualInvoicesPage() {
               <th className="px-3 py-2">Hali</th>
               <th className="px-3 py-2 text-right">Jumla (TSh)</th>
               <th className="px-3 py-2">Aliyetengeneza</th>
+              <th className="px-3 py-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -87,11 +90,34 @@ export default async function ManualInvoicesPage() {
                   {currency.format(invoice.total)}
                 </td>
                 <td className="px-3 py-2 text-secondary">{invoice.createdByName}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-end gap-1">
+                    {invoice.status !== "draft" && (
+                      <Link
+                        href={`/dashboard/admin/manual-invoices/${invoice.id}`}
+                        aria-label="View"
+                        title="View"
+                        className="rounded-control p-1.5 text-secondary hover:bg-white/[0.06] hover:text-primary"
+                      >
+                        <Eye size={15} />
+                      </Link>
+                    )}
+                    <Link
+                      href={`/dashboard/admin/manual-invoices/${invoice.id}/edit`}
+                      aria-label="Edit"
+                      title="Edit"
+                      className="rounded-control p-1.5 text-secondary hover:bg-white/[0.06] hover:text-primary"
+                    >
+                      <Pencil size={15} />
+                    </Link>
+                    <DeleteManualInvoiceButton invoiceId={invoice.id} />
+                  </div>
+                </td>
               </tr>
             ))}
             {invoices.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-secondary">
+                <td colSpan={9} className="px-3 py-6 text-center text-secondary">
                   Hakuna invoice bado.
                 </td>
               </tr>

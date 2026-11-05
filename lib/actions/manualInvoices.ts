@@ -12,6 +12,7 @@ import {
 } from "@/lib/validators/manualInvoices";
 
 type ActionResult = { success: true; id: string } | { success: false; error: string };
+type DeleteActionResult = { success: true } | { success: false; error: string };
 /** The PARSED/OUTPUT shape of either schema — what `.safeParse(...).data` actually is, not the
  * raw input callers pass in (draft callers pass unvalidated getValues() output, which is why
  * DraftManualInvoiceInput itself is a z.input, not a z.infer — see lib/validators/manualInvoices.ts). */
@@ -69,6 +70,9 @@ export async function createManualInvoice(input: CreateManualInvoiceInput): Prom
         create: data.items.map((item, index) => ({
           description: item.description,
           partNumber: item.partNumber,
+          countryOfOrigin: item.countryOfOrigin,
+          stockAvailable: item.stockAvailable,
+          genuine: item.genuine,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           orderIndex: index,
@@ -108,6 +112,9 @@ export async function updateManualInvoice(
           create: data.items.map((item, index) => ({
             description: item.description,
             partNumber: item.partNumber,
+            countryOfOrigin: item.countryOfOrigin,
+            stockAvailable: item.stockAvailable,
+            genuine: item.genuine,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             orderIndex: index,
@@ -143,6 +150,9 @@ export async function saveManualInvoiceDraft(input: DraftManualInvoiceInput): Pr
         create: data.items.map((item, index) => ({
           description: item.description,
           partNumber: item.partNumber,
+          countryOfOrigin: item.countryOfOrigin,
+          stockAvailable: item.stockAvailable,
+          genuine: item.genuine,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           orderIndex: index,
@@ -180,6 +190,9 @@ export async function updateManualInvoiceDraft(
           create: data.items.map((item, index) => ({
             description: item.description,
             partNumber: item.partNumber,
+            countryOfOrigin: item.countryOfOrigin,
+            stockAvailable: item.stockAvailable,
+            genuine: item.genuine,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             orderIndex: index,
@@ -190,4 +203,16 @@ export async function updateManualInvoiceDraft(
   ]);
 
   return { success: true, id };
+}
+
+/** Hard-deletes a manual invoice (and its items, via onDelete: Cascade) — unlike Part, nothing
+ * else references a ManualInvoice, so there's no soft-delete flag to preserve history for. */
+export async function deleteManualInvoice(id: string): Promise<DeleteActionResult> {
+  await requireAdmin();
+  try {
+    await prisma.manualInvoice.delete({ where: { id } });
+  } catch {
+    return { success: false, error: "Invoice hii haipo tena (huenda imeshafutwa)" };
+  }
+  return { success: true };
 }

@@ -9,6 +9,7 @@ import {
   createManualInvoiceSchema,
   manualInvoicePaymentModes,
   MANUAL_INVOICE_PAYMENT_LABELS,
+  genuineOptions,
 } from "@/lib/validators/manualInvoices";
 import {
   createManualInvoice,
@@ -24,7 +25,15 @@ import { Button } from "@/components/ui/Button";
 
 type FormValues = z.input<typeof createManualInvoiceSchema>;
 
-const emptyItem = { description: "", partNumber: "", quantity: 1, unitPrice: 0 };
+const emptyItem = {
+  description: "",
+  partNumber: "",
+  countryOfOrigin: "",
+  stockAvailable: "",
+  genuine: "",
+  quantity: 1,
+  unitPrice: 0,
+};
 const CUSTOMER_DATALIST_ID = "manual-invoice-known-customers";
 
 type Props = {
@@ -86,6 +95,9 @@ export function ManualInvoiceForm({
     return {
       description: item?.description ?? "",
       partNumber: item?.partNumber,
+      countryOfOrigin: item?.countryOfOrigin,
+      stockAvailable: item?.stockAvailable,
+      genuine: item?.genuine,
       quantity,
       unitPrice,
       amount: quantity * unitPrice,
@@ -250,31 +262,59 @@ export function ManualInvoiceForm({
         </div>
         <div className="flex flex-col gap-3">
           {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
-              <div>
-                <Label>Description</Label>
-                <Input {...register(`items.${index}.description`)} />
+            <div key={field.id} className="rounded-control border border-border/60 p-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
+                <div>
+                  <Label>Description</Label>
+                  <Input {...register(`items.${index}.description`)} />
+                </div>
+                <div>
+                  <Label>Part No. (si lazima)</Label>
+                  <Input className="w-28" {...register(`items.${index}.partNumber`)} />
+                </div>
+                <div>
+                  <Label>Qty</Label>
+                  <Input className="w-20" type="number" step="any" {...register(`items.${index}.quantity`)} />
+                </div>
+                <div>
+                  <Label>Unit Price</Label>
+                  <Input className="w-32" type="number" step="0.01" {...register(`items.${index}.unitPrice`)} />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={fields.length <= 1}
+                  onClick={() => remove(index)}
+                >
+                  Toa
+                </Button>
               </div>
-              <div>
-                <Label>Part No. (si lazima)</Label>
-                <Input className="w-28" {...register(`items.${index}.partNumber`)} />
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div>
+                  <Label>Country of Origin (si lazima)</Label>
+                  <Input placeholder="mfano: Japan" {...register(`items.${index}.countryOfOrigin`)} />
+                </div>
+                <div>
+                  <Label>Stock Available (si lazima)</Label>
+                  <Input
+                    placeholder="mfano: Available, On Order"
+                    {...register(`items.${index}.stockAvailable`)}
+                  />
+                </div>
+                <div>
+                  <Label>Genuine (si lazima)</Label>
+                  <select
+                    {...register(`items.${index}.genuine`)}
+                    className="w-full rounded-control border border-border bg-page px-3 py-2 text-sm text-primary"
+                  >
+                    {genuineOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt || "—"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <Label>Qty</Label>
-                <Input className="w-20" type="number" step="any" {...register(`items.${index}.quantity`)} />
-              </div>
-              <div>
-                <Label>Unit Price</Label>
-                <Input className="w-32" type="number" step="0.01" {...register(`items.${index}.unitPrice`)} />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={fields.length <= 1}
-                onClick={() => remove(index)}
-              >
-                Toa
-              </Button>
             </div>
           ))}
         </div>

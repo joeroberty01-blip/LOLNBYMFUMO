@@ -23,6 +23,9 @@ export type ManualInvoiceCustomerOption = {
 export type ManualInvoiceItemData = {
   description: string;
   partNumber: string | null;
+  countryOfOrigin: string | null;
+  stockAvailable: string | null;
+  genuine: string | null;
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -143,7 +146,15 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
       createdAt: true,
       items: {
         orderBy: { orderIndex: "asc" },
-        select: { description: true, partNumber: true, quantity: true, unitPrice: true },
+        select: {
+          description: true,
+          partNumber: true,
+          countryOfOrigin: true,
+          stockAvailable: true,
+          genuine: true,
+          quantity: true,
+          unitPrice: true,
+        },
       },
     },
   });
@@ -178,6 +189,9 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
       return {
         description: item.description,
         partNumber: item.partNumber,
+        countryOfOrigin: item.countryOfOrigin,
+        stockAvailable: item.stockAvailable,
+        genuine: item.genuine,
         quantity,
         unitPrice,
         amount: quantity * unitPrice,

@@ -23,9 +23,14 @@ const optionalText = () =>
     .or(z.literal(""))
     .transform((v) => (v ? v : undefined));
 
+export const genuineOptions = ["", "Genuine", "Non-Genuine"] as const;
+
 export const manualInvoiceItemSchema = z.object({
   description: z.string().trim().min(1, "Enter a description"),
   partNumber: optionalText(),
+  countryOfOrigin: optionalText(),
+  stockAvailable: optionalText(),
+  genuine: optionalText(),
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   unitPrice: z.coerce.number().positive("Unit price must be greater than 0"),
 });
@@ -64,6 +69,9 @@ export const draftManualInvoiceItemSchema = z.object({
     .optional()
     .transform((v) => v ?? ""),
   partNumber: optionalText(),
+  countryOfOrigin: optionalText(),
+  stockAvailable: optionalText(),
+  genuine: optionalText(),
   quantity: z.coerce
     .number()
     .optional()

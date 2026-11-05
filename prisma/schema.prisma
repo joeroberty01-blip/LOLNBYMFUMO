@@ -631,13 +631,20 @@ model ManualInvoice {
 }
 
 model ManualInvoiceItem {
-  id          String  @id @default(cuid())
-  invoiceId   String
-  description String
-  partNumber  String?
-  quantity    Decimal @db.Decimal(12, 2)
-  unitPrice   Decimal @db.Decimal(14, 2)
-  orderIndex  Int     @default(0)
+  id              String  @id @default(cuid())
+  invoiceId       String
+  description     String
+  partNumber      String?
+  /// Free text, e.g. "Japan", "China" — common on B2B spare-parts quotations.
+  countryOfOrigin String?
+  /// Free text availability note, e.g. "Available", "On Order" — not a stock-system quantity,
+  /// this item has no relation to Part/Inventory at all (see ManualInvoice's own doc comment).
+  stockAvailable  String?
+  /// "Genuine" or "Non-Genuine" — a plain label, not an enum, same style as paymentMode/docType.
+  genuine         String?
+  quantity        Decimal @db.Decimal(12, 2)
+  unitPrice       Decimal @db.Decimal(14, 2)
+  orderIndex      Int     @default(0)
 
   invoice ManualInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 

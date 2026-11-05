@@ -220,13 +220,34 @@ function ManualInvoicePdfDocument({
               borderWidth: 0.5,
               borderColor: "#cccccc",
             };
+            const extras = [
+              item.countryOfOrigin ? `Origin: ${item.countryOfOrigin}` : null,
+              item.stockAvailable ? `Stock: ${item.stockAvailable}` : null,
+              item.genuine ? item.genuine : null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
             return (
               <View key={i} style={{ flexDirection: "row" }}>
                 {company.hasSerialColumn && <Text style={{ ...cellStyle, flex: cols.sn }}>{i + 1}</Text>}
-                <Text style={{ ...cellStyle, flex: cols.desc }}>
-                  {item.description}
-                  {item.partNumber ? ` (${item.partNumber})` : ""}
-                </Text>
+                <View
+                  style={{
+                    flex: cols.desc,
+                    borderWidth: 0.5,
+                    borderColor: "#cccccc",
+                    paddingHorizontal: cellStyle.padding,
+                    paddingTop: cellStyle.padding,
+                    paddingBottom: cellStyle.padding,
+                  }}
+                >
+                  <Text style={{ fontSize: cellStyle.fontSize }}>
+                    {item.description}
+                    {item.partNumber ? ` (${item.partNumber})` : ""}
+                  </Text>
+                  {extras && (
+                    <Text style={{ fontSize: sz(6.5, 4), color: "#777777", marginTop: 1 }}>{extras}</Text>
+                  )}
+                </View>
                 <Text style={{ ...cellStyle, flex: cols.qty, textAlign: "right" }}>{item.quantity}</Text>
                 <Text style={{ ...cellStyle, flex: cols.price, textAlign: "right" }}>
                   {currency.format(item.unitPrice)}

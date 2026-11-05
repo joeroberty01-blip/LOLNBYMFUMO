@@ -54,6 +54,9 @@ export default async function EditManualInvoicePage({ params }: { params: Promis
           items: invoice.items.map((item) => ({
             description: item.description,
             partNumber: item.partNumber ?? "",
+            countryOfOrigin: item.countryOfOrigin ?? "",
+            stockAvailable: item.stockAvailable ?? "",
+            genuine: item.genuine ?? "",
             quantity: item.quantity,
             unitPrice: item.unitPrice,
           })),

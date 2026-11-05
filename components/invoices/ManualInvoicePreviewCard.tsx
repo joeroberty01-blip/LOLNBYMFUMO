@@ -9,6 +9,9 @@ const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maxi
 export type ManualInvoicePreviewItem = {
   description: string;
   partNumber?: string | null;
+  countryOfOrigin?: string | null;
+  stockAvailable?: string | null;
+  genuine?: string | null;
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -212,21 +215,28 @@ export function ManualInvoicePreviewCard({
               </td>
             </tr>
           ) : (
-            data.items.map((item, i) => (
+            data.items.map((item, i) => {
+              const extras = [
+                item.countryOfOrigin ? `Origin: ${item.countryOfOrigin}` : null,
+                item.stockAvailable ? `Stock: ${item.stockAvailable}` : null,
+                item.genuine ? item.genuine : null,
+              ].filter(Boolean);
+              const descCell = (
+                <>
+                  {item.description || "—"}
+                  {item.partNumber ? ` (${item.partNumber})` : ""}
+                  {extras.length > 0 && <div className="text-xs text-gray-500">{extras.join(" · ")}</div>}
+                </>
+              );
+              return (
               <tr key={i} style={i % 2 === 1 ? { backgroundColor: `${company.bannerColor}0d` } : undefined}>
                 {company.hasSerialColumn && <td className="border border-gray-300 px-2 py-1">{i + 1}</td>}
                 {company.hasSerialColumn ? (
-                  <td className="border border-gray-300 px-2 py-1">
-                    {item.description || "—"}
-                    {item.partNumber ? ` (${item.partNumber})` : ""}
-                  </td>
+                  <td className="border border-gray-300 px-2 py-1">{descCell}</td>
                 ) : (
                   <>
                     <td className="border border-gray-300 px-2 py-1 text-right">{item.quantity}</td>
-                    <td className="border border-gray-300 px-2 py-1">
-                      {item.description || "—"}
-                      {item.partNumber ? ` (${item.partNumber})` : ""}
-                    </td>
+                    <td className="border border-gray-300 px-2 py-1">{descCell}</td>
                   </>
                 )}
                 {company.hasSerialColumn && (
@@ -239,7 +249,8 @@ export function ManualInvoicePreviewCard({
                   {currency.format(item.amount)}
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>
