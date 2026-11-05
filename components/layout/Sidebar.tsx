@@ -23,6 +23,8 @@ import {
   Globe,
   Calculator,
   ArrowLeftRight,
+  FileText,
+  Tags,
   X,
 } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/I18nProvider";
@@ -58,6 +60,7 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
       items: [
         { href: "/dashboard/admin/parts", label: t.nav.parts, icon: Package },
         { href: "/dashboard/admin/parts/bulk-upload", label: t.nav.bulkUpload, icon: Upload },
+        { href: "/dashboard/admin/stickers", label: t.nav.stickers, icon: Tags },
         { href: "/dashboard/admin/stores", label: t.nav.stores, icon: Store },
         { href: "/dashboard/admin/customers", label: t.nav.customers, icon: Users },
         { href: "/dashboard/admin/debt-management", label: t.nav.debtManagement, icon: CreditCard },
@@ -84,6 +87,16 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
           href: "/dashboard/admin/stock-movements",
           label: t.nav.stockMovements,
           icon: ArrowLeftRight,
+        },
+      ],
+    },
+    {
+      label: t.nav.manualInvoices,
+      items: [
+        {
+          href: "/dashboard/admin/manual-invoices",
+          label: t.nav.manualInvoices,
+          icon: FileText,
         },
       ],
     },

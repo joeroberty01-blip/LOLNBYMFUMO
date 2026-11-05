@@ -61,6 +61,18 @@ export const COMPANY_PROFILES: Record<"lolnby" | "woodland", CompanyProfile> = {
   },
 };
 
+/** Short label used for the generated "digital signature" treatment on freestanding invoices
+ * (see components/invoices/DigitalSignature.tsx and lib/invoices/manualInvoicePdf.tsx) — the
+ * first two words of the registered name, title-cased. */
+export function getSignatureLabel(company: CompanyProfile): string {
+  return company.name
+    .split(" ")
+    .slice(0, 2)
+    .join(" ")
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+}
+
 /** TRA standard VAT rate. Sale.total is already VAT-inclusive (no separate VAT step exists
  * anywhere in the sales flow), so Lolnby's invoice backs Sub Total and VAT out of that one total
  * rather than adding VAT on top of it. Not used for Woodland (hasVat: false). */

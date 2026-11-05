@@ -22,6 +22,8 @@ export const en = {
   customerDebts: "Customer Debts",
   debtManagement: "Debt Management",
   partSalesHistory: "Part Sale History",
+  manualInvoices: "Company Invoices",
+  stickers: "Stickers",
 };
 
 export const sw = {
@@ -48,4 +50,6 @@ export const sw = {
   customerDebts: "Madeni ya Wateja",
   debtManagement: "Usimamizi wa Madeni",
   partSalesHistory: "Historia ya Mauzo ya Part",
+  manualInvoices: "Invoice za Makampuni",
+  stickers: "Stickers",
 };
