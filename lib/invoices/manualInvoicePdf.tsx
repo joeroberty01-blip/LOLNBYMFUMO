@@ -260,73 +260,50 @@ function ManualInvoicePdfDocument({
           })}
         </View>
 
-        {company.hasVat ? (
-          <View style={{ alignItems: "flex-end", marginBottom: mb(10, 4) }}>
-            {[
-              ["Sub Total", currency.format(subTotal), false],
-              ["VAT 18%", currency.format(vat), false],
-              ["TOTAL (TSh)", currency.format(invoice.total), true],
-            ].map(([label, value, isTotal]) => (
-              <View key={label as string} style={{ flexDirection: "row" }}>
-                <Text
-                  style={{
-                    fontSize: sz(9, 6.5),
-                    fontWeight: 700,
-                    padding: mb(5, 1.5),
-                    borderWidth: 0.5,
-                    borderColor: "#cccccc",
-                    width: 110,
-                    backgroundColor: isTotal ? "#f2f2f2" : undefined,
-                  }}
-                >
-                  {label}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: sz(9, 6.5),
-                    fontWeight: isTotal ? 700 : 400,
-                    padding: mb(5, 1.5),
-                    borderWidth: 0.5,
-                    borderColor: "#cccccc",
-                    width: 90,
-                    textAlign: "right",
-                    backgroundColor: isTotal ? "#f2f2f2" : undefined,
-                  }}
-                >
-                  {value}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              borderTopWidth: 1,
-              borderBottomWidth: 1,
-              borderColor: "#cccccc",
-              paddingVertical: mb(6, 3),
-              marginBottom: mb(10, 4),
-            }}
-          >
-            <Text style={{ fontSize: sz(9, 7), fontWeight: 700 }}>E.&O.E</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 8,
-                borderWidth: 0.5,
-                borderColor: company.bannerColor,
-                padding: mb(6, 3),
-              }}
-            >
-              <Text style={{ fontSize: sz(9, 7), fontWeight: 700 }}>TOTAL</Text>
-              <Text style={{ fontSize: sz(9, 7), fontWeight: 700 }}>{currency.format(invoice.total)}</Text>
+        <View style={{ alignItems: "flex-end", marginBottom: mb(10, 4) }}>
+          {(company.hasVat
+            ? [
+                ["Sub Total", currency.format(subTotal), false],
+                ["VAT 18%", currency.format(vat), false],
+                ["TOTAL (TSh)", currency.format(invoice.total), true],
+              ]
+            : [
+                ["VAT Exempted", "-", false],
+                ["TOTAL (TSh)", currency.format(invoice.total), true],
+              ]
+          ).map(([label, value, isTotal]) => (
+            <View key={label as string} style={{ flexDirection: "row" }}>
+              <Text
+                style={{
+                  fontSize: sz(9, 6.5),
+                  fontWeight: 700,
+                  padding: mb(5, 1.5),
+                  borderWidth: 0.5,
+                  borderColor: "#cccccc",
+                  width: 110,
+                  backgroundColor: isTotal ? "#f2f2f2" : undefined,
+                }}
+              >
+                {label}
+              </Text>
+              <Text
+                style={{
+                  fontSize: sz(9, 6.5),
+                  fontWeight: isTotal ? 700 : 400,
+                  padding: mb(5, 1.5),
+                  borderWidth: 0.5,
+                  borderColor: "#cccccc",
+                  width: 90,
+                  textAlign: "right",
+                  backgroundColor: isTotal ? "#f2f2f2" : undefined,
+                }}
+              >
+                {value}
+              </Text>
             </View>
-          </View>
-        )}
-        {company.hasVat && <Text style={{ fontSize: sz(9, 7), marginBottom: mb(14, 5) }}>E&O.E</Text>}
+          ))}
+        </View>
+        <Text style={{ fontSize: sz(9, 7), marginBottom: mb(14, 5) }}>E&O.E</Text>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: mb(16, 6) }}>
           <View style={{ maxWidth: "60%" }}>
