@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { Download, Mail, MessageCircle } from "lucide-react";
 import { updateSaleTraReceiptNo } from "@/lib/actions/sales";
 import { updateCustomerTaxDetails } from "@/lib/actions/customers";
 import type { SaleInvoiceData } from "@/lib/data/sales";
@@ -36,10 +37,70 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
   const [isSaving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [isPreparing, setIsPreparing] = useState<"download" | "whatsapp" | "email" | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   const company: CompanyProfile = COMPANY_PROFILES[companyKey];
   const subTotal = invoice.total / (1 + VAT_RATE);
   const vat = invoice.total - subTotal;
+  const docNumber = `${docType === "proforma" ? "PF-" : ""}${String(invoice.invoiceNumber).padStart(4, "0")}`;
+  const pdfFilename = `Invoice-${docNumber}.pdf`;
+
+  async function fetchPdfBlob(): Promise<Blob> {
+    const res = await fetch(`/api/sales/${invoice.id}/invoice/pdf?company=${companyKey}&docType=${docType}`);
+    if (!res.ok) throw new Error("Imeshindwa kutengeneza PDF");
+    return res.blob();
+  }
+
+  function triggerDownload(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = pdfFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDownload() {
+    setShareError(null);
+    setIsPreparing("download");
+    try {
+      triggerDownload(await fetchPdfBlob());
+    } catch {
+      setShareError("Imeshindwa kupakua PDF. Jaribu tena.");
+    } finally {
+      setIsPreparing(null);
+    }
+  }
+
+  async function handleShare(channel: "whatsapp" | "email") {
+    setShareError(null);
+    setIsPreparing(channel);
+    try {
+      const blob = await fetchPdfBlob();
+      const file = new File([blob], pdfFilename, { type: "application/pdf" });
+      const shareText = `Invoice ${docNumber} — ${company.name}`;
+      if (typeof navigator.share === "function" && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: shareText, text: shareText });
+          return;
+        } catch {
+          // Cancelled or unsupported mid-flight — fall through to the link-based fallback below.
+        }
+      }
+      triggerDownload(blob);
+      const note = `${shareText} — PDF imepakuliwa, tafadhali iambatanishe.`;
+      if (channel === "whatsapp") {
+        window.open(`https://wa.me/?text=${encodeURIComponent(note)}`, "_blank");
+      } else {
+        window.location.href = `mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(note)}`;
+      }
+    } catch {
+      setShareError("Imeshindwa kuandaa invoice. Jaribu tena.");
+    } finally {
+      setIsPreparing(null);
+    }
+  }
 
   function handleSave() {
     setSaveError(null);
@@ -65,7 +126,6 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
 
   const docLabel =
     docType === "proforma" ? "PROFORMA INVOICE" : company.hasVat ? "TAX INVOICE" : "INVOICE";
-  const docNumber = `${docType === "proforma" ? "PF-" : ""}${String(invoice.invoiceNumber).padStart(4, "0")}`;
 
   return (
     <div>
@@ -109,11 +169,34 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
           <Button type="button" variant="secondary" disabled={isSaving} onClick={handleSave}>
             {isSaving ? "Inahifadhi..." : "Hifadhi"}
           </Button>
+          <Button type="button" variant="secondary" disabled={isPreparing !== null} onClick={handleDownload}>
+            <Download size={14} className="mr-1 inline" />
+            {isPreparing === "download" ? "Inapakua..." : "Pakua PDF"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPreparing !== null}
+            onClick={() => handleShare("whatsapp")}
+          >
+            <MessageCircle size={14} className="mr-1 inline" />
+            {isPreparing === "whatsapp" ? "Inaandaa..." : "WhatsApp"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPreparing !== null}
+            onClick={() => handleShare("email")}
+          >
+            <Mail size={14} className="mr-1 inline" />
+            {isPreparing === "email" ? "Inaandaa..." : "Email"}
+          </Button>
           <Button type="button" variant="primary" onClick={() => window.print()}>
             Print
           </Button>
         </div>
       </div>
+      {shareError && <p className="no-print mb-3 text-sm text-danger">{shareError}</p>}
 
       <div className="mx-auto w-full max-w-3xl border border-gray-300 bg-white p-6 text-black print:border-0 print:p-0">
         <div className="mb-4 rounded py-3 text-center" style={{ backgroundColor: company.bannerColor }}>
@@ -165,12 +248,6 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
             )}
           </div>
         </div>
-        {docType === "proforma" && (
-          <p className="no-print mb-4 text-xs text-warning">
-            Profoma {company.hasVat ? "haina TRA Receipt No — " : ""}si tax document rasmi, ni quote kwa
-            customer kabla ya malipo.
-          </p>
-        )}
 
         <div className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
           <span className="font-semibold" style={{ color: company.bannerColor }}>
@@ -343,20 +420,22 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
             <p>Date: {format(invoice.createdAt, "d MMM yyyy")}</p>
             <p>For: {company.name}</p>
           </div>
-          <div className="relative text-center">
-            <p className="mb-8">
-              {company.hasStamp ? "Signature / Stamp:" : "Authorised Signature / Stamp"}
-            </p>
-            <div className="w-48 border-t border-black" />
+          <div className="flex items-end gap-2">
+            {/* Stamp sits beside the signature line, not on top of it — overlapping used to
+                bury the stamp's own lettering under the "Signature / Stamp" label. */}
             {company.hasStamp && (
-              <div className="pointer-events-none absolute top-[-18px] right-0">
-                <CompanyStamp
-                  date={format(invoice.createdAt, "dd MMM yyyy").toUpperCase()}
-                  companyKey={companyKey}
-                  width={110}
-                />
-              </div>
+              <CompanyStamp
+                date={format(invoice.createdAt, "dd MMM yyyy").toUpperCase()}
+                companyKey={companyKey}
+                width={100}
+              />
             )}
+            <div className="text-center">
+              <p className="mb-8">
+                {company.hasStamp ? "Signature / Stamp:" : "Authorised Signature / Stamp"}
+              </p>
+              <div className="w-48 border-t border-black" />
+            </div>
           </div>
         </div>
       </div>

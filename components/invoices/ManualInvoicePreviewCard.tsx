@@ -95,12 +95,6 @@ export function ManualInvoicePreviewCard({
           )}
         </div>
       </div>
-      {docType === "proforma" && (
-        <p className="no-print mb-4 text-xs text-warning">
-          Profoma {company.hasVat ? "haina TRA Receipt No — " : ""}si tax document rasmi, ni quote kwa customer
-          kabla ya malipo.
-        </p>
-      )}
 
       <div className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
         <span className="font-semibold" style={{ color: company.bannerColor }}>
@@ -322,20 +316,22 @@ export function ManualInvoicePreviewCard({
           <p>Date: {format(data.createdAt, "d MMM yyyy")}</p>
           <p>For: {company.name}</p>
         </div>
-        <div className="relative text-center">
-          {data.authorizedBy && <p className="text-xs">Authorized by:</p>}
-          <p className="mb-1 text-xs text-secondary">Signature:</p>
-          <DigitalSignature companyKey={companyKey} />
-          {data.authorizedBy && <p className="mt-1 text-xs font-bold">{data.authorizedBy}</p>}
+        <div className="flex items-end gap-2">
+          {/* Stamp sits beside the signature block, not on top of it — overlapping the two
+              used to bury the stamp's own lettering under the signature/"Authorized by" text. */}
           {company.hasStamp && (
-            <div className="pointer-events-none absolute top-[-18px] right-0">
-              <CompanyStamp
-                date={format(data.createdAt, "dd MMM yyyy").toUpperCase()}
-                companyKey={companyKey}
-                width={110}
-              />
-            </div>
+            <CompanyStamp
+              date={format(data.createdAt, "dd MMM yyyy").toUpperCase()}
+              companyKey={companyKey}
+              width={100}
+            />
           )}
+          <div className="text-center">
+            {data.authorizedBy && <p className="text-xs">Authorized by:</p>}
+            <p className="mb-1 text-xs text-secondary">Signature:</p>
+            <DigitalSignature companyKey={companyKey} />
+            {data.authorizedBy && <p className="mt-1 text-xs font-bold">{data.authorizedBy}</p>}
+          </div>
         </div>
       </div>
     </div>
