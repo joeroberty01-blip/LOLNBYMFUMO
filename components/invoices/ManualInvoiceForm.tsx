@@ -122,7 +122,9 @@ export function ManualInvoiceForm({
       setFormError(result.error);
       return;
     }
-    router.push(`/dashboard/admin/manual-invoices/${result.id}`);
+    // Back to the list, not the view page — the form "closes" once the invoice is saved
+    // rather than opening straight into another page to click away from.
+    router.push("/dashboard/admin/manual-invoices");
     router.refresh();
   });
 

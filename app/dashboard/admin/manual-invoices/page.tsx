@@ -6,19 +6,25 @@ import { auth } from "@/lib/auth";
 import { listManualInvoices } from "@/lib/data/manualInvoices";
 import { COMPANY_PROFILES } from "@/lib/companyInfo";
 import { Button } from "@/components/ui/Button";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { DeleteManualInvoiceButton } from "@/components/invoices/DeleteManualInvoiceButton";
 
 const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Lists freestanding PDF invoices created for external companies — a document series that
  * never touches Sale/Inventory/stock (see prisma/schema.prisma's ManualInvoice doc comment). */
-export default async function ManualInvoicesPage() {
+export default async function ManualInvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
-  const invoices = await listManualInvoices();
+  const { q } = await searchParams;
+  const invoices = await listManualInvoices(q);
 
   return (
     <div>
@@ -36,6 +42,10 @@ export default async function ManualInvoicesPage() {
         </Link>
       </div>
 
+      <div className="mb-4">
+        <SearchBar placeholder="Tafuta kwa jina la mteja au namba ya invoice..." className="max-w-sm" />
+      </div>
+
       <div className="overflow-x-auto rounded-card border border-border">
         <table className="w-full text-sm">
           <thead className="bg-surface-elevated text-left text-secondary">
@@ -46,6 +56,8 @@ export default async function ManualInvoicesPage() {
               <th className="px-3 py-2">Mteja</th>
               <th className="px-3 py-2">Aina</th>
               <th className="px-3 py-2">Hali</th>
+              <th className="px-3 py-2">Malipo</th>
+              <th className="px-3 py-2">Delivery</th>
               <th className="px-3 py-2 text-right">Jumla (TSh)</th>
               <th className="px-3 py-2">Aliyetengeneza</th>
               <th className="px-3 py-2 text-right">Actions</th>
@@ -86,6 +98,28 @@ export default async function ManualInvoicesPage() {
                     </span>
                   )}
                 </td>
+                <td className="px-3 py-2">
+                  {invoice.paid ? (
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                      Imelipwa
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-xs font-medium text-secondary">
+                      Haijalipwa
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {invoice.delivered ? (
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                      Imefikishwa
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-xs font-medium text-secondary">
+                      Bado
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums text-primary">
                   {currency.format(invoice.total)}
                 </td>
@@ -117,8 +151,8 @@ export default async function ManualInvoicesPage() {
             ))}
             {invoices.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-secondary">
-                  Hakuna invoice bado.
+                <td colSpan={11} className="px-3 py-6 text-center text-secondary">
+                  {q ? "Hakuna invoice iliyopatikana." : "Hakuna invoice bado."}
                 </td>
               </tr>
             )}

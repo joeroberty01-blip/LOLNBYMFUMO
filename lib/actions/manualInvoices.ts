@@ -216,3 +216,26 @@ export async function deleteManualInvoice(id: string): Promise<DeleteActionResul
   }
   return { success: true };
 }
+
+/** Toggles the invoice's "paid" status — tracked on the invoice itself, not a separate
+ * payments table (see the ManualInvoice doc comment). */
+export async function setManualInvoicePaid(id: string, paid: boolean): Promise<DeleteActionResult> {
+  await requireAdmin();
+  try {
+    await prisma.manualInvoice.update({ where: { id }, data: { paid } });
+  } catch {
+    return { success: false, error: "Invoice hii haipo tena (huenda imeshafutwa)" };
+  }
+  return { success: true };
+}
+
+/** Toggles the invoice's "delivered" status — same plain-field treatment as `paid`. */
+export async function setManualInvoiceDelivered(id: string, delivered: boolean): Promise<DeleteActionResult> {
+  await requireAdmin();
+  try {
+    await prisma.manualInvoice.update({ where: { id }, data: { delivered } });
+  } catch {
+    return { success: false, error: "Invoice hii haipo tena (huenda imeshafutwa)" };
+  }
+  return { success: true };
+}

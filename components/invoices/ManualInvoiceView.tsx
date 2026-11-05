@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Download, Mail, MessageCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Download, Mail, MessageCircle, Check, Truck } from "lucide-react";
 import type { ManualInvoiceData } from "@/lib/data/manualInvoices";
 import { COMPANY_PROFILES, type CompanyProfile } from "@/lib/companyInfo";
+import { setManualInvoicePaid, setManualInvoiceDelivered } from "@/lib/actions/manualInvoices";
 import { Button } from "@/components/ui/Button";
 import { ManualInvoicePreviewCard } from "@/components/invoices/ManualInvoicePreviewCard";
 
@@ -17,12 +19,43 @@ type DocType = "tax" | "proforma";
  * record backing it to patch in place. The company/doc-type toggles only change how this one
  * render looks, same as InvoiceView — they are not persisted. */
 export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
+  const router = useRouter();
   const [companyKey, setCompanyKey] = useState<"lolnby" | "woodland">(
     invoice.companyKey === "woodland" ? "woodland" : "lolnby"
   );
   const [docType, setDocType] = useState<DocType>(invoice.docType === "proforma" ? "proforma" : "tax");
   const [isPreparing, setIsPreparing] = useState<"download" | "whatsapp" | "email" | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [paid, setPaid] = useState(invoice.paid);
+  const [delivered, setDelivered] = useState(invoice.delivered);
+  const [isTogglingPaid, startTogglingPaid] = useTransition();
+  const [isTogglingDelivered, startTogglingDelivered] = useTransition();
+
+  function togglePaid() {
+    const next = !paid;
+    setPaid(next);
+    startTogglingPaid(async () => {
+      const result = await setManualInvoicePaid(invoice.id, next);
+      if (!result.success) {
+        setPaid(!next);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function toggleDelivered() {
+    const next = !delivered;
+    setDelivered(next);
+    startTogglingDelivered(async () => {
+      const result = await setManualInvoiceDelivered(invoice.id, next);
+      if (!result.success) {
+        setDelivered(!next);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   const company: CompanyProfile = COMPANY_PROFILES[companyKey];
   const docNumber = `${docType === "proforma" ? "PF-" : ""}MI-${String(invoice.invoiceNumber).padStart(4, "0")}`;
@@ -98,6 +131,32 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
               Hariri
             </Button>
           </Link>
+          <button
+            type="button"
+            disabled={isTogglingPaid}
+            onClick={togglePaid}
+            className={`flex items-center gap-1 rounded-control border px-3 py-1.5 text-xs font-medium ${
+              paid
+                ? "border-success/40 bg-success/15 text-success"
+                : "border-border text-secondary hover:text-primary"
+            }`}
+          >
+            <Check size={13} />
+            {paid ? "Imelipwa" : "Weka Imelipwa"}
+          </button>
+          <button
+            type="button"
+            disabled={isTogglingDelivered}
+            onClick={toggleDelivered}
+            className={`flex items-center gap-1 rounded-control border px-3 py-1.5 text-xs font-medium ${
+              delivered
+                ? "border-success/40 bg-success/15 text-success"
+                : "border-border text-secondary hover:text-primary"
+            }`}
+          >
+            <Truck size={13} />
+            {delivered ? "Imefikishwa" : "Weka Imefikishwa"}
+          </button>
           <div className="flex overflow-hidden rounded-control border border-border">
             {(["woodland", "lolnby"] as const).map((key) => (
               <button

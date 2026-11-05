@@ -6,6 +6,8 @@ export type ManualInvoiceListRow = {
   companyKey: string;
   docType: string;
   status: string;
+  paid: boolean;
+  delivered: boolean;
   customerName: string;
   total: number;
   createdAt: Date;
@@ -37,6 +39,8 @@ export type ManualInvoiceData = {
   companyKey: string;
   docType: string;
   status: string;
+  paid: boolean;
+  delivered: boolean;
   paymentMode: string;
   deliveryTime: string | null;
   brand: string | null;
@@ -58,9 +62,20 @@ export type ManualInvoiceData = {
 };
 
 /** Lists manual company invoices, newest first — a freestanding document series that never
- * touches Sale/Inventory (see prisma/schema.prisma's ManualInvoice doc comment). */
-export async function listManualInvoices(limit = 100): Promise<ManualInvoiceListRow[]> {
+ * touches Sale/Inventory (see prisma/schema.prisma's ManualInvoice doc comment). `query`
+ * filters by customer name or invoice number (the search bar at the top of the list page). */
+export async function listManualInvoices(query?: string, limit = 100): Promise<ManualInvoiceListRow[]> {
+  const q = query?.trim();
+  const invoiceNumberQuery = q ? Number(q.replace(/\D/g, "")) : undefined;
   const rows = await prisma.manualInvoice.findMany({
+    where: q
+      ? {
+          OR: [
+            { customerName: { contains: q, mode: "insensitive" } },
+            ...(invoiceNumberQuery ? [{ invoiceNumber: invoiceNumberQuery }] : []),
+          ],
+        }
+      : undefined,
     orderBy: { createdAt: "desc" },
     take: limit,
     select: {
@@ -69,6 +84,8 @@ export async function listManualInvoices(limit = 100): Promise<ManualInvoiceList
       companyKey: true,
       docType: true,
       status: true,
+      paid: true,
+      delivered: true,
       customerName: true,
       total: true,
       createdAt: true,
@@ -81,6 +98,8 @@ export async function listManualInvoices(limit = 100): Promise<ManualInvoiceList
     companyKey: row.companyKey,
     docType: row.docType,
     status: row.status,
+    paid: row.paid,
+    delivered: row.delivered,
     customerName: row.customerName,
     total: Number(row.total),
     createdAt: row.createdAt,
@@ -127,6 +146,8 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
       companyKey: true,
       docType: true,
       status: true,
+      paid: true,
+      delivered: true,
       paymentMode: true,
       deliveryTime: true,
       brand: true,
@@ -166,6 +187,8 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
     companyKey: invoice.companyKey,
     docType: invoice.docType,
     status: invoice.status,
+    paid: invoice.paid,
+    delivered: invoice.delivered,
     paymentMode: invoice.paymentMode,
     deliveryTime: invoice.deliveryTime,
     brand: invoice.brand,
