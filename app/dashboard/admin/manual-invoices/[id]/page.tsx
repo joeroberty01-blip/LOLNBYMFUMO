@@ -12,6 +12,11 @@ export default async function ManualInvoicePage({ params }: { params: Promise<{ 
   const { id } = await params;
   const invoice = await getManualInvoiceData(id);
   if (!invoice) notFound();
+  // A draft is work-in-progress — send the admin straight to finishing it rather than showing
+  // a printable view of something incomplete.
+  if (invoice.status === "draft") {
+    redirect(`/dashboard/admin/manual-invoices/${id}/edit`);
+  }
 
   return <ManualInvoiceView invoice={invoice} />;
 }

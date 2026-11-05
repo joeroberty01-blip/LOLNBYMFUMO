@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getManualInvoiceData } from "@/lib/data/manualInvoices";
+import { getManualInvoiceData, listManualInvoiceCustomers } from "@/lib/data/manualInvoices";
 import { ManualInvoiceForm } from "@/components/invoices/ManualInvoiceForm";
 import type { manualInvoicePaymentModes } from "@/lib/validators/manualInvoices";
 
@@ -12,7 +12,7 @@ export default async function EditManualInvoicePage({ params }: { params: Promis
   }
 
   const { id } = await params;
-  const invoice = await getManualInvoiceData(id);
+  const [invoice, customers] = await Promise.all([getManualInvoiceData(id), listManualInvoiceCustomers()]);
   if (!invoice) notFound();
 
   return (
@@ -20,12 +20,17 @@ export default async function EditManualInvoicePage({ params }: { params: Promis
       <Link href={`/dashboard/admin/manual-invoices/${id}`} className="text-sm text-accent hover:underline">
         ← Rudi kwa Invoice
       </Link>
-      <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
+      <h1 className="mt-4 mb-1 text-xl font-semibold text-primary">
         Hariri Invoice — MI-{String(invoice.invoiceNumber).padStart(4, "0")}
       </h1>
+      {invoice.status === "draft" && (
+        <p className="mb-6 text-sm font-medium text-warning">Hii ni Draft — bado haijakamilika.</p>
+      )}
+      {invoice.status !== "draft" && <div className="mb-6" />}
       <ManualInvoiceForm
         mode="edit"
         invoiceId={id}
+        customers={customers}
         defaultValues={{
           companyKey: invoice.companyKey as "lolnby" | "woodland",
           docType: invoice.docType as "tax" | "proforma",

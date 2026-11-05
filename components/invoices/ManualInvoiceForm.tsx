@@ -10,32 +10,43 @@ import {
   manualInvoicePaymentModes,
   MANUAL_INVOICE_PAYMENT_LABELS,
 } from "@/lib/validators/manualInvoices";
-import { createManualInvoice, updateManualInvoice } from "@/lib/actions/manualInvoices";
+import {
+  createManualInvoice,
+  updateManualInvoice,
+  saveManualInvoiceDraft,
+  updateManualInvoiceDraft,
+} from "@/lib/actions/manualInvoices";
 import { COMPANY_PROFILES } from "@/lib/companyInfo";
+import type { ManualInvoiceCustomerOption } from "@/lib/data/manualInvoices";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 type FormValues = z.input<typeof createManualInvoiceSchema>;
 
 const emptyItem = { description: "", partNumber: "", quantity: 1, unitPrice: 0 };
+const CUSTOMER_DATALIST_ID = "manual-invoice-known-customers";
 
 type Props = {
   mode: "create" | "edit";
   invoiceId?: string;
   defaultValues?: Partial<FormValues>;
+  customers?: ManualInvoiceCustomerOption[];
 };
 
 /** Create/edit form for a freestanding "invoice ya kampuni" (ManualInvoice) — free-text
  * customer details and line items typed in by hand. Never touches Sale/Inventory/Part/Customer
  * (see prisma/schema.prisma's ManualInvoice doc comment and lib/actions/manualInvoices.ts). */
-export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
+export function ManualInvoiceForm({ mode, invoiceId, defaultValues, customers = [] }: Props) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const {
     register,
     control,
     handleSubmit,
     watch,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<z.input<typeof createManualInvoiceSchema>, unknown, z.output<typeof createManualInvoiceSchema>>({
     resolver: zodResolver(createManualInvoiceSchema),
@@ -56,6 +67,17 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
   );
   const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const customerNameField = register("customerName");
+
+  function applyKnownCustomer(name: string) {
+    const match = customers.find((c) => c.name === name);
+    if (!match) return;
+    setValue("customerAddress", match.address ?? "");
+    setValue("customerTin", match.tin ?? "");
+    setValue("customerVrn", match.vrn ?? "");
+    setValue("customerPoNumber", match.poNumber ?? "");
+  }
+
   const onSubmit = handleSubmit(async (data) => {
     setFormError(null);
     const result =
@@ -67,6 +89,26 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
     router.push(`/dashboard/admin/manual-invoices/${result.id}`);
     router.refresh();
   });
+
+  async function handleSaveDraft() {
+    setFormError(null);
+    setIsSavingDraft(true);
+    try {
+      const raw = getValues();
+      const result =
+        mode === "create"
+          ? await saveManualInvoiceDraft(raw)
+          : await updateManualInvoiceDraft(invoiceId as string, raw);
+      if (!result.success) {
+        setFormError(result.error);
+        return;
+      }
+      router.push(`/dashboard/admin/manual-invoices/${result.id}/edit`);
+      router.refresh();
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }
 
   return (
     <form onSubmit={onSubmit} className="flex max-w-3xl flex-col gap-5">
@@ -113,7 +155,20 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Label>Jina la Mteja/Kampuni</Label>
-            <Input {...register("customerName")} />
+            <Input
+              list={CUSTOMER_DATALIST_ID}
+              placeholder="Chagua kutoka waliopo, au andika jina jipya"
+              {...customerNameField}
+              onChange={(e) => {
+                customerNameField.onChange(e);
+                applyKnownCustomer(e.target.value);
+              }}
+            />
+            <datalist id={CUSTOMER_DATALIST_ID}>
+              {customers.map((c) => (
+                <option key={c.name} value={c.name} />
+              ))}
+            </datalist>
             {errors.customerName && <p className="mt-1 text-sm text-danger">{errors.customerName.message}</p>}
           </div>
           <div>
@@ -217,9 +272,22 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
 
       {formError && <p className="text-sm text-danger">{formError}</p>}
 
-      <Button type="submit" variant="primary" disabled={isSubmitting} className="self-start">
-        {isSubmitting ? "Inahifadhi..." : mode === "create" ? "Tengeneza Invoice" : "Hifadhi Mabadiliko"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" variant="primary" disabled={isSubmitting || isSavingDraft}>
+          {isSubmitting ? "Inahifadhi..." : mode === "create" ? "Tengeneza Invoice" : "Hifadhi Mabadiliko"}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={isSubmitting || isSavingDraft}
+          onClick={handleSaveDraft}
+        >
+          {isSavingDraft ? "Inahifadhi Draft..." : "Hifadhi Draft"}
+        </Button>
+        <span className="text-xs text-secondary">
+          Draft haihitaji kujazwa kamili — unaweza kuendelea nayo baadaye.
+        </span>
+      </div>
     </form>
   );
 }

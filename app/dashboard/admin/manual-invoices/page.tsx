@@ -43,6 +43,7 @@ export default async function ManualInvoicesPage() {
               <th className="px-3 py-2">Kampuni</th>
               <th className="px-3 py-2">Mteja</th>
               <th className="px-3 py-2">Aina</th>
+              <th className="px-3 py-2">Hali</th>
               <th className="px-3 py-2 text-right">Jumla (TSh)</th>
               <th className="px-3 py-2">Aliyetengeneza</th>
             </tr>
@@ -52,7 +53,11 @@ export default async function ManualInvoicesPage() {
               <tr key={invoice.id} className="hover:bg-surface-elevated">
                 <td className="px-3 py-2">
                   <Link
-                    href={`/dashboard/admin/manual-invoices/${invoice.id}`}
+                    href={
+                      invoice.status === "draft"
+                        ? `/dashboard/admin/manual-invoices/${invoice.id}/edit`
+                        : `/dashboard/admin/manual-invoices/${invoice.id}`
+                    }
                     className="text-accent hover:underline"
                   >
                     MI-{String(invoice.invoiceNumber).padStart(4, "0")}
@@ -63,9 +68,20 @@ export default async function ManualInvoicesPage() {
                   {COMPANY_PROFILES[invoice.companyKey as "lolnby" | "woodland"]?.pickerLabel ??
                     invoice.companyKey}
                 </td>
-                <td className="px-3 py-2 text-primary">{invoice.customerName}</td>
+                <td className="px-3 py-2 text-primary">{invoice.customerName || "—"}</td>
                 <td className="px-3 py-2 text-secondary">
                   {invoice.docType === "proforma" ? "Proforma" : "Tax/Invoice"}
+                </td>
+                <td className="px-3 py-2">
+                  {invoice.status === "draft" ? (
+                    <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+                      Draft
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                      Final
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-primary">
                   {currency.format(invoice.total)}
@@ -75,7 +91,7 @@ export default async function ManualInvoicesPage() {
             ))}
             {invoices.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-secondary">
+                <td colSpan={8} className="px-3 py-6 text-center text-secondary">
                   Hakuna invoice bado.
                 </td>
               </tr>

@@ -587,6 +587,10 @@ model ManualInvoice {
   invoiceNumber     Int      @unique @default(autoincrement())
   companyKey        String
   docType           String   @default("tax")
+  /// "draft" (saved mid-fill, excluded from nothing but shown with a badge — still just a row
+  /// in this same table) or "final". A draft can have an empty customerName/items; a final
+  /// invoice always passed full validation when it was saved.
+  status            String   @default("final")
   /// "CASH" or "CREDIT" — unlike Sale, this is a plain label on the printed invoice, not a
   /// driver of any accounting/debt logic (a ManualInvoice never touches CustomerPayment/debt
   /// tables).

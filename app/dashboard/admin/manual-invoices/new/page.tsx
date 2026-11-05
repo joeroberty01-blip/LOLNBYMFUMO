@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { listManualInvoiceCustomers } from "@/lib/data/manualInvoices";
 import { ManualInvoiceForm } from "@/components/invoices/ManualInvoiceForm";
 
 export default async function NewManualInvoicePage() {
@@ -9,13 +10,15 @@ export default async function NewManualInvoicePage() {
     redirect("/login/admin");
   }
 
+  const customers = await listManualInvoiceCustomers();
+
   return (
     <div>
       <Link href="/dashboard/admin/manual-invoices" className="text-sm text-accent hover:underline">
         ← Rudi kwa Invoice za Makampuni
       </Link>
       <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">Invoice Mpya ya Kampuni</h1>
-      <ManualInvoiceForm mode="create" />
+      <ManualInvoiceForm mode="create" customers={customers} />
     </div>
   );
 }

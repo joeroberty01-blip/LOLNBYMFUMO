@@ -5,10 +5,19 @@ export type ManualInvoiceListRow = {
   invoiceNumber: number;
   companyKey: string;
   docType: string;
+  status: string;
   customerName: string;
   total: number;
   createdAt: Date;
   createdByName: string;
+};
+
+export type ManualInvoiceCustomerOption = {
+  name: string;
+  address: string | null;
+  tin: string | null;
+  vrn: string | null;
+  poNumber: string | null;
 };
 
 export type ManualInvoiceItemData = {
@@ -24,6 +33,7 @@ export type ManualInvoiceData = {
   invoiceNumber: number;
   companyKey: string;
   docType: string;
+  status: string;
   paymentMode: string;
   deliveryTime: string | null;
   brand: string | null;
@@ -55,6 +65,7 @@ export async function listManualInvoices(limit = 100): Promise<ManualInvoiceList
       invoiceNumber: true,
       companyKey: true,
       docType: true,
+      status: true,
       customerName: true,
       total: true,
       createdAt: true,
@@ -66,10 +77,41 @@ export async function listManualInvoices(limit = 100): Promise<ManualInvoiceList
     invoiceNumber: row.invoiceNumber,
     companyKey: row.companyKey,
     docType: row.docType,
+    status: row.status,
     customerName: row.customerName,
     total: Number(row.total),
     createdAt: row.createdAt,
     createdByName: row.createdBy.name,
+  }));
+}
+
+/** Distinct customers seen across past manual invoices (by name — most recent address/TIN/VRN/
+ * order number wins when the same name was typed more than once), so the create/edit form can
+ * offer "pick a saved customer, or type a new one" instead of retyping their details every
+ * time. There's no separate Customer table for this feature by design (see the ManualInvoice
+ * doc comment) — these rows are the only record of it. */
+export async function listManualInvoiceCustomers(): Promise<ManualInvoiceCustomerOption[]> {
+  const rows = await prisma.$queryRaw<
+    {
+      customerName: string;
+      customerAddress: string | null;
+      customerTin: string | null;
+      customerVrn: string | null;
+      customerPoNumber: string | null;
+    }[]
+  >`
+    SELECT DISTINCT ON ("customerName")
+      "customerName", "customerAddress", "customerTin", "customerVrn", "customerPoNumber"
+    FROM "ManualInvoice"
+    WHERE "customerName" != ''
+    ORDER BY "customerName", "createdAt" DESC
+  `;
+  return rows.map((row) => ({
+    name: row.customerName,
+    address: row.customerAddress,
+    tin: row.customerTin,
+    vrn: row.customerVrn,
+    poNumber: row.customerPoNumber,
   }));
 }
 
@@ -81,6 +123,7 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
       invoiceNumber: true,
       companyKey: true,
       docType: true,
+      status: true,
       paymentMode: true,
       deliveryTime: true,
       brand: true,
@@ -111,6 +154,7 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
     invoiceNumber: invoice.invoiceNumber,
     companyKey: invoice.companyKey,
     docType: invoice.docType,
+    status: invoice.status,
     paymentMode: invoice.paymentMode,
     deliveryTime: invoice.deliveryTime,
     brand: invoice.brand,
