@@ -315,8 +315,15 @@ export function ManualInvoiceForm({
       </div>
     </form>
 
-      <div className="no-print w-full xl:sticky xl:top-4 xl:w-[460px] xl:shrink-0">
+      <div className="no-print w-full xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:w-[460px] xl:shrink-0 xl:overflow-y-auto">
         <p className="mb-2 text-xs font-semibold text-secondary">Preview — jinsi invoice itakavyoonekana</p>
+        {/* Shrunk to comfortably fit the viewport height alongside the form instead of running
+            off-screen, and bolded throughout — this live preview is a quick-glance reference
+            while filling the form, not the printed page (ManualInvoiceView), so it favours
+            legibility at a small size over matching print weight exactly. `zoom` (not
+            `transform: scale`) shrinks the actual layout box, not just the paint, so it doesn't
+            leave dead space around it. */}
+        <div className="origin-top font-semibold" style={{ zoom: 0.68 }}>
         <ManualInvoicePreviewCard
           data={{
             invoiceNumber: invoiceNumber ?? null,
@@ -341,6 +348,7 @@ export function ManualInvoiceForm({
           companyKey={watched.companyKey ?? "lolnby"}
           docType={watched.docType ?? "tax"}
         />
+        </div>
       </div>
     </div>
   );

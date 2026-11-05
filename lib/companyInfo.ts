@@ -19,8 +19,9 @@ export type CompanyProfile = {
   hasVat: boolean;
   /** Lolnby's items table has an S/N column; Woodland's doesn't. */
   hasSerialColumn: boolean;
-  /** Only Lolnby has a generated company stamp (see CompanyStamp.tsx) — Woodland's template
-   * just has a blank "Authorised Signature / Stamp" box, no stamp artwork exists for it. */
+  /** Both entities have a generated company stamp now (see CompanyStamp.tsx, which picks the
+   * matching artwork — public/company-stamp.svg for Lolnby, public/woodland-stamp.svg for
+   * Woodland — off this same key). */
   hasStamp: boolean;
   bannerColor: string;
   titleColor: string;
@@ -55,7 +56,7 @@ export const COMPANY_PROFILES: Record<"lolnby" | "woodland", CompanyProfile> = {
     vrn: null,
     hasVat: false,
     hasSerialColumn: false,
-    hasStamp: false,
+    hasStamp: true,
     bannerColor: "#1F7BBF",
     titleColor: "#C8102E",
   },

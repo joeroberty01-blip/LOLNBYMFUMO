@@ -328,8 +328,12 @@ export function ManualInvoicePreviewCard({
           <DigitalSignature companyKey={companyKey} />
           {data.authorizedBy && <p className="mt-1 text-xs font-bold">{data.authorizedBy}</p>}
           {company.hasStamp && (
-            <div className="pointer-events-none absolute top-[-30px] right-0">
-              <CompanyStamp date={format(data.createdAt, "dd MMM yyyy").toUpperCase()} />
+            <div className="pointer-events-none absolute top-[-18px] right-0">
+              <CompanyStamp
+                date={format(data.createdAt, "dd MMM yyyy").toUpperCase()}
+                companyKey={companyKey}
+                width={110}
+              />
             </div>
           )}
         </div>

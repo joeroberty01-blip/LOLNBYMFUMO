@@ -349,8 +349,12 @@ export function InvoiceView({ invoice }: { invoice: SaleInvoiceData }) {
             </p>
             <div className="w-48 border-t border-black" />
             {company.hasStamp && (
-              <div className="pointer-events-none absolute top-[-30px] right-0">
-                <CompanyStamp date={format(invoice.createdAt, "dd MMM yyyy").toUpperCase()} />
+              <div className="pointer-events-none absolute top-[-18px] right-0">
+                <CompanyStamp
+                  date={format(invoice.createdAt, "dd MMM yyyy").toUpperCase()}
+                  companyKey={companyKey}
+                  width={110}
+                />
               </div>
             )}
           </div>
