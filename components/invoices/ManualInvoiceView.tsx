@@ -9,6 +9,7 @@ import { COMPANY_PROFILES, VAT_RATE, type CompanyProfile } from "@/lib/companyIn
 import { Button } from "@/components/ui/Button";
 import { CompanyStamp } from "@/components/sales/CompanyStamp";
 import { DigitalSignature } from "@/components/invoices/DigitalSignature";
+import { MANUAL_INVOICE_PAYMENT_LABELS } from "@/lib/validators/manualInvoices";
 
 const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -275,9 +276,13 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
             </>
           )}
           <span className="font-semibold" style={{ color: company.bannerColor }}>
-            Payment Mode
+            Payment Method
           </span>
-          <span>{invoice.paymentMode === "CREDIT" ? "Credit" : "Cash"}</span>
+          <span>
+            {MANUAL_INVOICE_PAYMENT_LABELS[
+              invoice.paymentMode as keyof typeof MANUAL_INVOICE_PAYMENT_LABELS
+            ] ?? invoice.paymentMode}
+          </span>
         </div>
 
         <table className="mb-4 w-full border-collapse text-sm">

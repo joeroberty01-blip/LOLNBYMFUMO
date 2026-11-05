@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getManualInvoiceData } from "@/lib/data/manualInvoices";
 import { ManualInvoiceForm } from "@/components/invoices/ManualInvoiceForm";
+import type { manualInvoicePaymentModes } from "@/lib/validators/manualInvoices";
 
 export default async function EditManualInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -28,7 +29,7 @@ export default async function EditManualInvoicePage({ params }: { params: Promis
         defaultValues={{
           companyKey: invoice.companyKey as "lolnby" | "woodland",
           docType: invoice.docType as "tax" | "proforma",
-          paymentMode: invoice.paymentMode as "CASH" | "CREDIT",
+          paymentMode: invoice.paymentMode as (typeof manualInvoicePaymentModes)[number],
           deliveryTime: invoice.deliveryTime ?? "",
           brand: invoice.brand ?? "",
           customerName: invoice.customerName,

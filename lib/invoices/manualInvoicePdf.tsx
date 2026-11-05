@@ -2,6 +2,7 @@ import { Document, Page, Text, View, renderToBuffer } from "@react-pdf/renderer"
 import { format } from "date-fns";
 import type { ManualInvoiceData } from "@/lib/data/manualInvoices";
 import { COMPANY_PROFILES, VAT_RATE, getSignatureLabel, type CompanyProfile } from "@/lib/companyInfo";
+import { MANUAL_INVOICE_PAYMENT_LABELS } from "@/lib/validators/manualInvoices";
 
 const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -122,7 +123,11 @@ function ManualInvoicePdfDocument({
             invoice.brand ? ["Brand", invoice.brand] : null,
             invoice.deliveryTime ? ["Delivery Time", invoice.deliveryTime] : null,
             invoice.period ? ["Period", invoice.period] : null,
-            ["Payment Mode", invoice.paymentMode === "CREDIT" ? "Credit" : "Cash"],
+            [
+              "Payment Method",
+              MANUAL_INVOICE_PAYMENT_LABELS[invoice.paymentMode as keyof typeof MANUAL_INVOICE_PAYMENT_LABELS] ??
+                invoice.paymentMode,
+            ],
           ]
             .filter((row): row is [string, string] => row !== null)
             .map(([label, value]) => (

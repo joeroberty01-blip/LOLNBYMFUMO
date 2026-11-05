@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { createManualInvoiceSchema } from "@/lib/validators/manualInvoices";
+import {
+  createManualInvoiceSchema,
+  manualInvoicePaymentModes,
+  MANUAL_INVOICE_PAYMENT_LABELS,
+} from "@/lib/validators/manualInvoices";
 import { createManualInvoice, updateManualInvoice } from "@/lib/actions/manualInvoices";
 import { COMPANY_PROFILES } from "@/lib/companyInfo";
 import { Input, Label } from "@/components/ui/Input";
@@ -85,10 +89,13 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
           </select>
         </div>
         <div>
-          <Label>Payment Mode</Label>
+          <Label>Payment Method</Label>
           <select {...register("paymentMode")} className="w-full rounded-control border border-border bg-page px-3 py-2 text-sm text-primary">
-            <option value="CASH">Cash</option>
-            <option value="CREDIT">Credit</option>
+            {manualInvoicePaymentModes.map((mode) => (
+              <option key={mode} value={mode}>
+                {MANUAL_INVOICE_PAYMENT_LABELS[mode]}
+              </option>
+            ))}
           </select>
         </div>
         <div>
