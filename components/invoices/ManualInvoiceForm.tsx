@@ -18,6 +18,7 @@ import {
 } from "@/lib/actions/manualInvoices";
 import { COMPANY_PROFILES } from "@/lib/companyInfo";
 import type { ManualInvoiceCustomerOption } from "@/lib/data/manualInvoices";
+import { ManualInvoicePreviewCard } from "@/components/invoices/ManualInvoicePreviewCard";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -31,12 +32,26 @@ type Props = {
   invoiceId?: string;
   defaultValues?: Partial<FormValues>;
   customers?: ManualInvoiceCustomerOption[];
+  /** Only known in edit mode (a draft/invoice already has these) — the live preview falls back
+   * to "...." for the number and today's date when creating a brand new one. */
+  invoiceNumber?: number;
+  createdAt?: Date;
 };
 
 /** Create/edit form for a freestanding "invoice ya kampuni" (ManualInvoice) — free-text
  * customer details and line items typed in by hand. Never touches Sale/Inventory/Part/Customer
- * (see prisma/schema.prisma's ManualInvoice doc comment and lib/actions/manualInvoices.ts). */
-export function ManualInvoiceForm({ mode, invoiceId, defaultValues, customers = [] }: Props) {
+ * (see prisma/schema.prisma's ManualInvoice doc comment and lib/actions/manualInvoices.ts). A
+ * live preview of the actual letterhead renders alongside the form (ManualInvoicePreviewCard,
+ * shared with the finished view/print page) so the admin can see the real invoice take shape
+ * while filling it in, instead of only after saving. */
+export function ManualInvoiceForm({
+  mode,
+  invoiceId,
+  defaultValues,
+  customers = [],
+  invoiceNumber,
+  createdAt,
+}: Props) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -60,14 +75,23 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues, customers = 
     },
   });
   const { fields, append, remove } = useFieldArray<FormValues>({ control, name: "items" });
-  const items = watch("items");
-  const total = (items ?? []).reduce(
-    (sum, item) => sum + (Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0),
-    0
-  );
   const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const customerNameField = register("customerName");
+
+  const watched = watch();
+  const previewItems = (watched.items ?? []).map((item) => {
+    const quantity = Number(item?.quantity) || 0;
+    const unitPrice = Number(item?.unitPrice) || 0;
+    return {
+      description: item?.description ?? "",
+      partNumber: item?.partNumber,
+      quantity,
+      unitPrice,
+      amount: quantity * unitPrice,
+    };
+  });
+  const total = previewItems.reduce((sum, item) => sum + item.amount, 0);
 
   function applyKnownCustomer(name: string) {
     const match = customers.find((c) => c.name === name);
@@ -111,7 +135,8 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues, customers = 
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-3xl flex-col gap-5">
+    <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+    <form onSubmit={onSubmit} className="flex w-full max-w-3xl flex-1 flex-col gap-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label>Kampuni ya Kutoa Invoice</Label>
@@ -289,5 +314,34 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues, customers = 
         </span>
       </div>
     </form>
+
+      <div className="no-print w-full xl:sticky xl:top-4 xl:w-[460px] xl:shrink-0">
+        <p className="mb-2 text-xs font-semibold text-secondary">Preview — jinsi invoice itakavyoonekana</p>
+        <ManualInvoicePreviewCard
+          data={{
+            invoiceNumber: invoiceNumber ?? null,
+            customerName: watched.customerName ?? "",
+            customerAddress: watched.customerAddress,
+            customerTin: watched.customerTin,
+            customerVrn: watched.customerVrn,
+            customerPoNumber: watched.customerPoNumber,
+            brand: watched.brand,
+            deliveryTime: watched.deliveryTime,
+            period: watched.period,
+            paymentMode: watched.paymentMode ?? "CASH",
+            traReceiptNo: watched.traReceiptNo,
+            bankMethod: watched.bankMethod,
+            bankAccountName: watched.bankAccountName,
+            bankAccountNumber: watched.bankAccountNumber,
+            authorizedBy: watched.authorizedBy,
+            createdAt: createdAt ?? new Date(),
+            items: previewItems,
+            total,
+          }}
+          companyKey={watched.companyKey ?? "lolnby"}
+          docType={watched.docType ?? "tax"}
+        />
+      </div>
+    </div>
   );
 }
