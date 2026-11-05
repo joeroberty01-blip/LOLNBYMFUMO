@@ -583,30 +583,41 @@ model ChinaMasterItem {
 /// inventory, or the POS sales data at all. Uses its own invoice number sequence (separate
 /// from Sale.invoiceNumber) and reuses the same company letterhead data (lib/companyInfo.ts).
 model ManualInvoice {
-  id               String   @id @default(cuid())
-  invoiceNumber    Int      @unique @default(autoincrement())
-  companyKey       String
-  docType          String   @default("tax")
+  id                String   @id @default(cuid())
+  invoiceNumber     Int      @unique @default(autoincrement())
+  companyKey        String
+  docType           String   @default("tax")
   /// "CASH" or "CREDIT" — unlike Sale, this is a plain label on the printed invoice, not a
   /// driver of any accounting/debt logic (a ManualInvoice never touches CustomerPayment/debt
   /// tables).
-  paymentMode      String   @default("CASH")
+  paymentMode       String   @default("CASH")
   /// Free-text expected delivery time for this order (e.g. "Siku 3", "Mara moja").
-  deliveryTime     String?
+  deliveryTime      String?
   /// Free-text brand this order is for (e.g. a vehicle make or parts brand).
-  brand            String?
-  customerName     String
-  customerAddress  String?
-  customerTin      String?
-  customerVrn      String?
+  brand             String?
+  customerName      String
+  customerAddress   String?
+  customerTin       String?
+  customerVrn       String?
   /// The customer's own Purchase Order reference number (their internal order number), printed
   /// on the invoice when they've given one — common for B2B company invoices.
-  customerPoNumber String?
-  traReceiptNo     String?
-  notes            String?
-  total            Decimal  @db.Decimal(14, 2)
-  createdById      String
-  createdAt        DateTime @default(now())
+  customerPoNumber  String?
+  /// Free-text billing period this invoice covers (e.g. "01-07-2026 to 30-09-2026") — common
+  /// for recurring/contract invoicing, optional otherwise.
+  period            String?
+  /// Bank payment details shown in a "Payment Details" box when the customer is paying by bank
+  /// transfer — distinct from `paymentMode` (Cash/Credit), which is just a plain label.
+  bankMethod        String?
+  bankAccountName   String?
+  bankAccountNumber String?
+  /// Named signatory printed under "Authorized Signature" (e.g. "NIXON J KIWELU") — in addition
+  /// to the generated DigitalSignature treatment, matching the business's own paper template.
+  authorizedBy      String?
+  traReceiptNo      String?
+  notes             String?
+  total             Decimal  @db.Decimal(14, 2)
+  createdById       String
+  createdAt         DateTime @default(now())
 
   createdBy User                @relation(fields: [createdById], references: [id])
   items     ManualInvoiceItem[]

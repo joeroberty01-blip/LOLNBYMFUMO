@@ -121,6 +121,7 @@ function ManualInvoicePdfDocument({
             invoice.customerPoNumber ? ["Order Number", invoice.customerPoNumber] : null,
             invoice.brand ? ["Brand", invoice.brand] : null,
             invoice.deliveryTime ? ["Delivery Time", invoice.deliveryTime] : null,
+            invoice.period ? ["Period", invoice.period] : null,
             ["Payment Mode", invoice.paymentMode === "CREDIT" ? "Credit" : "Cash"],
           ]
             .filter((row): row is [string, string] => row !== null)
@@ -302,15 +303,59 @@ function ManualInvoicePdfDocument({
         {company.hasVat && <Text style={{ fontSize: sz(9, 7), marginBottom: mb(14, 5) }}>E&O.E</Text>}
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: mb(16, 6) }}>
-          <View>
+          <View style={{ maxWidth: "60%" }}>
+            {(invoice.bankMethod || invoice.bankAccountName || invoice.bankAccountNumber) && (
+              <View
+                style={{
+                  marginBottom: mb(8, 3),
+                  borderWidth: 0.5,
+                  borderColor: company.bannerColor,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: sz(8, 6),
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    backgroundColor: company.bannerColor,
+                    padding: mb(3, 1.5),
+                  }}
+                >
+                  PAYMENT DETAILS
+                </Text>
+                <View style={{ padding: mb(3, 1.5) }}>
+                  {invoice.bankMethod && (
+                    <Text style={{ fontSize: sz(8, 6) }}>
+                      <Text style={{ fontWeight: 700 }}>Payment Method:</Text> {invoice.bankMethod}
+                    </Text>
+                  )}
+                  {invoice.bankAccountName && (
+                    <Text style={{ fontSize: sz(8, 6) }}>
+                      <Text style={{ fontWeight: 700 }}>Account Name:</Text> {invoice.bankAccountName}
+                    </Text>
+                  )}
+                  {invoice.bankAccountNumber && (
+                    <Text style={{ fontSize: sz(8, 6) }}>
+                      <Text style={{ fontWeight: 700 }}>Account Number:</Text> {invoice.bankAccountNumber}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
             <Text style={{ fontSize: sz(9, 7) }}>Date: {format(invoice.createdAt, "d MMM yyyy")}</Text>
             <Text style={{ fontSize: sz(9, 7) }}>For: {company.name}</Text>
           </View>
           <View style={{ alignItems: "center" }}>
+            {invoice.authorizedBy && <Text style={{ fontSize: sz(8, 6) }}>Authorized by:</Text>}
             <Text style={{ fontSize: sz(8, 6), color: "#555555", marginBottom: mb(4, 2) }}>Signature:</Text>
             <Text style={{ fontSize: sz(14, 10), fontFamily: "Helvetica-Oblique", color: company.titleColor }}>
               {getSignatureLabel(company)}
             </Text>
+            {invoice.authorizedBy && (
+              <Text style={{ fontSize: sz(9, 7), fontWeight: 700, marginTop: mb(3, 1.5) }}>
+                {invoice.authorizedBy}
+              </Text>
+            )}
           </View>
         </View>
       </Page>

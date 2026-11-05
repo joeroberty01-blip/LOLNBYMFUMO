@@ -266,6 +266,14 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
               <span>{invoice.deliveryTime}</span>
             </>
           )}
+          {invoice.period && (
+            <>
+              <span className="font-semibold" style={{ color: company.bannerColor }}>
+                Period
+              </span>
+              <span>{invoice.period}</span>
+            </>
+          )}
           <span className="font-semibold" style={{ color: company.bannerColor }}>
             Payment Mode
           </span>
@@ -379,14 +387,46 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
 
         {company.hasVat && <p className="mb-6 text-sm">E&amp;O.E</p>}
 
-        <div className="flex items-end justify-between text-sm">
-          <div>
+        <div className="flex items-end justify-between gap-4 text-sm">
+          <div className="max-w-[60%]">
+            {(invoice.bankMethod || invoice.bankAccountName || invoice.bankAccountNumber) && (
+              <div
+                className="mb-3 overflow-hidden rounded border"
+                style={{ borderColor: company.bannerColor }}
+              >
+                <div
+                  className="px-2.5 py-1 text-xs font-semibold text-white"
+                  style={{ backgroundColor: company.bannerColor }}
+                >
+                  PAYMENT DETAILS
+                </div>
+                <div className="space-y-0.5 px-2.5 py-1.5 text-xs">
+                  {invoice.bankMethod && (
+                    <p>
+                      <span className="font-semibold">Payment Method:</span> {invoice.bankMethod}
+                    </p>
+                  )}
+                  {invoice.bankAccountName && (
+                    <p>
+                      <span className="font-semibold">Account Name:</span> {invoice.bankAccountName}
+                    </p>
+                  )}
+                  {invoice.bankAccountNumber && (
+                    <p>
+                      <span className="font-semibold">Account Number:</span> {invoice.bankAccountNumber}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             <p>Date: {format(invoice.createdAt, "d MMM yyyy")}</p>
             <p>For: {company.name}</p>
           </div>
           <div className="relative text-center">
+            {invoice.authorizedBy && <p className="text-xs">Authorized by:</p>}
             <p className="mb-1 text-xs text-secondary">Signature:</p>
             <DigitalSignature companyKey={companyKey} />
+            {invoice.authorizedBy && <p className="mt-1 text-xs font-bold">{invoice.authorizedBy}</p>}
             {company.hasStamp && (
               <div className="pointer-events-none absolute top-[-30px] right-0">
                 <CompanyStamp date={format(invoice.createdAt, "dd MMM yyyy").toUpperCase()} />

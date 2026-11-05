@@ -32,6 +32,11 @@ export type ManualInvoiceData = {
   customerTin: string | null;
   customerVrn: string | null;
   customerPoNumber: string | null;
+  period: string | null;
+  bankMethod: string | null;
+  bankAccountName: string | null;
+  bankAccountNumber: string | null;
+  authorizedBy: string | null;
   traReceiptNo: string | null;
   notes: string | null;
   total: number;
@@ -84,6 +89,11 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
       customerTin: true,
       customerVrn: true,
       customerPoNumber: true,
+      period: true,
+      bankMethod: true,
+      bankAccountName: true,
+      bankAccountNumber: true,
+      authorizedBy: true,
       traReceiptNo: true,
       notes: true,
       total: true,
@@ -109,6 +119,11 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
     customerTin: invoice.customerTin,
     customerVrn: invoice.customerVrn,
     customerPoNumber: invoice.customerPoNumber,
+    period: invoice.period,
+    bankMethod: invoice.bankMethod,
+    bankAccountName: invoice.bankAccountName,
+    bankAccountNumber: invoice.bankAccountNumber,
+    authorizedBy: invoice.authorizedBy,
     traReceiptNo: invoice.traReceiptNo,
     notes: invoice.notes,
     total: Number(invoice.total),

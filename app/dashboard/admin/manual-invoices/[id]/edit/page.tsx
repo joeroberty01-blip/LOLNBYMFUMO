@@ -36,6 +36,11 @@ export default async function EditManualInvoicePage({ params }: { params: Promis
           customerTin: invoice.customerTin ?? "",
           customerVrn: invoice.customerVrn ?? "",
           customerPoNumber: invoice.customerPoNumber ?? "",
+          period: invoice.period ?? "",
+          bankMethod: invoice.bankMethod ?? "",
+          bankAccountName: invoice.bankAccountName ?? "",
+          bankAccountNumber: invoice.bankAccountNumber ?? "",
+          authorizedBy: invoice.authorizedBy ?? "",
           traReceiptNo: invoice.traReceiptNo ?? "",
           notes: invoice.notes ?? "",
           items: invoice.items.map((item) => ({

@@ -129,6 +129,28 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
             <Label>TRA Receipt No. (si lazima)</Label>
             <Input {...register("traReceiptNo")} />
           </div>
+          <div className="sm:col-span-2">
+            <Label>Period (si lazima)</Label>
+            <Input placeholder="mfano: 01-07-2026 to 30-09-2026" {...register("period")} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-card border border-border p-4">
+        <h2 className="mb-3 text-sm font-semibold text-primary">Payment Details (si lazima)</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <Label>Payment Method</Label>
+            <Input placeholder="mfano: CRDB BANK" {...register("bankMethod")} />
+          </div>
+          <div>
+            <Label>Account Name</Label>
+            <Input {...register("bankAccountName")} />
+          </div>
+          <div>
+            <Label>Account Number</Label>
+            <Input {...register("bankAccountNumber")} />
+          </div>
         </div>
       </div>
 
@@ -175,9 +197,15 @@ export function ManualInvoiceForm({ mode, invoiceId, defaultValues }: Props) {
         </p>
       </div>
 
-      <div>
-        <Label>Maelezo ya Ndani (si lazima, hayaonekani kwenye PDF)</Label>
-        <Input {...register("notes")} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <Label>Authorized By (si lazima)</Label>
+          <Input placeholder="mfano: NIXON J KIWELU" {...register("authorizedBy")} />
+        </div>
+        <div>
+          <Label>Maelezo ya Ndani (si lazima, hayaonekani kwenye PDF)</Label>
+          <Input {...register("notes")} />
+        </div>
       </div>
 
       {formError && <p className="text-sm text-danger">{formError}</p>}
