@@ -47,6 +47,10 @@ const BANK_ACCOUNT_NUMBER_DEFAULTS: Record<"lolnby" | "woodland", string> = {
   lolnby: "0150487208600",
   woodland: "00200022687",
 };
+const BANK_ACCOUNT_NAME_DEFAULTS: Record<"lolnby" | "woodland", string> = {
+  lolnby: COMPANY_PROFILES.lolnby.name,
+  woodland: COMPANY_PROFILES.woodland.name,
+};
 
 type Props = {
   mode: "create" | "edit";
@@ -95,6 +99,8 @@ export function ManualInvoiceForm({
       bankMethod: BANK_METHOD_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
       bankAccountNumber:
         BANK_ACCOUNT_NUMBER_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
+      bankAccountName:
+        BANK_ACCOUNT_NAME_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
       ...defaultValues,
     },
   });
@@ -173,17 +179,18 @@ export function ManualInvoiceForm({
             {...register("companyKey", {
               onChange: (e) => {
                 const key = e.target.value as "lolnby" | "woodland";
-                const currentBankMethod = getValues("bankMethod");
-                if (!currentBankMethod || Object.values(BANK_METHOD_DEFAULTS).includes(currentBankMethod)) {
-                  setValue("bankMethod", BANK_METHOD_DEFAULTS[key]);
-                }
-                const currentAccountNumber = getValues("bankAccountNumber");
-                if (
-                  !currentAccountNumber ||
-                  Object.values(BANK_ACCOUNT_NUMBER_DEFAULTS).includes(currentAccountNumber)
-                ) {
-                  setValue("bankAccountNumber", BANK_ACCOUNT_NUMBER_DEFAULTS[key]);
-                }
+                const syncBankField = (
+                  field: "bankMethod" | "bankAccountNumber" | "bankAccountName",
+                  defaults: Record<"lolnby" | "woodland", string>
+                ) => {
+                  const current = getValues(field);
+                  if (!current || Object.values(defaults).includes(current)) {
+                    setValue(field, defaults[key]);
+                  }
+                };
+                syncBankField("bankMethod", BANK_METHOD_DEFAULTS);
+                syncBankField("bankAccountNumber", BANK_ACCOUNT_NUMBER_DEFAULTS);
+                syncBankField("bankAccountName", BANK_ACCOUNT_NAME_DEFAULTS);
               },
             })}
             className="w-full rounded-control border border-border bg-page px-3 py-2 text-sm text-primary"
