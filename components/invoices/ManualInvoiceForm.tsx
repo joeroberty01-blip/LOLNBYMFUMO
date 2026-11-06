@@ -36,12 +36,16 @@ const emptyItem = {
 };
 const CUSTOMER_DATALIST_ID = "manual-invoice-known-customers";
 
-/** Each company banks with a different institution, so the Payment Details "Payment Method"
- * bank name defaults to the right one for whichever company is selected — the admin can still
- * type over it for a one-off invoice. */
+/** Each company banks with a different institution/account, so the Payment Details fields
+ * default to the right ones for whichever company is selected — the admin can still type over
+ * them for a one-off invoice. */
 const BANK_METHOD_DEFAULTS: Record<"lolnby" | "woodland", string> = {
   lolnby: "CRDB BANK",
   woodland: "AZANIA BANK",
+};
+const BANK_ACCOUNT_NUMBER_DEFAULTS: Record<"lolnby" | "woodland", string> = {
+  lolnby: "0150487208600",
+  woodland: "00200022687",
 };
 
 type Props = {
@@ -89,6 +93,8 @@ export function ManualInvoiceForm({
       customerName: "",
       items: [emptyItem],
       bankMethod: BANK_METHOD_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
+      bankAccountNumber:
+        BANK_ACCOUNT_NUMBER_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
       ...defaultValues,
     },
   });
@@ -168,10 +174,15 @@ export function ManualInvoiceForm({
               onChange: (e) => {
                 const key = e.target.value as "lolnby" | "woodland";
                 const currentBankMethod = getValues("bankMethod");
-                const isDefaultOrEmpty =
-                  !currentBankMethod || Object.values(BANK_METHOD_DEFAULTS).includes(currentBankMethod);
-                if (isDefaultOrEmpty) {
+                if (!currentBankMethod || Object.values(BANK_METHOD_DEFAULTS).includes(currentBankMethod)) {
                   setValue("bankMethod", BANK_METHOD_DEFAULTS[key]);
+                }
+                const currentAccountNumber = getValues("bankAccountNumber");
+                if (
+                  !currentAccountNumber ||
+                  Object.values(BANK_ACCOUNT_NUMBER_DEFAULTS).includes(currentAccountNumber)
+                ) {
+                  setValue("bankAccountNumber", BANK_ACCOUNT_NUMBER_DEFAULTS[key]);
                 }
               },
             })}
