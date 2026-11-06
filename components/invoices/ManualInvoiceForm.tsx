@@ -36,6 +36,14 @@ const emptyItem = {
 };
 const CUSTOMER_DATALIST_ID = "manual-invoice-known-customers";
 
+/** Each company banks with a different institution, so the Payment Details "Payment Method"
+ * bank name defaults to the right one for whichever company is selected — the admin can still
+ * type over it for a one-off invoice. */
+const BANK_METHOD_DEFAULTS: Record<"lolnby" | "woodland", string> = {
+  lolnby: "CRDB BANK",
+  woodland: "AZANIA BANK",
+};
+
 type Props = {
   mode: "create" | "edit";
   invoiceId?: string;
@@ -80,6 +88,7 @@ export function ManualInvoiceForm({
       paymentMode: "CASH",
       customerName: "",
       items: [emptyItem],
+      bankMethod: BANK_METHOD_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
       ...defaultValues,
     },
   });
@@ -154,7 +163,20 @@ export function ManualInvoiceForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label>Kampuni ya Kutoa Invoice</Label>
-          <select {...register("companyKey")} className="w-full rounded-control border border-border bg-page px-3 py-2 text-sm text-primary">
+          <select
+            {...register("companyKey", {
+              onChange: (e) => {
+                const key = e.target.value as "lolnby" | "woodland";
+                const currentBankMethod = getValues("bankMethod");
+                const isDefaultOrEmpty =
+                  !currentBankMethod || Object.values(BANK_METHOD_DEFAULTS).includes(currentBankMethod);
+                if (isDefaultOrEmpty) {
+                  setValue("bankMethod", BANK_METHOD_DEFAULTS[key]);
+                }
+              },
+            })}
+            className="w-full rounded-control border border-border bg-page px-3 py-2 text-sm text-primary"
+          >
             {(["lolnby", "woodland"] as const).map((key) => (
               <option key={key} value={key}>
                 {COMPANY_PROFILES[key].name}
