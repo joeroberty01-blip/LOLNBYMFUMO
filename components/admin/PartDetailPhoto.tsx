@@ -98,14 +98,11 @@ export function PartDetailPhoto({
           <img src={photoUrl} alt={name} className="h-full w-full object-cover" />
         ) : genericImageUrl ? (
           <div className="relative h-full w-full">
-            <img src={genericImageUrl} alt={name} className="h-full w-full object-cover opacity-80" />
+            <img src={genericImageUrl} alt={name} className="h-full w-full object-cover" />
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100">
               <Camera size={20} />
               <span className="text-xs">Pakia Picha Halisi</span>
             </div>
-            <span className="absolute top-1 right-1 rounded-full border border-border bg-surface px-1.5 py-0.5 text-[9px] leading-tight text-secondary">
-              Picha ya jumla
-            </span>
           </div>
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-surface text-secondary">

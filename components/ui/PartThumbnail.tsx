@@ -22,17 +22,13 @@ export function PartThumbnail({
   if (!hasPhoto) {
     if (genericImageUrl) {
       return (
-        <div className="relative h-9 w-9 shrink-0" title="Picha ya jumla (siyo halisi)">
-          <img
-            src={genericImageUrl}
-            alt={alt}
-            loading="lazy"
-            className="h-9 w-9 shrink-0 rounded-control border border-border object-cover opacity-80"
-          />
-          <span className="absolute -right-1 -bottom-1 rounded-full border border-border bg-surface px-1 text-[8px] leading-tight text-secondary">
-            AI
-          </span>
-        </div>
+        <img
+          src={genericImageUrl}
+          alt={alt}
+          loading="lazy"
+          title="Picha ya jumla (siyo halisi)"
+          className="h-9 w-9 shrink-0 rounded-control border border-border object-cover"
+        />
       );
     }
     return (
