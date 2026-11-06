@@ -10,7 +10,7 @@ import { setManualInvoicePaid, setManualInvoiceDelivered } from "@/lib/actions/m
 import { Button } from "@/components/ui/Button";
 import { ManualInvoicePreviewCard } from "@/components/invoices/ManualInvoicePreviewCard";
 
-type DocType = "tax" | "proforma";
+type DocType = "tax" | "proforma" | "delivery";
 
 /** Print/view for a freestanding company invoice (ManualInvoice) — reuses the same letterhead
  * data as the Sale-backed InvoiceView (lib/companyInfo.ts). Unlike InvoiceView there's no
@@ -23,7 +23,9 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
   const [companyKey, setCompanyKey] = useState<"lolnby" | "woodland">(
     invoice.companyKey === "woodland" ? "woodland" : "lolnby"
   );
-  const [docType, setDocType] = useState<DocType>(invoice.docType === "proforma" ? "proforma" : "tax");
+  const [docType, setDocType] = useState<DocType>(
+    invoice.docType === "proforma" ? "proforma" : invoice.docType === "delivery" ? "delivery" : "tax"
+  );
   const [isPreparing, setIsPreparing] = useState<"download" | "whatsapp" | "email" | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [paid, setPaid] = useState(invoice.paid);
@@ -58,7 +60,8 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
   }
 
   const company: CompanyProfile = COMPANY_PROFILES[companyKey];
-  const docNumber = `${docType === "proforma" ? "PF-" : ""}MI-${String(invoice.invoiceNumber).padStart(4, "0")}`;
+  const docNumberPrefix = docType === "proforma" ? "PF-" : docType === "delivery" ? "DN-" : "";
+  const docNumber = `${docNumberPrefix}MI-${String(invoice.invoiceNumber).padStart(4, "0")}`;
   const pdfFilename = `Invoice-${docNumber}.pdf`;
 
   async function fetchPdfBlob(): Promise<Blob> {
@@ -183,6 +186,13 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
               className={`px-3 py-1.5 text-xs font-medium ${docType === "tax" ? "bg-accent text-white" : "bg-surface text-secondary"}`}
             >
               {company.hasVat ? "Tax Invoice" : "Invoice"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDocType("delivery")}
+              className={`px-3 py-1.5 text-xs font-medium ${docType === "delivery" ? "bg-accent text-white" : "bg-surface text-secondary"}`}
+            >
+              Delivery Note
             </button>
           </div>
           <Button

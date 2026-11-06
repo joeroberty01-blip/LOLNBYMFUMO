@@ -38,7 +38,7 @@ export type ManualInvoiceItemInput = z.infer<typeof manualInvoiceItemSchema>;
 
 export const createManualInvoiceSchema = z.object({
   companyKey: z.enum(["lolnby", "woodland"]),
-  docType: z.enum(["tax", "proforma"]),
+  docType: z.enum(["tax", "proforma", "delivery"]),
   paymentMode: z.enum(manualInvoicePaymentModes),
   deliveryTime: optionalText(),
   brand: optionalText(),
@@ -85,7 +85,7 @@ export type DraftManualInvoiceItemInput = z.infer<typeof draftManualInvoiceItemS
 
 export const draftManualInvoiceSchema = z.object({
   companyKey: z.enum(["lolnby", "woodland"]),
-  docType: z.enum(["tax", "proforma"]),
+  docType: z.enum(["tax", "proforma", "delivery"]),
   paymentMode: z.enum(manualInvoicePaymentModes),
   deliveryTime: optionalText(),
   brand: optionalText(),

@@ -17,10 +17,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const sp = request.nextUrl.searchParams;
   const companyKey = sp.get("company") === "woodland" ? "woodland" : sp.get("company") === "lolnby" ? "lolnby" : (invoice.companyKey as "lolnby" | "woodland");
-  const docType = sp.get("docType") === "proforma" ? "proforma" : "tax";
+  const docTypeParam = sp.get("docType");
+  const docType = docTypeParam === "proforma" ? "proforma" : docTypeParam === "delivery" ? "delivery" : "tax";
 
   const buffer = await renderManualInvoicePdf(invoice, companyKey, docType);
-  const docPrefix = docType === "proforma" ? "PF-" : "";
+  const docPrefix = docType === "proforma" ? "PF-" : docType === "delivery" ? "DN-" : "";
   const filename = `Invoice-${docPrefix}MI-${String(invoice.invoiceNumber).padStart(4, "0")}.pdf`;
 
   return new Response(new Uint8Array(buffer), {

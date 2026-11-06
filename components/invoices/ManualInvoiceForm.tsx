@@ -167,6 +167,7 @@ export function ManualInvoiceForm({
           <select {...register("docType")} className="w-full rounded-control border border-border bg-page px-3 py-2 text-sm text-primary">
             <option value="tax">Tax Invoice / Invoice</option>
             <option value="proforma">Proforma Invoice</option>
+            <option value="delivery">Delivery Note</option>
           </select>
         </div>
         <div>

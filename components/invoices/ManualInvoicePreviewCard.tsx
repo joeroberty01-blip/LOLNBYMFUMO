@@ -49,14 +49,23 @@ export function ManualInvoicePreviewCard({
 }: {
   data: ManualInvoicePreviewData;
   companyKey: "lolnby" | "woodland";
-  docType: "tax" | "proforma";
+  docType: "tax" | "proforma" | "delivery";
 }) {
   const company: CompanyProfile = COMPANY_PROFILES[companyKey];
   const subTotal = data.total / (1 + VAT_RATE);
   const vat = data.total - subTotal;
+  const isDeliveryNote = docType === "delivery";
 
-  const docLabel = docType === "proforma" ? "PROFORMA INVOICE" : company.hasVat ? "TAX INVOICE" : "INVOICE";
-  const docNumber = `${docType === "proforma" ? "PF-" : ""}MI-${
+  const docLabel =
+    docType === "delivery"
+      ? "DELIVERY NOTE"
+      : docType === "proforma"
+        ? "PROFORMA INVOICE"
+        : company.hasVat
+          ? "TAX INVOICE"
+          : "INVOICE";
+  const docNumberPrefix = docType === "proforma" ? "PF-" : docType === "delivery" ? "DN-" : "";
+  const docNumber = `${docNumberPrefix}MI-${
     data.invoiceNumber ? String(data.invoiceNumber).padStart(4, "0") : "...."
   }`;
 
@@ -196,19 +205,23 @@ export function ManualInvoicePreviewCard({
                 Qty
               </th>
             )}
-            <th className="border px-2 py-1.5 text-right" style={{ borderColor: company.bannerColor }}>
-              {company.hasSerialColumn ? "Unit Price (TSh)" : "@ (Unit Price)"}
-            </th>
-            <th className="border px-2 py-1.5 text-right" style={{ borderColor: company.bannerColor }}>
-              {company.hasSerialColumn ? "Amount (TSh)" : "AMOUNT"}
-            </th>
+            {!isDeliveryNote && (
+              <>
+                <th className="border px-2 py-1.5 text-right" style={{ borderColor: company.bannerColor }}>
+                  {company.hasSerialColumn ? "Unit Price (TSh)" : "@ (Unit Price)"}
+                </th>
+                <th className="border px-2 py-1.5 text-right" style={{ borderColor: company.bannerColor }}>
+                  {company.hasSerialColumn ? "Amount (TSh)" : "AMOUNT"}
+                </th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
           {data.items.length === 0 ? (
             <tr>
               <td
-                colSpan={company.hasSerialColumn ? 5 : 4}
+                colSpan={company.hasSerialColumn ? (isDeliveryNote ? 3 : 5) : isDeliveryNote ? 2 : 4}
                 className="border border-gray-300 px-2 py-3 text-center text-gray-400"
               >
                 Hakuna item bado
@@ -242,12 +255,16 @@ export function ManualInvoicePreviewCard({
                 {company.hasSerialColumn && (
                   <td className="border border-gray-300 px-2 py-1 text-right">{item.quantity}</td>
                 )}
-                <td className="border border-gray-300 px-2 py-1 text-right tabular-nums">
-                  {currency.format(item.unitPrice)}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 text-right tabular-nums">
-                  {currency.format(item.amount)}
-                </td>
+                {!isDeliveryNote && (
+                  <>
+                    <td className="border border-gray-300 px-2 py-1 text-right tabular-nums">
+                      {currency.format(item.unitPrice)}
+                    </td>
+                    <td className="border border-gray-300 px-2 py-1 text-right tabular-nums">
+                      {currency.format(item.amount)}
+                    </td>
+                  </>
+                )}
               </tr>
               );
             })
@@ -255,55 +272,56 @@ export function ManualInvoicePreviewCard({
         </tbody>
       </table>
 
-      {company.hasVat ? (
-        <div className="mb-6 flex justify-end">
-          <table className="border-collapse text-sm">
-            <tbody>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1.5 font-medium">Sub Total</td>
-                <td className="border border-gray-300 px-3 py-1.5 text-right tabular-nums">
-                  {currency.format(subTotal)}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1.5 font-medium">VAT 18%</td>
-                <td className="border border-gray-300 px-3 py-1.5 text-right tabular-nums">
-                  {currency.format(vat)}
-                </td>
-              </tr>
-              <tr style={{ backgroundColor: `${company.bannerColor}10` }}>
-                <td className="border border-gray-300 px-3 py-1.5 font-bold">TOTAL (TSh)</td>
-                <td className="border border-gray-300 px-3 py-1.5 text-right font-bold tabular-nums">
-                  {currency.format(data.total)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="mb-6 flex justify-end">
-          <table className="border-collapse text-sm">
-            <tbody>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1.5 font-medium">VAT Exempted</td>
-                <td className="border border-gray-300 px-3 py-1.5 text-right tabular-nums">-</td>
-              </tr>
-              <tr style={{ backgroundColor: `${company.bannerColor}10` }}>
-                <td className="border border-gray-300 px-3 py-1.5 font-bold">TOTAL (TSh)</td>
-                <td className="border border-gray-300 px-3 py-1.5 text-right font-bold tabular-nums">
-                  {currency.format(data.total)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+      {!isDeliveryNote &&
+        (company.hasVat ? (
+          <div className="mb-6 flex justify-end">
+            <table className="border-collapse text-sm">
+              <tbody>
+                <tr>
+                  <td className="border border-gray-300 px-3 py-1.5 font-medium">Sub Total</td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-right tabular-nums">
+                    {currency.format(subTotal)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 px-3 py-1.5 font-medium">VAT 18%</td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-right tabular-nums">
+                    {currency.format(vat)}
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: `${company.bannerColor}10` }}>
+                  <td className="border border-gray-300 px-3 py-1.5 font-bold">TOTAL (TSh)</td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-right font-bold tabular-nums">
+                    {currency.format(data.total)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="mb-6 flex justify-end">
+            <table className="border-collapse text-sm">
+              <tbody>
+                <tr>
+                  <td className="border border-gray-300 px-3 py-1.5 font-medium">VAT Exempted</td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-right tabular-nums">-</td>
+                </tr>
+                <tr style={{ backgroundColor: `${company.bannerColor}10` }}>
+                  <td className="border border-gray-300 px-3 py-1.5 font-bold">TOTAL (TSh)</td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-right font-bold tabular-nums">
+                    {currency.format(data.total)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ))}
 
-      <p className="mb-6 text-sm">E&amp;O.E</p>
+      {!isDeliveryNote && <p className="mb-6 text-sm">E&amp;O.E</p>}
 
       <div className="flex items-end justify-between gap-4 text-sm">
         <div className="max-w-[60%]">
-          {(data.bankMethod || data.bankAccountName || data.bankAccountNumber) && (
+          {!isDeliveryNote && (data.bankMethod || data.bankAccountName || data.bankAccountNumber) && (
             <div className="mb-3 overflow-hidden rounded border" style={{ borderColor: company.bannerColor }}>
               <div
                 className="px-2.5 py-1 text-xs font-semibold text-white"
@@ -332,6 +350,12 @@ export function ManualInvoicePreviewCard({
           )}
           <p>Date: {format(data.createdAt, "d MMM yyyy")}</p>
           <p>For: {company.name}</p>
+          {isDeliveryNote && (
+            <div className="mt-4 text-center">
+              <p className="mb-6 text-xs text-secondary">Received By (Jina na Sahihi):</p>
+              <p className="w-40 border-t border-gray-400 pt-1 text-xs">&nbsp;</p>
+            </div>
+          )}
         </div>
         <div className="flex items-end gap-2">
           {/* Stamp sits beside the signature block, not on top of it — overlapping the two
@@ -344,7 +368,11 @@ export function ManualInvoicePreviewCard({
             />
           )}
           <div className="text-center">
-            {data.authorizedBy && <p className="text-xs">Authorized by:</p>}
+            {isDeliveryNote ? (
+              <p className="text-xs">Delivered by:</p>
+            ) : (
+              data.authorizedBy && <p className="text-xs">Authorized by:</p>
+            )}
             <p className="mb-1 text-xs text-secondary">Signature:</p>
             <DigitalSignature companyKey={companyKey} />
             {data.authorizedBy && <p className="mt-1 text-xs font-bold">{data.authorizedBy}</p>}

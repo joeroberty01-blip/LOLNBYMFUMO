@@ -6,7 +6,12 @@ import { MANUAL_INVOICE_PAYMENT_LABELS } from "@/lib/validators/manualInvoices";
 
 const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function colWidths(hasSerialColumn: boolean) {
+function colWidths(hasSerialColumn: boolean, isDeliveryNote: boolean) {
+  if (isDeliveryNote) {
+    return hasSerialColumn
+      ? { sn: 0.1, desc: 0.75, qty: 0.15, price: 0, amount: 0 }
+      : { qty: 0.15, desc: 0.85, price: 0, amount: 0 };
+  }
   return hasSerialColumn
     ? { sn: 0.08, desc: 0.52, qty: 0.1, price: 0.15, amount: 0.15 }
     : { qty: 0.1, desc: 0.55, price: 0.17, amount: 0.18 };
@@ -36,14 +41,23 @@ function ManualInvoicePdfDocument({
 }: {
   invoice: ManualInvoiceData;
   companyKey: "lolnby" | "woodland";
-  docType: "tax" | "proforma";
+  docType: "tax" | "proforma" | "delivery";
 }) {
   const company: CompanyProfile = COMPANY_PROFILES[companyKey];
   const subTotal = invoice.total / (1 + VAT_RATE);
   const vat = invoice.total - subTotal;
-  const docLabel = docType === "proforma" ? "PROFORMA INVOICE" : company.hasVat ? "TAX INVOICE" : "INVOICE";
-  const docNumber = `${docType === "proforma" ? "PF-" : ""}MI-${String(invoice.invoiceNumber).padStart(4, "0")}`;
-  const cols = colWidths(company.hasSerialColumn);
+  const isDeliveryNote = docType === "delivery";
+  const docLabel =
+    docType === "delivery"
+      ? "DELIVERY NOTE"
+      : docType === "proforma"
+        ? "PROFORMA INVOICE"
+        : company.hasVat
+          ? "TAX INVOICE"
+          : "INVOICE";
+  const docNumberPrefix = docType === "proforma" ? "PF-" : docType === "delivery" ? "DN-" : "";
+  const docNumber = `${docNumberPrefix}MI-${String(invoice.invoiceNumber).padStart(4, "0")}`;
+  const cols = colWidths(company.hasSerialColumn, isDeliveryNote);
 
   const scale = getScale(invoice.items.length);
   const sz = (base: number, min: number) => Math.max(min, Math.round(base * scale * 10) / 10);
@@ -184,34 +198,38 @@ function ManualInvoicePdfDocument({
             >
               Qty
             </Text>
-            <Text
-              style={{
-                fontSize: sz(8, 6),
-                fontWeight: 700,
-                color: "#ffffff",
-                padding: mb(4, 1.5),
-                borderWidth: 0.5,
-                borderColor: company.bannerColor,
-                flex: cols.price,
-                textAlign: "right",
-              }}
-            >
-              Unit Price
-            </Text>
-            <Text
-              style={{
-                fontSize: sz(8, 6),
-                fontWeight: 700,
-                color: "#ffffff",
-                padding: mb(4, 1.5),
-                borderWidth: 0.5,
-                borderColor: company.bannerColor,
-                flex: cols.amount,
-                textAlign: "right",
-              }}
-            >
-              Amount
-            </Text>
+            {!isDeliveryNote && (
+              <>
+                <Text
+                  style={{
+                    fontSize: sz(8, 6),
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    padding: mb(4, 1.5),
+                    borderWidth: 0.5,
+                    borderColor: company.bannerColor,
+                    flex: cols.price,
+                    textAlign: "right",
+                  }}
+                >
+                  Unit Price
+                </Text>
+                <Text
+                  style={{
+                    fontSize: sz(8, 6),
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    padding: mb(4, 1.5),
+                    borderWidth: 0.5,
+                    borderColor: company.bannerColor,
+                    flex: cols.amount,
+                    textAlign: "right",
+                  }}
+                >
+                  Amount
+                </Text>
+              </>
+            )}
           </View>
           {invoice.items.map((item, i) => {
             const cellStyle = {
@@ -249,65 +267,71 @@ function ManualInvoicePdfDocument({
                   )}
                 </View>
                 <Text style={{ ...cellStyle, flex: cols.qty, textAlign: "right" }}>{item.quantity}</Text>
-                <Text style={{ ...cellStyle, flex: cols.price, textAlign: "right" }}>
-                  {currency.format(item.unitPrice)}
-                </Text>
-                <Text style={{ ...cellStyle, flex: cols.amount, textAlign: "right" }}>
-                  {currency.format(item.amount)}
-                </Text>
+                {!isDeliveryNote && (
+                  <>
+                    <Text style={{ ...cellStyle, flex: cols.price, textAlign: "right" }}>
+                      {currency.format(item.unitPrice)}
+                    </Text>
+                    <Text style={{ ...cellStyle, flex: cols.amount, textAlign: "right" }}>
+                      {currency.format(item.amount)}
+                    </Text>
+                  </>
+                )}
               </View>
             );
           })}
         </View>
 
-        <View style={{ alignItems: "flex-end", marginBottom: mb(10, 4) }}>
-          {(company.hasVat
-            ? [
-                ["Sub Total", currency.format(subTotal), false],
-                ["VAT 18%", currency.format(vat), false],
-                ["TOTAL (TSh)", currency.format(invoice.total), true],
-              ]
-            : [
-                ["VAT Exempted", "-", false],
-                ["TOTAL (TSh)", currency.format(invoice.total), true],
-              ]
-          ).map(([label, value, isTotal]) => (
-            <View key={label as string} style={{ flexDirection: "row" }}>
-              <Text
-                style={{
-                  fontSize: sz(9, 6.5),
-                  fontWeight: 700,
-                  padding: mb(5, 1.5),
-                  borderWidth: 0.5,
-                  borderColor: "#cccccc",
-                  width: 110,
-                  backgroundColor: isTotal ? "#f2f2f2" : undefined,
-                }}
-              >
-                {label}
-              </Text>
-              <Text
-                style={{
-                  fontSize: sz(9, 6.5),
-                  fontWeight: isTotal ? 700 : 400,
-                  padding: mb(5, 1.5),
-                  borderWidth: 0.5,
-                  borderColor: "#cccccc",
-                  width: 90,
-                  textAlign: "right",
-                  backgroundColor: isTotal ? "#f2f2f2" : undefined,
-                }}
-              >
-                {value}
-              </Text>
-            </View>
-          ))}
-        </View>
-        <Text style={{ fontSize: sz(9, 7), marginBottom: mb(14, 5) }}>E&O.E</Text>
+        {!isDeliveryNote && (
+          <View style={{ alignItems: "flex-end", marginBottom: mb(10, 4) }}>
+            {(company.hasVat
+              ? [
+                  ["Sub Total", currency.format(subTotal), false],
+                  ["VAT 18%", currency.format(vat), false],
+                  ["TOTAL (TSh)", currency.format(invoice.total), true],
+                ]
+              : [
+                  ["VAT Exempted", "-", false],
+                  ["TOTAL (TSh)", currency.format(invoice.total), true],
+                ]
+            ).map(([label, value, isTotal]) => (
+              <View key={label as string} style={{ flexDirection: "row" }}>
+                <Text
+                  style={{
+                    fontSize: sz(9, 6.5),
+                    fontWeight: 700,
+                    padding: mb(5, 1.5),
+                    borderWidth: 0.5,
+                    borderColor: "#cccccc",
+                    width: 110,
+                    backgroundColor: isTotal ? "#f2f2f2" : undefined,
+                  }}
+                >
+                  {label}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: sz(9, 6.5),
+                    fontWeight: isTotal ? 700 : 400,
+                    padding: mb(5, 1.5),
+                    borderWidth: 0.5,
+                    borderColor: "#cccccc",
+                    width: 90,
+                    textAlign: "right",
+                    backgroundColor: isTotal ? "#f2f2f2" : undefined,
+                  }}
+                >
+                  {value}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        {!isDeliveryNote && <Text style={{ fontSize: sz(9, 7), marginBottom: mb(14, 5) }}>E&O.E</Text>}
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: mb(16, 6) }}>
           <View style={{ maxWidth: "60%" }}>
-            {(invoice.bankMethod || invoice.bankAccountName || invoice.bankAccountNumber) && (
+            {!isDeliveryNote && (invoice.bankMethod || invoice.bankAccountName || invoice.bankAccountNumber) && (
               <View
                 style={{
                   marginBottom: mb(8, 3),
@@ -347,9 +371,21 @@ function ManualInvoicePdfDocument({
             )}
             <Text style={{ fontSize: sz(9, 7) }}>Date: {format(invoice.createdAt, "d MMM yyyy")}</Text>
             <Text style={{ fontSize: sz(9, 7) }}>For: {company.name}</Text>
+            {isDeliveryNote && (
+              <View style={{ marginTop: mb(20, 8), alignItems: "center" }}>
+                <Text style={{ fontSize: sz(8, 6), color: "#555555", marginBottom: mb(14, 6) }}>
+                  Received By (Jina na Sahihi):
+                </Text>
+                <View style={{ width: 140, borderTopWidth: 0.5, borderColor: "#999999" }} />
+              </View>
+            )}
           </View>
           <View style={{ alignItems: "center" }}>
-            {invoice.authorizedBy && <Text style={{ fontSize: sz(8, 6) }}>Authorized by:</Text>}
+            {isDeliveryNote ? (
+              <Text style={{ fontSize: sz(8, 6) }}>Delivered by:</Text>
+            ) : (
+              invoice.authorizedBy && <Text style={{ fontSize: sz(8, 6) }}>Authorized by:</Text>
+            )}
             <Text style={{ fontSize: sz(8, 6), color: "#555555", marginBottom: mb(4, 2) }}>Signature:</Text>
             <Text style={{ fontSize: sz(14, 10), fontFamily: "Helvetica-Oblique", color: company.titleColor }}>
               {getSignatureLabel(company)}
@@ -369,7 +405,7 @@ function ManualInvoicePdfDocument({
 export async function renderManualInvoicePdf(
   invoice: ManualInvoiceData,
   companyKey: "lolnby" | "woodland",
-  docType: "tax" | "proforma"
+  docType: "tax" | "proforma" | "delivery"
 ): Promise<Buffer> {
   return renderToBuffer(<ManualInvoicePdfDocument invoice={invoice} companyKey={companyKey} docType={docType} />);
 }

@@ -35,7 +35,7 @@ export default async function EditManualInvoicePage({ params }: { params: Promis
         createdAt={invoice.createdAt}
         defaultValues={{
           companyKey: invoice.companyKey as "lolnby" | "woodland",
-          docType: invoice.docType as "tax" | "proforma",
+          docType: invoice.docType as "tax" | "proforma" | "delivery",
           paymentMode: invoice.paymentMode as (typeof manualInvoicePaymentModes)[number],
           deliveryTime: invoice.deliveryTime ?? "",
           brand: invoice.brand ?? "",

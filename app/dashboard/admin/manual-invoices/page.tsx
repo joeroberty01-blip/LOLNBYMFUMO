@@ -85,7 +85,11 @@ export default async function ManualInvoicesPage({
                 </td>
                 <td className="px-3 py-2 text-primary">{invoice.customerName || "—"}</td>
                 <td className="px-3 py-2 text-secondary">
-                  {invoice.docType === "proforma" ? "Proforma" : "Tax/Invoice"}
+                  {invoice.docType === "proforma"
+                    ? "Proforma"
+                    : invoice.docType === "delivery"
+                      ? "Delivery Note"
+                      : "Tax/Invoice"}
                 </td>
                 <td className="px-3 py-2">
                   {invoice.status === "draft" ? (
