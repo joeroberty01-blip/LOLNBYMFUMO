@@ -51,6 +51,9 @@ const BANK_ACCOUNT_NAME_DEFAULTS: Record<"lolnby" | "woodland", string> = {
   lolnby: COMPANY_PROFILES.lolnby.name,
   woodland: COMPANY_PROFILES.woodland.name,
 };
+/** The usual signer for both companies' invoices — pre-filled so a new invoice/delivery note
+ * never goes out with a blank "Authorized By" line. */
+const DEFAULT_AUTHORIZED_BY = "N.J. KIWELU";
 
 type Props = {
   mode: "create" | "edit";
@@ -101,6 +104,7 @@ export function ManualInvoiceForm({
         BANK_ACCOUNT_NUMBER_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
       bankAccountName:
         BANK_ACCOUNT_NAME_DEFAULTS[(defaultValues?.companyKey as "lolnby" | "woodland") ?? "lolnby"],
+      authorizedBy: DEFAULT_AUTHORIZED_BY,
       ...defaultValues,
     },
   });

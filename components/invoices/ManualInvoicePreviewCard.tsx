@@ -374,7 +374,7 @@ export function ManualInvoicePreviewCard({
               data.authorizedBy && <p className="text-xs">Authorized by:</p>
             )}
             <p className="mb-1 text-xs text-secondary">Signature:</p>
-            <DigitalSignature companyKey={companyKey} />
+            <DigitalSignature companyKey={companyKey} label={isDeliveryNote ? data.authorizedBy ?? undefined : undefined} />
             {data.authorizedBy && <p className="mt-1 text-xs font-bold">{data.authorizedBy}</p>}
           </div>
         </div>

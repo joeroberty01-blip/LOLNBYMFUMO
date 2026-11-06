@@ -388,7 +388,7 @@ function ManualInvoicePdfDocument({
             )}
             <Text style={{ fontSize: sz(8, 6), color: "#555555", marginBottom: mb(4, 2) }}>Signature:</Text>
             <Text style={{ fontSize: sz(14, 10), fontFamily: "Helvetica-Oblique", color: company.titleColor }}>
-              {getSignatureLabel(company)}
+              {isDeliveryNote && invoice.authorizedBy ? invoice.authorizedBy : getSignatureLabel(company)}
             </Text>
             {invoice.authorizedBy && (
               <Text style={{ fontSize: sz(9, 7), fontWeight: 700, marginTop: mb(3, 1.5) }}>
