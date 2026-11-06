@@ -6,14 +6,23 @@ import { auth } from "@/lib/auth";
 import { getDateRange, type Period } from "@/lib/dateRanges";
 import { getLedgerReport } from "@/lib/data/reports/ledger";
 import { getBranches } from "@/lib/data/branches";
+import { COMPANY_PROFILES } from "@/lib/companyInfo";
 import { ReportControls } from "@/components/reports/ReportControls";
 import { LedgerActions } from "@/components/reports/LedgerActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getServerDictionary } from "@/lib/i18n/server";
 
-/** The report's letterhead deliberately shows the real business name, not APP_NAME (the
- * software's own identity) — this is a financial document, not an internal system screen. */
-const BUSINESS_NAME = "LOLNBY GENERAL ENTERPRISES";
+/** The report's letterhead deliberately shows the real registered business name(s), not
+ * APP_NAME (the software's own identity) — this is a financial document, not an internal
+ * system screen. Filtering to one branch (see the Branch picker below) shows that branch's own
+ * registered entity name (lib/companyInfo.ts); "Zote" (no branch filter) shows both, since the
+ * combined ledger spans both entities' sales. */
+function reportLetterhead(branchName: string | undefined): string {
+  if (!branchName) return `${COMPANY_PROFILES.lolnby.name} & ${COMPANY_PROFILES.woodland.name}`;
+  return branchName.toLowerCase().includes("woodland")
+    ? COMPANY_PROFILES.woodland.name
+    : COMPANY_PROFILES.lolnby.name;
+}
 
 const currency = new Intl.NumberFormat("sw-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "never" });
 
@@ -55,6 +64,8 @@ export default async function ReportsPage({
     getLedgerReport(range, { branchId: sp.branchId }),
     getBranches(),
   ]);
+  const selectedBranchName = sp.branchId ? branches.find((b) => b.id === sp.branchId)?.name : undefined;
+  const letterhead = reportLetterhead(selectedBranchName);
 
   return (
     <div>
@@ -85,7 +96,7 @@ export default async function ReportsPage({
 
       <div className="ledger-report rounded-card border border-border bg-surface p-6">
         <div className="mb-4 text-center">
-          <p className="text-sm font-bold text-primary">{BUSINESS_NAME}</p>
+          <p className="text-sm font-bold text-primary">{letterhead}</p>
           <p className="text-xs font-semibold text-primary">{t.reports.ledger.subtitle}</p>
           <p className="text-[11px] text-secondary">
             {fmtDate(range.start)} — {fmtDate(range.end)}

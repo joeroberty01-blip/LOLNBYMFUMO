@@ -12,7 +12,7 @@ type Props = {
 
 /** Live search: the text box updates the URL (and re-renders the Server Component table) a
  * short beat after the admin stops typing, instead of waiting for a form submit / Enter press. */
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150;
 
 /** Ordering only. The stock-condition options that used to live here ("Stock ndogo kwanza",
  * "Stock hasi kwanza") were removed on purpose: they only pushed matching parts to the top while

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, Pencil, Tag } from "lucide-react";
@@ -10,7 +9,6 @@ import { StockAdjustmentModal } from "@/components/admin/StockAdjustmentModal";
 import { Table, THead, THeadRow, Th, TBody, Tr, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PartThumbnailButton } from "@/components/admin/PartThumbnailButton";
-import { Button } from "@/components/ui/Button";
 import { queueStickers } from "@/lib/stickers/queue";
 import type { StickerItem } from "@/lib/stickers/stickerPdf";
 
@@ -27,7 +25,7 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * column. Picture is a small, compact square icon (PartThumbnail) — a real uploaded photo reads
  * as visually "big" even at modest pixel sizes, so this stays deliberately small/modern rather
  * than growing to show more detail. */
-const COL_WIDTHS = ["32px", "22%", "20%", "12%", "12%", "15%", "7%", "56px", "185px"];
+const COL_WIDTHS = ["23%", "21%", "13%", "13%", "16%", "8%", "56px", "160px"];
 
 function rowKey(row: AdminPartRow, i: number) {
   return `${row.partId}-${row.branchId ?? "none"}-${i}`;
@@ -45,26 +43,9 @@ export function PartsTable({
   branches: { id: string; name: string }[];
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   if (rows.length === 0) {
     return <EmptyState title="No parts found." />;
-  }
-
-  const allKeys = rows.map(rowKey);
-  const allSelected = allKeys.length > 0 && allKeys.every((k) => selected.has(k));
-
-  function toggle(key: string) {
-    setSelected((s) => {
-      const next = new Set(s);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(allKeys));
   }
 
   function printSticker(row: AdminPartRow) {
@@ -72,24 +53,8 @@ export function PartsTable({
     router.push("/dashboard/admin/stickers");
   }
 
-  function printSelectedStickers() {
-    const chosen = rows.filter((row, i) => selected.has(rowKey(row, i))).map(toStickerItem);
-    if (!chosen.length) return;
-    queueStickers(chosen);
-    router.push("/dashboard/admin/stickers");
-  }
-
   return (
-    <div>
-      {selected.size > 0 && (
-        <div className="no-print mb-2 flex items-center justify-between rounded-control border border-border bg-surface-elevated px-3 py-2">
-          <span className="text-sm text-secondary">{selected.size} zimechaguliwa</span>
-          <Button type="button" variant="primary" onClick={printSelectedStickers}>
-            Chapisha Stickers ({selected.size})
-          </Button>
-        </div>
-      )}
-      <Table className="table-fixed min-w-[760px]">
+    <Table className="table-fixed min-w-[760px]">
       <colgroup>
         {COL_WIDTHS.map((w, i) => (
           <col key={i} style={{ width: w }} />
@@ -97,14 +62,6 @@ export function PartsTable({
       </colgroup>
       <THead>
         <THeadRow className="divide-x divide-border">
-          <Th className="no-print !px-2">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={toggleAll}
-              aria-label="Chagua zote"
-            />
-          </Th>
           <Th>Name</Th>
           <Th>Part Number</Th>
           <Th className="text-right">Buying</Th>
@@ -122,14 +79,6 @@ export function PartsTable({
             index={i}
             className="divide-x divide-border"
           >
-            <Td className="no-print !px-2">
-              <input
-                type="checkbox"
-                checked={selected.has(rowKey(row, i))}
-                onChange={() => toggle(rowKey(row, i))}
-                aria-label={`Chagua ${row.name}`}
-              />
-            </Td>
             <Td className="max-w-0 truncate" title={row.name}>
               {row.name}
             </Td>
@@ -220,7 +169,6 @@ export function PartsTable({
           </Tr>
         ))}
       </TBody>
-      </Table>
-    </div>
+    </Table>
   );
 }
