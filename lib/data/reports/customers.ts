@@ -57,15 +57,20 @@ export type CustomerDebtGroup = {
  * field is only ever adjusted by the very same sale/payment/delete events replayed here (see
  * completeSale, deleteSale, recordCustomerPayment in lib/actions/). */
 export async function getCustomerDebtItems(
-  options: { scope?: "native" | "legacy" | "all"; legacySource?: string } = {}
+  options: { scope?: "native" | "legacy" | "all"; legacySource?: string; branchId?: string } = {}
 ): Promise<CustomerDebtGroup[]> {
-  const { scope = "all", legacySource } = options;
+  const { scope = "all", legacySource, branchId } = options;
   const debtors = await prisma.customer.findMany({
     where: {
       balance: { gt: 0 },
       ...(scope === "native" ? { isLegacyImport: false } : {}),
       ...(scope === "legacy" ? { isLegacyImport: true } : {}),
       ...(legacySource ? { legacySource } : {}),
+      // Narrows to customers who have at least one credit sale at this branch -- a customer's
+      // full invoice/payment history is still used below to compute their remaining balance
+      // (see settleOpenItems), only WHICH customers make the list is filtered here, since in
+      // practice each customer belongs to one company's branch, not a mix.
+      ...(branchId ? { sales: { some: { branchId, isCredit: true, status: "COMPLETED" } } } : {}),
     },
     orderBy: { balance: "desc" },
   });

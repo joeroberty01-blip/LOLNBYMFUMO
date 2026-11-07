@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getCustomerDebtItems } from "@/lib/data/reports/customers";
 import { getBranches } from "@/lib/data/branches";
 import { ReportActions } from "@/components/reports/ReportActions";
+import { CustomerDebtBranchFilter } from "@/components/reports/CustomerDebtBranchFilter";
 import { CustomerDebtItemsTable } from "@/components/admin/CustomerDebtItemsTable";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
@@ -14,15 +15,23 @@ import { isSmsGatewayConfigured } from "@/lib/smsGateway";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
-export default async function CustomersDebtReportPage() {
+export default async function CustomersDebtReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string }>;
+}) {
   const session = await auth();
   if (!session || session.user.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
   const { t } = await getServerDictionary();
+  const { branchId } = await searchParams;
 
-  const [debtors, branches] = await Promise.all([getCustomerDebtItems(), getBranches()]);
+  const [debtors, branches] = await Promise.all([
+    getCustomerDebtItems({ branchId }),
+    getBranches(),
+  ]);
   const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
   const reachable = debtors.filter((d) => toWhatsAppNumber(d.phone) !== null).length;
 
@@ -35,6 +44,8 @@ export default async function CustomersDebtReportPage() {
       </p>
 
       <ReportActions reportType="customers" title={t.reports.customers.title} />
+
+      <CustomerDebtBranchFilter branches={branches} />
 
       {/* Only offered once the gateway is actually configured — a button that can only ever
           report "not set up" is noise on a page the admin uses every day. */}
