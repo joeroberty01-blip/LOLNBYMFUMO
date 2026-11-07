@@ -28,6 +28,7 @@ export function CustomerDebtItemsTable({
   t,
   canManage = true,
   initialSearch,
+  disputed = false,
 }: {
   groups: CustomerDebtGroup[];
   branches: { id: string; name: string }[];
@@ -41,6 +42,11 @@ export function CustomerDebtItemsTable({
   /** Pre-fills the search box — used by POSTerminal's "Angalia Deni" link (?q=customer name) so
    * landing here goes straight to the right customer instead of an empty list. */
   initialSearch?: string;
+  /** True for legacy-imported debts whose payment history is known to be incomplete (the old
+   * system's records don't capture every payment collected, e.g. cash taken outside it) — shades
+   * every balance figure grey instead of the usual confident red, with a banner explaining why,
+   * so nobody mistakes "still owed per the import" for a verified amount. */
+  disputed?: boolean;
 }) {
   const [search, setSearch] = useState(initialSearch ?? "");
   const [expanded, setExpanded] = useState<Set<string>>(
@@ -98,6 +104,14 @@ export function CustomerDebtItemsTable({
 
   return (
     <div className="flex flex-col gap-3">
+      {disputed && (
+        <div className="rounded-card border border-warning/30 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-warning">
+          Taarifa za malipo ya madeni haya ni za mfumo wa zamani na hazina uhakika kamili — baadhi
+          ya wateja hapa chini wanaweza kuwa tayari wamelipa (kiasi au yote) nje ya mfumo huo.
+          Thibitisha na mteja kabla ya kudai, na bonyeza &quot;Rekodi Malipo&quot; mara
+          utakapothibitisha.
+        </div>
+      )}
       <Input
         type="text"
         placeholder="Tafuta customer kwa jina, simu, au namba ya invoice..."
@@ -139,7 +153,9 @@ export function CustomerDebtItemsTable({
                     <Td className="text-right tabular-nums text-secondary">
                       {g.items.length} invoice{g.items.length === 1 ? "" : "s"}
                     </Td>
-                    <Td className="text-right font-medium text-danger tabular-nums">
+                    <Td
+                      className={`text-right font-medium tabular-nums ${disputed ? "!text-secondary" : "!text-danger"}`}
+                    >
                       {currency.format(g.balance)}
                     </Td>
                     <Td className="text-right tabular-nums">{currency.format(g.creditLimit)}</Td>
@@ -190,7 +206,10 @@ export function CustomerDebtItemsTable({
                             <Td className="text-right text-sm tabular-nums text-secondary">
                               Jumla: {currency.format(it.total)}
                             </Td>
-                            <Td colSpan={2} className="text-right text-sm font-medium tabular-nums text-danger">
+                            <Td
+                              colSpan={2}
+                              className={`text-right text-sm font-medium tabular-nums ${disputed ? "!text-secondary" : "!text-danger"}`}
+                            >
                               Deni: {currency.format(it.remaining)}
                             </Td>
                             <Td onClick={(e) => e.stopPropagation()}>

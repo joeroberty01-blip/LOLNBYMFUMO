@@ -61,6 +61,7 @@ export default async function LegacyDebtsPage({
         storeName={BUSINESS_NAME}
         t={t}
         initialSearch={q}
+        disputed
       />
     </div>
   );
