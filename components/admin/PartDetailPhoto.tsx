@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/Button";
 import { PhotoCropModal } from "@/components/admin/PhotoCropModal";
 
 /** Large photo on the Part detail (View) page. Clicking the image itself does whichever of the
- * two actions makes sense given its current state — upload when there's nothing to look at yet,
- * or a full-size lightbox when there is — rather than one click target trying to do both. The
- * "Badilisha Picha" button below is the explicit, always-visible way to upload/replace either
- * way, for anyone who'd rather not rely on guessing what clicking the image will do.
+ * two actions makes sense given its current state — upload when there's nothing to look at yet
+ * (no real photo and no generic catalog image either), or a full-size lightbox otherwise —
+ * rather than one click target trying to do both. The "Badilisha Picha" button below is the
+ * explicit, always-visible way to upload/replace either way, for anyone who'd rather not rely on
+ * guessing what clicking the image will do.
  *
  * Picking a file opens PhotoCropModal before anything is uploaded — the file that reaches
  * uploadPartPhoto is always the cropped square, never the raw pick. */
@@ -84,26 +85,23 @@ export function PartDetailPhoto({
   }
 
   const photoUrl = `/api/parts/${partId}/photo?v=${version}`;
+  // A generic catalog image is still a real photo to look at (just not of this specific item),
+  // so tapping it opens the lightbox like any other photo -- only an outright blank placeholder
+  // falls through to the upload picker.
+  const canView = hasPhoto || Boolean(genericImageUrl);
+  const lightboxSrc = hasPhoto ? photoUrl : (genericImageUrl ?? "");
 
   return (
     <div className="mb-6">
       <button
         type="button"
-        onClick={() => (hasPhoto ? setLightboxOpen(true) : inputRef.current?.click())}
+        onClick={() => (canView ? setLightboxOpen(true) : inputRef.current?.click())}
         disabled={isPending}
-        title={hasPhoto ? "Bonyeza kuona picha kubwa" : "Bonyeza kupakia picha"}
+        title={canView ? "Bonyeza kuona picha kubwa" : "Bonyeza kupakia picha"}
         className="block h-40 w-40 overflow-hidden rounded-card border border-border disabled:opacity-50"
       >
-        {hasPhoto ? (
-          <img src={photoUrl} alt={name} className="h-full w-full object-cover" />
-        ) : genericImageUrl ? (
-          <div className="relative h-full w-full">
-            <img src={genericImageUrl} alt={name} className="h-full w-full object-cover" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100">
-              <Camera size={20} />
-              <span className="text-xs">Pakia Picha Halisi</span>
-            </div>
-          </div>
+        {canView ? (
+          <img src={hasPhoto ? photoUrl : genericImageUrl!} alt={name} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-surface text-secondary">
             <ImageOff size={28} />
@@ -136,13 +134,13 @@ export function PartDetailPhoto({
         onChange={handleChange}
       />
 
-      {lightboxOpen && hasPhoto && (
+      {lightboxOpen && canView && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightboxOpen(false)}
         >
           <img
-            src={photoUrl}
+            src={lightboxSrc}
             alt={name}
             className="max-h-[85vh] max-w-[85vw] rounded-card object-contain"
             onClick={(e) => e.stopPropagation()}

@@ -9,10 +9,10 @@ import { PartThumbnail } from "@/components/ui/PartThumbnail";
 import { PhotoCropModal } from "@/components/admin/PhotoCropModal";
 
 /** Clickable thumbnail for the admin Parts table. Clicking does whichever action fits the
- * current state — opens a full-size lightbox when there's already a photo to look at, or the
- * file picker (via PhotoCropModal, same as PartDetailPhoto) when there isn't — rather than
- * always re-opening the file picker and never letting the admin just look at what's there.
- * Admin-only (uploadPartPhoto enforces this server-side too). */
+ * current state — opens a full-size lightbox when there's already a photo (real or generic
+ * catalog) to look at, or the file picker (via PhotoCropModal, same as PartDetailPhoto) when
+ * there's truly nothing — rather than always re-opening the file picker and never letting the
+ * admin just look at what's there. Admin-only (uploadPartPhoto enforces this server-side too). */
 export function PartThumbnailButton({
   partId,
   hasPhoto,
@@ -65,14 +65,19 @@ export function PartThumbnailButton({
   }
 
   const photoUrl = `/api/parts/${partId}/photo?v=${version}`;
+  // A generic catalog image is still a real photo to look at (just not of this specific item),
+  // so tapping it opens the lightbox like any other photo -- only an outright blank placeholder
+  // falls through to the upload picker.
+  const canView = hasPhoto || Boolean(genericImageUrl);
+  const lightboxSrc = hasPhoto ? photoUrl : (genericImageUrl ?? "");
 
   return (
     <>
       <button
         type="button"
-        onClick={() => (hasPhoto ? setLightboxOpen(true) : inputRef.current?.click())}
+        onClick={() => (canView ? setLightboxOpen(true) : inputRef.current?.click())}
         disabled={isPending}
-        title={hasPhoto ? "Bonyeza kuona picha kubwa" : "Bonyeza kupakia picha"}
+        title={canView ? "Bonyeza kuona picha kubwa" : "Bonyeza kupakia picha"}
         className="rounded-control disabled:opacity-50"
       >
         <PartThumbnail partId={partId} hasPhoto={hasPhoto} genericImageUrl={genericImageUrl} alt={name} />
@@ -85,13 +90,13 @@ export function PartThumbnailButton({
         />
       </button>
 
-      {lightboxOpen && hasPhoto && (
+      {lightboxOpen && canView && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightboxOpen(false)}
         >
           <img
-            src={photoUrl}
+            src={lightboxSrc}
             alt={name}
             className="max-h-[85vh] max-w-[85vw] rounded-card object-contain"
             onClick={(e) => e.stopPropagation()}
