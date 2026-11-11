@@ -3,10 +3,14 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Mail, MessageCircle, Check, Truck } from "lucide-react";
+import { Download, Mail, MessageCircle, Check, Truck, ThumbsUp } from "lucide-react";
 import type { ManualInvoiceData } from "@/lib/data/manualInvoices";
 import { COMPANY_PROFILES, type CompanyProfile } from "@/lib/companyInfo";
-import { setManualInvoicePaid, setManualInvoiceDelivered } from "@/lib/actions/manualInvoices";
+import {
+  setManualInvoicePaid,
+  setManualInvoiceDelivered,
+  setManualInvoiceAccepted,
+} from "@/lib/actions/manualInvoices";
 import { Button } from "@/components/ui/Button";
 import { ManualInvoicePreviewCard } from "@/components/invoices/ManualInvoicePreviewCard";
 
@@ -30,8 +34,10 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
   const [shareError, setShareError] = useState<string | null>(null);
   const [paid, setPaid] = useState(invoice.paid);
   const [delivered, setDelivered] = useState(invoice.delivered);
+  const [accepted, setAccepted] = useState(invoice.accepted);
   const [isTogglingPaid, startTogglingPaid] = useTransition();
   const [isTogglingDelivered, startTogglingDelivered] = useTransition();
+  const [isTogglingAccepted, startTogglingAccepted] = useTransition();
 
   function togglePaid() {
     const next = !paid;
@@ -53,6 +59,19 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
       const result = await setManualInvoiceDelivered(invoice.id, next);
       if (!result.success) {
         setDelivered(!next);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function toggleAccepted() {
+    const next = !accepted;
+    setAccepted(next);
+    startTogglingAccepted(async () => {
+      const result = await setManualInvoiceAccepted(invoice.id, next);
+      if (!result.success) {
+        setAccepted(!next);
         return;
       }
       router.refresh();
@@ -159,6 +178,19 @@ export function ManualInvoiceView({ invoice }: { invoice: ManualInvoiceData }) {
           >
             <Truck size={13} />
             {delivered ? "Imefikishwa" : "Weka Imefikishwa"}
+          </button>
+          <button
+            type="button"
+            disabled={isTogglingAccepted}
+            onClick={toggleAccepted}
+            className={`flex items-center gap-1 rounded-control border px-3 py-1.5 text-xs font-medium ${
+              accepted
+                ? "border-success/40 bg-success/15 text-success"
+                : "border-border text-secondary hover:text-primary"
+            }`}
+          >
+            <ThumbsUp size={13} />
+            {accepted ? "Imekubaliwa" : "Weka Imekubaliwa"}
           </button>
           <div className="flex overflow-hidden rounded-control border border-border">
             {(["woodland", "lolnby"] as const).map((key) => (

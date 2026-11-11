@@ -597,6 +597,9 @@ model ManualInvoice {
   paid              Boolean  @default(false)
   /// Whether the order has been delivered — same plain toggle treatment as `paid`.
   delivered         Boolean  @default(false)
+  /// Whether the customer has accepted this document (mainly meaningful for a Proforma, which
+  /// is a quote awaiting the customer's go-ahead) — same plain toggle treatment as `paid`.
+  accepted          Boolean  @default(false)
   /// "CASH" or "CREDIT" — unlike Sale, this is a plain label on the printed invoice, not a
   /// driver of any accounting/debt logic (a ManualInvoice never touches CustomerPayment/debt
   /// tables).

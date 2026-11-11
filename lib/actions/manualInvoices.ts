@@ -239,3 +239,14 @@ export async function setManualInvoiceDelivered(id: string, delivered: boolean):
   }
   return { success: true };
 }
+
+/** Toggles the invoice's "accepted" status — same plain-field treatment as `paid`. */
+export async function setManualInvoiceAccepted(id: string, accepted: boolean): Promise<DeleteActionResult> {
+  await requireAdmin();
+  try {
+    await prisma.manualInvoice.update({ where: { id }, data: { accepted } });
+  } catch {
+    return { success: false, error: "Invoice hii haipo tena (huenda imeshafutwa)" };
+  }
+  return { success: true };
+}

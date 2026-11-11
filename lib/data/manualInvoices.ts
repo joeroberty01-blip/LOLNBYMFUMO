@@ -8,7 +8,9 @@ export type ManualInvoiceListRow = {
   status: string;
   paid: boolean;
   delivered: boolean;
+  accepted: boolean;
   customerName: string;
+  customerPoNumber: string | null;
   total: number;
   createdAt: Date;
   createdByName: string;
@@ -41,6 +43,7 @@ export type ManualInvoiceData = {
   status: string;
   paid: boolean;
   delivered: boolean;
+  accepted: boolean;
   paymentMode: string;
   deliveryTime: string | null;
   brand: string | null;
@@ -86,7 +89,9 @@ export async function listManualInvoices(query?: string, limit = 100): Promise<M
       status: true,
       paid: true,
       delivered: true,
+      accepted: true,
       customerName: true,
+      customerPoNumber: true,
       total: true,
       createdAt: true,
       createdBy: { select: { name: true } },
@@ -100,7 +105,9 @@ export async function listManualInvoices(query?: string, limit = 100): Promise<M
     status: row.status,
     paid: row.paid,
     delivered: row.delivered,
+    accepted: row.accepted,
     customerName: row.customerName,
+    customerPoNumber: row.customerPoNumber,
     total: Number(row.total),
     createdAt: row.createdAt,
     createdByName: row.createdBy.name,
@@ -148,6 +155,7 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
       status: true,
       paid: true,
       delivered: true,
+      accepted: true,
       paymentMode: true,
       deliveryTime: true,
       brand: true,
@@ -189,6 +197,7 @@ export async function getManualInvoiceData(id: string): Promise<ManualInvoiceDat
     status: invoice.status,
     paid: invoice.paid,
     delivered: invoice.delivered,
+    accepted: invoice.accepted,
     paymentMode: invoice.paymentMode,
     deliveryTime: invoice.deliveryTime,
     brand: invoice.brand,

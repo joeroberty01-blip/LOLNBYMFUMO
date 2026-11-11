@@ -54,10 +54,12 @@ export default async function ManualInvoicesPage({
               <th className="px-3 py-2">Tarehe</th>
               <th className="px-3 py-2">Kampuni</th>
               <th className="px-3 py-2">Mteja</th>
+              <th className="px-3 py-2">PO Namba</th>
               <th className="px-3 py-2">Aina</th>
               <th className="px-3 py-2">Hali</th>
               <th className="px-3 py-2">Malipo</th>
               <th className="px-3 py-2">Delivery</th>
+              <th className="px-3 py-2">Kukubaliwa</th>
               <th className="px-3 py-2 text-right">Jumla (TSh)</th>
               <th className="px-3 py-2">Aliyetengeneza</th>
               <th className="px-3 py-2 text-right">Actions</th>
@@ -84,6 +86,7 @@ export default async function ManualInvoicesPage({
                     invoice.companyKey}
                 </td>
                 <td className="px-3 py-2 text-primary">{invoice.customerName || "—"}</td>
+                <td className="px-3 py-2 text-secondary">{invoice.customerPoNumber || "—"}</td>
                 <td className="px-3 py-2 text-secondary">
                   {invoice.docType === "proforma"
                     ? "Proforma"
@@ -124,6 +127,17 @@ export default async function ManualInvoicesPage({
                     </span>
                   )}
                 </td>
+                <td className="px-3 py-2">
+                  {invoice.accepted ? (
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                      Imekubaliwa
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-xs font-medium text-secondary">
+                      Bado
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums text-primary">
                   {currency.format(invoice.total)}
                 </td>
@@ -155,7 +169,7 @@ export default async function ManualInvoicesPage({
             ))}
             {invoices.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-6 text-center text-secondary">
+                <td colSpan={13} className="px-3 py-6 text-center text-secondary">
                   {q ? "Hakuna invoice iliyopatikana." : "Hakuna invoice bado."}
                 </td>
               </tr>
