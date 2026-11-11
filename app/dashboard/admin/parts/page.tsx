@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { List, LineChart } from "lucide-react";
+import { List, LineChart, Download } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getPartsForAdminTable, getPartCategories } from "@/lib/data/parts";
 import { getBranches } from "@/lib/data/branches";
@@ -92,6 +92,12 @@ export default async function AdminPartsPage({
           <p className="text-sm text-secondary">{t.adminCatalog.parts.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a href="/api/parts/price-list-xlsx">
+            <Button type="button" variant="secondary">
+              <Download size={15} className="mr-1.5 inline" />
+              Pakua Bei (Excel)
+            </Button>
+          </a>
           <Link href="/dashboard/admin/parts/photo-queue">
             <Button type="button" variant="secondary">
               Picha za Parts
