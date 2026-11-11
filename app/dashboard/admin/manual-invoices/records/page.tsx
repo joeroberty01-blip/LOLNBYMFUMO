@@ -51,7 +51,7 @@ export default async function ManualInvoiceRecordsPage({
       </div>
 
       <div className="mb-4">
-        <SearchBar placeholder="Tafuta kwa jina la mteja au namba ya invoice..." className="max-w-sm" />
+        <SearchBar placeholder="Tafuta kwa jina la mteja, namba ya invoice, PO namba, au part number..." className="max-w-sm" />
       </div>
 
       <div className="overflow-x-auto rounded-card border border-border">

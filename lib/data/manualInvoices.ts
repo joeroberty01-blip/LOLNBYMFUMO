@@ -66,7 +66,10 @@ export type ManualInvoiceData = {
 
 /** Lists manual company invoices, newest first — a freestanding document series that never
  * touches Sale/Inventory (see prisma/schema.prisma's ManualInvoice doc comment). `query`
- * filters by customer name or invoice number (the search bar at the top of the list page). */
+ * filters by customer name, invoice number, the customer's own PO/order number, or a part
+ * number/description typed on one of the invoice's line items — that last one reads straight off
+ * ManualInvoiceItem's own free-text fields, never the Part/Inventory catalog (a ManualInvoice
+ * never touches stock, see this file's and the schema's doc comments). */
 export async function listManualInvoices(query?: string, limit = 100): Promise<ManualInvoiceListRow[]> {
   const q = query?.trim();
   const invoiceNumberQuery = q ? Number(q.replace(/\D/g, "")) : undefined;
@@ -75,7 +78,18 @@ export async function listManualInvoices(query?: string, limit = 100): Promise<M
       ? {
           OR: [
             { customerName: { contains: q, mode: "insensitive" } },
+            { customerPoNumber: { contains: q, mode: "insensitive" } },
             ...(invoiceNumberQuery ? [{ invoiceNumber: invoiceNumberQuery }] : []),
+            {
+              items: {
+                some: {
+                  OR: [
+                    { partNumber: { contains: q, mode: "insensitive" } },
+                    { description: { contains: q, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
           ],
         }
       : undefined,
