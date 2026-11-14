@@ -133,6 +133,8 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
           icon: ArrowLeftRight,
         },
         { href: "/dashboard/sales/my-performance", label: t.nav.myPerformance, icon: LineChart },
+        { href: "/dashboard/admin/manual-invoices", label: t.nav.manualInvoices, icon: FileText },
+        { href: "/dashboard/admin/stickers", label: t.nav.stickers, icon: Tags },
       ],
     },
   ];

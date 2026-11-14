@@ -19,7 +19,10 @@ export default async function ManualInvoicesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isAdmin = session?.user.role === "ADMIN";
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -41,11 +44,13 @@ export default async function ManualInvoicesPage({
               Invoice Records
             </Button>
           </Link>
-          <Link href="/dashboard/admin/manual-invoices/new">
-            <Button type="button" variant="primary">
-              + Invoice Mpya
-            </Button>
-          </Link>
+          {isAdmin && (
+            <Link href="/dashboard/admin/manual-invoices/new">
+              <Button type="button" variant="primary">
+                + Invoice Mpya
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -74,16 +79,22 @@ export default async function ManualInvoicesPage({
             {invoices.map((invoice) => (
               <tr key={invoice.id} className="hover:bg-surface-elevated">
                 <td className="px-3 py-2">
-                  <Link
-                    href={
-                      invoice.status === "draft"
-                        ? `/dashboard/admin/manual-invoices/${invoice.id}/edit`
-                        : `/dashboard/admin/manual-invoices/${invoice.id}`
-                    }
-                    className="text-accent hover:underline"
-                  >
-                    MI-{String(invoice.invoiceNumber).padStart(4, "0")}
-                  </Link>
+                  {invoice.status === "draft" && !isAdmin ? (
+                    <span className="text-primary">
+                      MI-{String(invoice.invoiceNumber).padStart(4, "0")}
+                    </span>
+                  ) : (
+                    <Link
+                      href={
+                        invoice.status === "draft"
+                          ? `/dashboard/admin/manual-invoices/${invoice.id}/edit`
+                          : `/dashboard/admin/manual-invoices/${invoice.id}`
+                      }
+                      className="text-accent hover:underline"
+                    >
+                      MI-{String(invoice.invoiceNumber).padStart(4, "0")}
+                    </Link>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-primary">{format(invoice.createdAt, "d MMM yyyy")}</td>
                 <td className="px-3 py-2 text-primary">
@@ -147,15 +158,19 @@ export default async function ManualInvoicesPage({
                         <Eye size={15} />
                       </Link>
                     )}
-                    <Link
-                      href={`/dashboard/admin/manual-invoices/${invoice.id}/edit`}
-                      aria-label="Edit"
-                      title="Edit"
-                      className="rounded-control p-1.5 text-secondary hover:bg-white/[0.06] hover:text-primary"
-                    >
-                      <Pencil size={15} />
-                    </Link>
-                    <DeleteManualInvoiceButton invoiceId={invoice.id} />
+                    {isAdmin && (
+                      <>
+                        <Link
+                          href={`/dashboard/admin/manual-invoices/${invoice.id}/edit`}
+                          aria-label="Edit"
+                          title="Edit"
+                          className="rounded-control p-1.5 text-secondary hover:bg-white/[0.06] hover:text-primary"
+                        >
+                          <Pencil size={15} />
+                        </Link>
+                        <DeleteManualInvoiceButton invoiceId={invoice.id} />
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
