@@ -11,8 +11,13 @@ type Props = {
 };
 
 /** Live search: the text box updates the URL (and re-renders the Server Component table) a
- * short beat after the admin stops typing, instead of waiting for a form submit / Enter press. */
-const DEBOUNCE_MS = 150;
+ * short beat after the admin stops typing, instead of waiting for a form submit / Enter press.
+ * Each keystroke that survives the debounce costs a full server round trip (Neon is in
+ * us-east-2; this app's users are in Tanzania), so 150ms was firing on nearly every letter for
+ * anyone typing at a normal pace, turning one search into several multi-second round trips
+ * instead of one. 500ms -- a bit past the shared SearchBar's 300ms, since this page's query is
+ * heavier -- waits for an actual pause before firing. */
+const DEBOUNCE_MS = 500;
 
 /** Ordering only. The stock-condition options that used to live here ("Stock ndogo kwanza",
  * "Stock hasi kwanza") were removed on purpose: they only pushed matching parts to the top while
