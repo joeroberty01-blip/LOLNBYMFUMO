@@ -15,6 +15,7 @@ import {
 import { logAudit } from "@/lib/audit";
 import { toCents, fromCents } from "@/lib/money";
 import { customerInvoiceRemainingCents } from "@/lib/data/outstanding";
+import { isSimilarName } from "@/lib/textSimilarity";
 
 /** A rejection the admin should see verbatim, as opposed to an unexpected failure. Thrown inside
  * the transaction so the refusal also rolls back anything already written. */
@@ -42,13 +43,23 @@ export async function createCustomerQuick(input: QuickCustomerInput): Promise<Ac
   return { success: true, customerId: customer.id };
 }
 
+export type ResolveCustomerResult =
+  | { success: true; customerId: string }
+  | { success: false; error: string; suggestion?: { id: string; name: string } };
+
 /** Typing a customer's name at the start of a POS sale is the fast path — reuse the existing
  * Customer record if that name is already on file (case-insensitive), otherwise create one on
- * the spot with just the name. Either way it shows up on the Customers page like any other. */
+ * the spot with just the name. Either way it shows up on the Customers page like any other.
+ *
+ * Before creating a brand-new customer, this also checks for a near-duplicate name already on
+ * file (e.g. "Rama" typed as "Lama") and refuses with a `suggestion` instead of silently
+ * splitting one real customer into two records — the caller must re-call with `force: true`
+ * once the cashier has confirmed it really is a different person. */
 export async function findOrCreateCustomerByName(
   name: string,
-  phone?: string
-): Promise<ActionResult> {
+  phone?: string,
+  force = false
+): Promise<ResolveCustomerResult> {
   const session = await auth();
   if (!session || session.user.status !== "APPROVED") {
     return { success: false, error: "Huna ruhusa ya kufanya hili" };
@@ -79,6 +90,21 @@ export async function findOrCreateCustomerByName(
       revalidatePath("/dashboard/admin/customers");
     }
     return { success: true, customerId: existing.id };
+  }
+
+  if (!force) {
+    const activeCustomers = await prisma.customer.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+    });
+    const close = activeCustomers.find((c) => isSimilarName(c.name, trimmed));
+    if (close) {
+      return {
+        success: false,
+        error: `Jina hili linafanana na mteja aliyepo "${close.name}". Ni mtu huyo huyo?`,
+        suggestion: { id: close.id, name: close.name },
+      };
+    }
   }
 
   const customer = await prisma.customer.create({
@@ -203,6 +229,64 @@ export async function archiveCustomer(customerId: string): Promise<SimpleResult>
   // deletePart).
   await prisma.customer.update({ where: { id: customerId }, data: { isActive: false } });
   revalidatePath("/dashboard/admin/customers");
+  return { success: true };
+}
+
+/**
+ * Merges a duplicate customer record (created from a misspelled name, e.g. "Lama" instead of
+ * an existing "Rama") into the real one: every Sale and CustomerPayment pointing at `fromId` is
+ * repointed to `intoId`, `intoId`'s balance absorbs `fromId`'s (both are real outstanding debt,
+ * so they add up rather than one overwriting the other), and `fromId` is archived rather than
+ * deleted — Sale history must never lose the customer it points to, same convention as
+ * archiveCustomer. `intoId`'s own name/phone/email/creditLimit are left untouched.
+ */
+export async function mergeCustomers(fromId: string, intoId: string): Promise<SimpleResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+
+  if (fromId === intoId) {
+    return { success: false, error: "Chagua wateja wawili tofauti" };
+  }
+
+  const [from, into] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: fromId } }),
+    prisma.customer.findUnique({ where: { id: intoId } }),
+  ]);
+  if (!from || !into) {
+    return { success: false, error: "Mteja mmoja wao hayupo (huenda ameshafutwa)" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.sale.updateMany({ where: { customerId: fromId }, data: { customerId: intoId } });
+      await tx.customerPayment.updateMany({ where: { customerId: fromId }, data: { customerId: intoId } });
+      await tx.customer.update({
+        where: { id: intoId },
+        data: { balance: { increment: from.balance } },
+      });
+      await tx.customer.update({
+        where: { id: fromId },
+        data: { isActive: false, balance: 0 },
+      });
+      await logAudit(tx, {
+        userId: session.user.id,
+        action: "CUSTOMER_MERGED",
+        entityType: "Customer",
+        entityId: fromId,
+        metadata: { fromName: from.name, intoId, intoName: into.name },
+      });
+    });
+  } catch (e) {
+    return { success: false, error: (e as Error).message || "Imeshindikana kuunganisha wateja" };
+  }
+
+  revalidatePath("/dashboard/admin/customers");
+  revalidatePath(`/dashboard/admin/customers/${intoId}`);
+  revalidatePath("/dashboard/admin/reports/customers");
   return { success: true };
 }
 

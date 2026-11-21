@@ -1,7 +1,12 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getCustomerDetail, getCustomerSaleHistory, getCustomerPayments } from "@/lib/data/customers";
+import {
+  getCustomerDetail,
+  getCustomerSaleHistory,
+  getCustomerPayments,
+  getOtherActiveCustomers,
+} from "@/lib/data/customers";
 import { getBranches } from "@/lib/data/branches";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { StatCard } from "@/components/ui/StatCard";
@@ -10,6 +15,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PayInvoicesButton } from "@/components/admin/PayInvoicesButton";
+import { MergeCustomerButton } from "@/components/admin/MergeCustomerButton";
 import { CustomerSaleHistoryTable } from "@/components/admin/CustomerSaleHistoryTable";
 import { CreditCard, Wallet } from "lucide-react";
 import { getOpenInvoicesForCustomer } from "@/lib/data/outstanding";
@@ -42,6 +48,7 @@ export default async function CustomerDetailPage({
   const payments = await getCustomerPayments(id);
   const branches = await getBranches();
   const openInvoices = await getOpenInvoicesForCustomer(id);
+  const otherCustomers = await getOtherActiveCustomers(id);
 
   return (
     <div>
@@ -76,6 +83,11 @@ export default async function CustomerDetailPage({
               {t.common.edit}
             </Button>
           </Link>
+          <MergeCustomerButton
+            customerId={customer.id}
+            customerName={customer.name}
+            otherCustomers={otherCustomers}
+          />
         </div>
       </div>
 

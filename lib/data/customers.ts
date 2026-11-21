@@ -154,6 +154,20 @@ export async function getCustomerPayments(customerId: string) {
   }));
 }
 
+export type CustomerMergeOption = { id: string; name: string; balance: number };
+
+/** Every other active customer, for the "merge duplicate" picker on a customer's own detail
+ * page — lets an admin fix a typo'd second record (e.g. "Lama" created instead of reusing the
+ * existing "Rama") after the fact. */
+export async function getOtherActiveCustomers(excludeId: string): Promise<CustomerMergeOption[]> {
+  const rows = await prisma.customer.findMany({
+    where: { isActive: true, id: { not: excludeId } },
+    select: { id: true, name: true, balance: true },
+    orderBy: { name: "asc" },
+  });
+  return rows.map((r) => ({ id: r.id, name: r.name, balance: r.balance.toNumber() }));
+}
+
 export type MessagingCustomer = {
   id: string;
   name: string;

@@ -101,6 +101,9 @@ export function POSTerminal({
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerNameError, setCustomerNameError] = useState<string | null>(null);
+  // A near-duplicate name findOrCreateCustomerByName flagged (e.g. "Lama" close to an existing
+  // "Rama") — cleared whenever the typed text changes, same as the debt-dismissal below.
+  const [nameSuggestion, setNameSuggestion] = useState<{ id: string; name: string } | null>(null);
   // Which typed name the cashier has already dismissed the debt warning for — cleared whenever
   // the text changes, so switching to a different (or no) customer re-arms it.
   const [dismissedDebtFor, setDismissedDebtFor] = useState<string | null>(null);
@@ -116,9 +119,21 @@ export function POSTerminal({
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
   const customerName = customers.find((c) => c.id === customerId)?.name ?? "";
 
+  // Live dropdown of existing customers matching what's typed so far — picking one sets
+  // customerId directly, which is what actually stops a typo ("Lama" for an existing "Rama")
+  // from ever reaching findOrCreateCustomerByName and splitting one person into two records.
+  // Hidden once a customer is picked (customerId set); typing again clears customerId and the
+  // dropdown reappears.
+  const customerMatches = useMemo(() => {
+    const typed = customerSearch.trim().toLowerCase();
+    if (!typed || customerId) return [];
+    return customers.filter((c) => c.name.toLowerCase().includes(typed)).slice(0, 6);
+  }, [customerSearch, customerId, customers]);
+  const showCustomerDropdown = customerMatches.length > 0;
+
   // Matches as soon as the typed text exactly equals a known customer's name — which happens
-  // reliably once the cashier picks the name from the <datalist> suggestions below, even though
-  // customerId itself isn't resolved until checkout (resolveCustomer).
+  // reliably once the cashier picks a name from the dropdown above, even though customerId
+  // itself isn't resolved until checkout (resolveCustomer).
   const matchedDebtCustomer = useMemo(() => {
     const typed = customerSearch.trim().toLowerCase();
     if (!typed) return null;
@@ -263,6 +278,7 @@ export function POSTerminal({
     setCustomerId(null);
     setCustomerSearch("");
     setCustomerPhone("");
+    setNameSuggestion(null);
     setPaymentMethod("CASH");
     if (branchId) {
       void selectBranch(branchId);
@@ -270,17 +286,21 @@ export function POSTerminal({
   }
 
   /** Resolves the typed name to a Customer id — reuses an existing customer with that name
-   * (case-insensitive) or creates one on the spot. Returns null (and sets the field error) on
-   * failure so the caller can bail out without opening the confirm dialog. */
-  async function resolveCustomer(): Promise<string | null> {
+   * (case-insensitive) or creates one on the spot. Returns null (and sets the field error, or
+   * nameSuggestion if it's a likely typo of an existing customer) on failure so the caller can
+   * bail out without opening the confirm dialog. `force` skips the near-duplicate-name check,
+   * used when the cashier has already confirmed it really is a new person. */
+  async function resolveCustomer(force = false): Promise<string | null> {
     const name = customerSearch.trim();
     if (!name) return null;
     setCustomerNameError(null);
+    setNameSuggestion(null);
     setIsSavingCustomerName(true);
     try {
-      const result = await findOrCreateCustomerByName(name, customerPhone.trim() || undefined);
+      const result = await findOrCreateCustomerByName(name, customerPhone.trim() || undefined, force);
       if (!result.success) {
         setCustomerNameError(result.error);
+        setNameSuggestion(result.suggestion ?? null);
         return null;
       }
       setCustomers((prev) =>
@@ -293,6 +313,20 @@ export function POSTerminal({
     } finally {
       setIsSavingCustomerName(false);
     }
+  }
+
+  /** The cashier confirmed the suggested existing customer is the same person — switch the
+   * typed name to that customer's own name so the next resolve exact-matches it. */
+  function acceptNameSuggestion() {
+    if (!nameSuggestion) return;
+    setCustomerSearch(nameSuggestion.name);
+    setNameSuggestion(null);
+    setCustomerNameError(null);
+  }
+
+  /** The cashier confirmed it IS a new, different person — create it despite the similarity. */
+  async function confirmNewCustomer() {
+    await resolveCustomer(true);
   }
 
   async function handleCompleteSale() {
@@ -535,26 +569,73 @@ export function POSTerminal({
         </div>
 
         <div className="mb-4 flex flex-col gap-3">
-          <div>
+          <div className="relative">
             <p className="mb-1.5 text-sm font-medium text-primary">{t.sales.pos.chooseCustomer}</p>
             <Input
               type="text"
-              list="pos-known-customers"
               placeholder={t.sales.pos.customerNamePlaceholder}
               value={customerSearch}
+              autoComplete="off"
               onChange={(e) => {
                 setCustomerSearch(e.target.value);
                 setCustomerId(null);
                 setCustomerNameError(null);
+                setNameSuggestion(null);
               }}
             />
-            <datalist id="pos-known-customers">
-              {customers.map((c) => (
-                <option key={c.id} value={c.name} />
-              ))}
-            </datalist>
+            {showCustomerDropdown && (
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-control border border-border bg-surface shadow-lg">
+                {customerMatches.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCustomerSearch(c.name);
+                      setCustomerId(c.id);
+                      setCustomerNameError(null);
+                      setNameSuggestion(null);
+                    }}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface-elevated"
+                  >
+                    <span className="text-primary">
+                      {c.name}
+                      {c.phone && <span className="ml-1.5 text-secondary">· {c.phone}</span>}
+                    </span>
+                    {c.balance > 0 && (
+                      <span className="tabular-nums text-xs text-warning">
+                        {currency.format(c.balance)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+                <div className="border-t border-border px-3 py-1.5 text-xs text-secondary">
+                  Haupo kwenye orodha? Endelea kuandika jina jipya.
+                </div>
+              </div>
+            )}
             {customerNameError && (
               <p className="mt-1 text-sm text-danger">{customerNameError}</p>
+            )}
+            {nameSuggestion && (
+              <div className="mt-1.5 rounded-control border border-warning/40 bg-warning/[0.08] px-3 py-2 text-sm">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={acceptNameSuggestion}
+                    className="text-xs font-medium text-accent hover:underline"
+                  >
+                    Ndiyo, ni {nameSuggestion.name}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingCustomerName}
+                    onClick={confirmNewCustomer}
+                    className="text-xs text-secondary hover:underline"
+                  >
+                    Hapana, ni mteja mpya
+                  </button>
+                </div>
+              </div>
             )}
             {showDebtWarning && matchedDebtCustomer && (
               <div className="mt-1.5 rounded-control border border-warning/40 bg-warning/[0.08] px-3 py-2 text-sm">
