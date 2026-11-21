@@ -13,7 +13,11 @@ export type CustomerRow = {
 };
 
 export async function getCustomers(page: PageArgs, q?: string): Promise<Paginated<CustomerRow>> {
-  const where: Prisma.CustomerWhereInput = { isActive: true };
+  // Excludes customers created purely to hold imported legacy debt (see Customer.isLegacyImport)
+  // -- they're placeholders for a historical balance, not people to sell to or message today, so
+  // they stay off the real Customers directory, POS picker, and every other "who are my
+  // customers" list in this file. Their own debt lives on its dedicated page instead.
+  const where: Prisma.CustomerWhereInput = { isActive: true, isLegacyImport: false };
   const query = q?.trim();
   if (query) {
     where.OR = [
@@ -48,7 +52,7 @@ export type POSCustomer = { id: string; name: string; phone: string | null; bala
 
 export async function getCustomersForPOS(): Promise<POSCustomer[]> {
   const rows = await prisma.customer.findMany({
-    where: { isActive: true },
+    where: { isActive: true, isLegacyImport: false },
     select: { id: true, name: true, phone: true, balance: true },
     orderBy: { name: "asc" },
   });
@@ -161,7 +165,7 @@ export type CustomerMergeOption = { id: string; name: string; balance: number };
  * existing "Rama") after the fact. */
 export async function getOtherActiveCustomers(excludeId: string): Promise<CustomerMergeOption[]> {
   const rows = await prisma.customer.findMany({
-    where: { isActive: true, id: { not: excludeId } },
+    where: { isActive: true, isLegacyImport: false, id: { not: excludeId } },
     select: { id: true, name: true, balance: true },
     orderBy: { name: "asc" },
   });
@@ -180,7 +184,7 @@ export type MessagingCustomer = {
  * message the ones that can. */
 export async function getCustomersForMessaging(): Promise<MessagingCustomer[]> {
   const rows = await prisma.customer.findMany({
-    where: { isActive: true },
+    where: { isActive: true, isLegacyImport: false },
     select: { id: true, name: true, phone: true, balance: true },
     orderBy: { name: "asc" },
   });

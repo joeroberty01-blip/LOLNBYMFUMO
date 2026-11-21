@@ -94,7 +94,7 @@ export async function findOrCreateCustomerByName(
 
   if (!force) {
     const activeCustomers = await prisma.customer.findMany({
-      where: { isActive: true },
+      where: { isActive: true, isLegacyImport: false },
       select: { id: true, name: true },
     });
     const close = activeCustomers.find((c) => isSimilarName(c.name, trimmed));
