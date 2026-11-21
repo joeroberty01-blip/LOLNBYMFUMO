@@ -57,9 +57,9 @@ export async function sendDebtRemindersBySms(): Promise<ReminderRunResult> {
 }
 
 /**
- * Same send, without the admin-session check -- for the weekly cron (see
- * app/api/cron/weekly-debt-reminders/route.ts), which authenticates the request itself (a
- * shared CRON_SECRET, not a logged-in user) rather than through next-auth.
+ * Same send, without the admin-session check -- for the every-10-days cron (see
+ * app/api/cron/debt-reminders/route.ts), which authenticates the request itself (a shared
+ * CRON_SECRET, not a logged-in user) rather than through next-auth.
  */
 export async function runDebtReminders(): Promise<ReminderRunResult> {
   if (!isSmsGatewayConfigured()) {
