@@ -37,11 +37,38 @@ export async function sendDebtRemindersBySms(): Promise<ReminderRunResult> {
   if (!session || session.user.role !== "ADMIN") {
     return { success: false, error: "Huna ruhusa ya kufanya hili" };
   }
+
+  const result = await runDebtReminders();
+  if (result.success) {
+    await logAudit(prisma, {
+      userId: session.user.id,
+      action: "DEBT_REMINDERS_SENT",
+      entityType: "ReminderRun",
+      entityId: session.user.id,
+      metadata: {
+        sent: result.sent,
+        failed: result.failed,
+        skippedNoPhone: result.skippedNoPhone,
+      },
+    });
+    revalidatePath("/dashboard/admin/reports/customers");
+  }
+  return result;
+}
+
+/**
+ * Same send, without the admin-session check -- for the weekly cron (see
+ * app/api/cron/weekly-debt-reminders/route.ts), which authenticates the request itself (a
+ * shared CRON_SECRET, not a logged-in user) rather than through next-auth.
+ */
+export async function runDebtReminders(): Promise<ReminderRunResult> {
   if (!isSmsGatewayConfigured()) {
     return { success: false, error: smsGatewayNotConfiguredMessage() };
   }
 
-  const groups = await getCustomerDebtItems();
+  // Never the legacy-imported placeholder "customers" (see Customer.isLegacyImport) -- they have
+  // no phone numbers and nobody to actually remind.
+  const groups = await getCustomerDebtItems({ scope: "native" });
   if (groups.length === 0) {
     return { success: true, sent: 0, failed: 0, skippedNoPhone: 0, failures: [] };
   }
@@ -79,14 +106,5 @@ export async function sendDebtRemindersBySms(): Promise<ReminderRunResult> {
     }
   }
 
-  await logAudit(prisma, {
-    userId: session.user.id,
-    action: "DEBT_REMINDERS_SENT",
-    entityType: "ReminderRun",
-    entityId: session.user.id,
-    metadata: { sent, failed, skippedNoPhone, totalDebtors: groups.length },
-  });
-
-  revalidatePath("/dashboard/admin/reports/customers");
   return { success: true, sent, failed, skippedNoPhone, failures };
 }

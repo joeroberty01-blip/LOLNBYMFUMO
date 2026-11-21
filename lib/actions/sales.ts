@@ -15,6 +15,8 @@ import {
   type POSInventoryItem,
 } from "@/lib/data/sales";
 import { logAudit } from "@/lib/audit";
+import { invoiceMessage, toWhatsAppNumber } from "@/lib/messaging";
+import { sendSms, isSmsGatewayConfigured } from "@/lib/smsGateway";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -210,6 +212,37 @@ export async function completeSale(input: CompleteSaleInput): Promise<CompleteSa
         isManualEntry: i.isManualEntry,
       })),
     };
+
+    // Receipt SMS only for a sale paid right now -- a credit sale has nothing to receipt yet
+    // (the customer hasn't paid), and never breaks checkout: an unconfigured/unreachable gateway
+    // is swallowed since the printed/on-screen receipt already satisfies the sale either way.
+    if (!sale.isCredit && sale.customer?.phone && isSmsGatewayConfigured()) {
+      const number = toWhatsAppNumber(sale.customer.phone);
+      if (number) {
+        try {
+          await sendSms(
+            [`+${number}`],
+            invoiceMessage({
+              customerName: sale.customer.name,
+              storeName: sale.branch.name,
+              storeLocation: sale.branch.location,
+              invoiceNumber: sale.invoiceNumber,
+              date: sale.createdAt,
+              items: sale.items.map((i) => ({
+                name: i.isManualEntry ? (i.manualItemName ?? "Manual item") : (i.part?.name ?? "Part"),
+                partNumber: i.isManualEntry ? (i.manualPartNumber ?? null) : (i.part?.partNumber ?? null),
+                quantity: i.quantity,
+                subtotal: i.quantity * i.unitPrice.toNumber(),
+              })),
+              total: sale.total.toNumber(),
+              isCredit: false,
+            })
+          );
+        } catch {
+          // Best-effort -- the sale already succeeded.
+        }
+      }
+    }
 
     return { success: true, data: receipt };
   } catch (e) {
