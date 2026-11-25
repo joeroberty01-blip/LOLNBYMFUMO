@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Send } from "lucide-react";
-import { sendDebtRemindersBySms, type ReminderRunResult } from "@/lib/actions/smsReminders";
+import { sendDebtRemindersBySms } from "@/lib/actions/smsReminders";
+import type { ReminderRunResult } from "@/lib/debtReminders";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 

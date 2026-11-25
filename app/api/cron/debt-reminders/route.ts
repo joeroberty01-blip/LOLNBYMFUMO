@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runDebtReminders } from "@/lib/actions/smsReminders";
+import { runDebtReminders } from "@/lib/debtReminders";
 
 /** Every 10 days, counting from Monday 2026-11-16 (day 1) -- so day 10, 20, 30... is a reminder
  * day, day 1-9, 11-19... is not. Vercel Cron has no "every N days from this date" schedule, only
@@ -18,15 +18,15 @@ function isDueToday(now: Date): boolean {
 /** Triggered by Vercel Cron (see vercel.json) every day, but only actually sends on the 10-day
  * cycle -- the automatic version of the admin's "Tuma vikumbusho vyote kwa SMS" button, so
  * debtors get reminded without anyone having to remember to click it. Vercel signs its own cron
- * requests with this bearer token when CRON_SECRET is set; anyone else hitting this URL without
- * it gets rejected before any SMS goes out. */
+ * requests with this bearer token when CRON_SECRET is set. Without CRON_SECRET the route refuses to
+ * run at all, so nobody can trigger a bulk SMS run just by knowing the URL. */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "CRON_SECRET haijawekwa" }, { status: 503 });
+  }
+  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!isDueToday(new Date())) {
