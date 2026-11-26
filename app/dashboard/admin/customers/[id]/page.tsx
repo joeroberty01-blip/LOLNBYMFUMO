@@ -35,7 +35,10 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -69,7 +72,7 @@ export default async function CustomerDetailPage({
           </p>
         </div>
         <div className="flex gap-2">
-          {customer.balance > 0 && (
+          {isAdmin && customer.balance > 0 && (
             <PayInvoicesButton
               kind="customer"
               partyId={customer.id}
@@ -83,11 +86,13 @@ export default async function CustomerDetailPage({
               {t.common.edit}
             </Button>
           </Link>
-          <MergeCustomerButton
-            customerId={customer.id}
-            customerName={customer.name}
-            otherCustomers={otherCustomers}
-          />
+          {isAdmin && (
+            <MergeCustomerButton
+              customerId={customer.id}
+              customerName={customer.name}
+              otherCustomers={otherCustomers}
+            />
+          )}
         </div>
       </div>
 

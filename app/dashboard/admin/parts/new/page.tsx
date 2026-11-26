@@ -7,7 +7,10 @@ import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function NewPartPage() {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -21,7 +24,7 @@ export default async function NewPartPage() {
       <h1 className="mt-4 mb-6 text-xl font-semibold text-primary">
         {t.adminCatalog.parts.newTitle}
       </h1>
-      <PartForm mode="create" branches={branches} />
+      <PartForm mode="create" branches={branches} showCostPrice={isAdmin} />
     </div>
   );
 }

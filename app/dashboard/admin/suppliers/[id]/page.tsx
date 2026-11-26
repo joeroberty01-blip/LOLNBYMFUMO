@@ -35,7 +35,10 @@ export default async function SupplierDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -72,7 +75,7 @@ export default async function SupplierDetailPage({
           </p>
         </div>
         <div className="flex gap-2">
-          {supplier.balance > 0 && (
+          {isAdmin && supplier.balance > 0 && (
             <PayInvoicesButton
               kind="supplier"
               partyId={supplier.id}
@@ -89,19 +92,23 @@ export default async function SupplierDetailPage({
         </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={`mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${isAdmin ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+      >
         <StatCard
           icon={<CreditCard size={18} />}
           label={t.adminCatalog.suppliers.currentBalance}
           value={currency.format(supplier.balance)}
           alert={supplier.balance > 0}
         />
-        <StatCard
-          icon={<Receipt size={18} />}
-          label="Jumla ya Manunuzi"
-          value={currency.format(history.totalSpend)}
-          accent="primary"
-        />
+        {isAdmin && (
+          <StatCard
+            icon={<Receipt size={18} />}
+            label="Jumla ya Manunuzi"
+            value={currency.format(history.totalSpend)}
+            accent="primary"
+          />
+        )}
         <StatCard
           icon={<Package size={18} />}
           label="Parts Tofauti"
@@ -116,7 +123,7 @@ export default async function SupplierDetailPage({
         />
       </div>
 
-      <SupplierInvoices supplierId={supplier.id} invoices={invoices} />
+      {isAdmin && <SupplierInvoices supplierId={supplier.id} invoices={invoices} />}
 
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-sm font-semibold text-primary">Parts Zilizotoka Kwake</h2>
@@ -143,8 +150,7 @@ export default async function SupplierDetailPage({
                 "Bidhaa",
                 "Part No",
                 "Qty",
-                "Bei kwa Unit",
-                "Jumla",
+                ...(isAdmin ? ["Bei kwa Unit", "Jumla"] : []),
                 "Store",
                 "Maelezo",
               ]}
@@ -153,8 +159,7 @@ export default async function SupplierDetailPage({
                 l.partName,
                 l.partNumber,
                 l.quantity,
-                l.unitPrice,
-                l.lineTotal,
+                ...(isAdmin ? [l.unitPrice, l.lineTotal] : []),
                 l.branchName,
                 l.notes ?? "",
               ])}
@@ -166,8 +171,12 @@ export default async function SupplierDetailPage({
                   <Th>Bidhaa</Th>
                   <Th>Part No</Th>
                   <Th className="text-right">Qty</Th>
-                  <Th className="text-right">Bei kwa Unit</Th>
-                  <Th className="text-right">Jumla</Th>
+                  {isAdmin && (
+                    <>
+                      <Th className="text-right">Bei kwa Unit</Th>
+                      <Th className="text-right">Jumla</Th>
+                    </>
+                  )}
                   <Th>Store</Th>
                 </THeadRow>
               </THead>
@@ -182,12 +191,16 @@ export default async function SupplierDetailPage({
                       {l.partNumber}
                     </Td>
                     <Td className="text-right tabular-nums">{l.quantity}</Td>
-                    <Td className="text-right tabular-nums whitespace-nowrap">
-                      {currency.format(l.unitPrice)}
-                    </Td>
-                    <Td className="text-right font-medium tabular-nums whitespace-nowrap text-primary">
-                      {currency.format(l.lineTotal)}
-                    </Td>
+                    {isAdmin && (
+                      <>
+                        <Td className="text-right tabular-nums whitespace-nowrap">
+                          {currency.format(l.unitPrice)}
+                        </Td>
+                        <Td className="text-right font-medium tabular-nums whitespace-nowrap text-primary">
+                          {currency.format(l.lineTotal)}
+                        </Td>
+                      </>
+                    )}
                     <Td className="whitespace-nowrap text-secondary">{l.branchName}</Td>
                   </Tr>
                 ))}
@@ -197,30 +210,36 @@ export default async function SupplierDetailPage({
         )}
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-primary">{t.adminCatalog.suppliers.recordPayment}</h2>
-      {payments.length === 0 ? (
-        <EmptyState title={t.adminCatalog.suppliers.empty} />
-      ) : (
-        <Table>
-          <THead>
-            <THeadRow>
-              <Th>{t.common.date}</Th>
-              <Th className="text-right">{t.common.amount}</Th>
-              <Th>{t.common.paymentMethod}</Th>
-              <Th>{t.reports.inventory.who}</Th>
-            </THeadRow>
-          </THead>
-          <TBody>
-            {payments.map((p, i) => (
-              <Tr key={p.id} index={i}>
-                <Td className="text-secondary">{p.createdAt.toLocaleString("sw-TZ")}</Td>
-                <Td className="text-right tabular-nums">{currency.format(p.amount)}</Td>
-                <Td>{PAYMENT_LABEL[p.paymentMethod] ?? p.paymentMethod}</Td>
-                <Td>{p.userName}</Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
+      {isAdmin && (
+        <>
+          <h2 className="mb-2 text-sm font-semibold text-primary">
+            {t.adminCatalog.suppliers.recordPayment}
+          </h2>
+          {payments.length === 0 ? (
+            <EmptyState title={t.adminCatalog.suppliers.empty} />
+          ) : (
+            <Table>
+              <THead>
+                <THeadRow>
+                  <Th>{t.common.date}</Th>
+                  <Th className="text-right">{t.common.amount}</Th>
+                  <Th>{t.common.paymentMethod}</Th>
+                  <Th>{t.reports.inventory.who}</Th>
+                </THeadRow>
+              </THead>
+              <TBody>
+                {payments.map((p, i) => (
+                  <Tr key={p.id} index={i}>
+                    <Td className="text-secondary">{p.createdAt.toLocaleString("sw-TZ")}</Td>
+                    <Td className="text-right tabular-nums">{currency.format(p.amount)}</Td>
+                    <Td>{PAYMENT_LABEL[p.paymentMethod] ?? p.paymentMethod}</Td>
+                    <Td>{p.userName}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
+          )}
+        </>
       )}
     </div>
   );

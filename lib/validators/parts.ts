@@ -58,6 +58,16 @@ function bareCodeCheck(data: { name: string; partNumber: string }, ctx: z.Refine
 export const partSchema = basePartObject.superRefine(bareCodeCheck);
 export type PartInput = z.infer<typeof partSchema>;
 
+/** Overrides basePartObject's required costPrice for createPartSchema/editPartSchema/
+ * partFormSchema below — their shared PartForm hides the buying-price field entirely for sales
+ * staff (see PartForm's showCostPrice), so their submission simply omits it. createPart defaults
+ * the missing value to 0; updatePart passing `undefined` to Prisma leaves the existing value
+ * untouched. The admin form always registers and submits a value, so the positive-number check
+ * still applies there. partSchema/quickPartSchema (admin-only call sites) are unaffected. */
+const optionalCostPrice = {
+  costPrice: z.coerce.number().positive("Buying price iwe zaidi ya 0").optional(),
+};
+
 /** The five fields the Credit Purchase "New Product" modal asks for. Built by narrowing
  * basePartObject and re-applying the check, NOT by `partSchema.pick(...)` — Zod refuses `.pick()`
  * on a schema that already carries refinements and throws at module-evaluation time, which took
@@ -72,6 +82,7 @@ export type QuickPartInput = z.infer<typeof quickPartSchema>;
  * prior quantity to show or correct — there is nothing yet for "current quantity" to mean. */
 export const createPartSchema = basePartObject
   .extend({
+    ...optionalCostPrice,
     openingQuantity: z.coerce.number().int().min(0, "Isiwe hasi").optional(),
     openingBranchId: z
       .string()
@@ -92,6 +103,7 @@ export type CreatePartInput = z.infer<typeof createPartSchema>;
  * the dedicated Adjust Stock action, never a silent overwrite of Inventory.quantity. */
 export const editPartSchema = basePartObject
   .extend({
+    ...optionalCostPrice,
     fromBranchId: z
       .string()
       .optional()
@@ -112,6 +124,7 @@ export type EditPartInput = z.infer<typeof editPartSchema>;
  * keys that schema doesn't declare. */
 export const partFormSchema = basePartObject
   .extend({
+    ...optionalCostPrice,
     openingQuantity: z.coerce.number().int().min(0, "Isiwe hasi").optional(),
     openingBranchId: z
       .string()

@@ -8,7 +8,9 @@ import { getAllActivePartsLite } from "@/lib/data/parts";
  * of the (possibly filtered) table is currently on screen. */
 export async function GET() {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  if (!session || (session.user.role !== "ADMIN" && !isApprovedSalesStaff)) {
     return new Response("Forbidden", { status: 403 });
   }
 

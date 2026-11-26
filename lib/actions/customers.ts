@@ -137,7 +137,7 @@ async function requireAdminOrApprovedStaff() {
 
 export async function createCustomer(input: CustomerInput): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireAdminOrApprovedStaff();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -159,7 +159,7 @@ export async function updateCustomer(
   input: CustomerInput
 ): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireAdminOrApprovedStaff();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -188,7 +188,7 @@ export async function updateCustomerTaxDetails(
   input: { address?: string; tin?: string; vrn?: string }
 ): Promise<SimpleResult> {
   try {
-    await requireAdmin();
+    await requireAdminOrApprovedStaff();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }

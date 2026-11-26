@@ -39,13 +39,16 @@ export default async function AdminPartsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
   const sp = await searchParams;
   const { q, category, stock, sort, page: pageParam, pageSize, tab } = sp;
-  const activeTab = tab === "report" ? "report" : "list";
+  const activeTab = isAdmin && tab === "report" ? "report" : "list";
   const { t } = await getServerDictionary();
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
   const selectedCategories = (sp.categories ?? "")
@@ -103,11 +106,13 @@ export default async function AdminPartsPage({
               Picha za Parts
             </Button>
           </Link>
-          <Link href="/dashboard/admin/parts/bulk-upload">
-            <Button type="button" variant="secondary">
-              {t.nav.bulkUpload}
-            </Button>
-          </Link>
+          {isAdmin && (
+            <Link href="/dashboard/admin/parts/bulk-upload">
+              <Button type="button" variant="secondary">
+                {t.nav.bulkUpload}
+              </Button>
+            </Link>
+          )}
           <Link href="/dashboard/admin/parts/new">
             <Button type="button" variant="primary">
               {t.adminCatalog.parts.addNew}
@@ -116,13 +121,15 @@ export default async function AdminPartsPage({
         </div>
       </div>
 
-      <Tabs
-        defaultValue="list"
-        tabs={[
-          { value: "list", label: t.nav.parts, icon: <List size={15} /> },
-          { value: "report", label: t.reports.inventory.title, icon: <LineChart size={15} /> },
-        ]}
-      />
+      {isAdmin && (
+        <Tabs
+          defaultValue="list"
+          tabs={[
+            { value: "list", label: t.nav.parts, icon: <List size={15} /> },
+            { value: "report", label: t.reports.inventory.title, icon: <LineChart size={15} /> },
+          ]}
+        />
+      )}
 
       {activeTab === "list" && (
         <>
@@ -150,13 +157,21 @@ export default async function AdminPartsPage({
           <ListToolbar
             compact
             filename="parts"
-            headers={["Name", "Part Number", "Branch", "Quantity", "Cost Price", "Unit Price", "Low Stock Threshold"]}
+            headers={[
+              "Name",
+              "Part Number",
+              "Branch",
+              "Quantity",
+              ...(isAdmin ? ["Cost Price"] : []),
+              "Unit Price",
+              "Low Stock Threshold",
+            ]}
             rows={parts.rows.map((p) => [
               p.name,
               p.partNumber,
               p.branchName,
               p.quantity,
-              p.costPrice,
+              ...(isAdmin ? [p.costPrice] : []),
               p.unitPrice,
               p.lowStockThreshold,
             ])}
@@ -172,7 +187,7 @@ export default async function AdminPartsPage({
             </p>
           </div>
 
-          <PartsTable rows={parts.rows} branches={branches} />
+          <PartsTable rows={parts.rows} branches={branches} isAdmin={isAdmin} />
 
           <Pagination
             baseHref="/dashboard/admin/parts"
@@ -193,7 +208,7 @@ export default async function AdminPartsPage({
         </>
       )}
 
-      {activeTab === "report" && <PartsReportTab sp={sp} t={t} />}
+      {isAdmin && activeTab === "report" && <PartsReportTab sp={sp} t={t} />}
     </div>
   );
 }

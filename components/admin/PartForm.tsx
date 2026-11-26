@@ -22,6 +22,11 @@ type Props = {
    * several stores at once, so the page has to say which one is being edited — picking a
    * different store in the form moves that store's stock to the new one. */
   currentBranchId?: string;
+  /** Sales staff get this form too (catalogue upkeep is routine counter work), but never see the
+   * buying price — the field isn't registered at all for them, so it's never in the submitted
+   * data; createPart/updatePart fill in or preserve it server-side instead. Defaults true since
+   * every existing caller is admin-only. */
+  showCostPrice?: boolean;
 };
 
 export function PartForm({
@@ -30,6 +35,7 @@ export function PartForm({
   defaultValues,
   branches = [],
   currentBranchId,
+  showCostPrice = true,
 }: Props) {
   const t = useTranslations();
   const router = useRouter();
@@ -97,14 +103,16 @@ export function PartForm({
         {errors.category && <p className="mt-1 text-sm text-danger">{errors.category.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>{t.adminCatalog.parts.buyingPrice}</Label>
-          <Input id="costPrice" type="number" step="0.01" {...register("costPrice")} />
-          {errors.costPrice && (
-            <p className="mt-1 text-sm text-danger">{errors.costPrice.message}</p>
-          )}
-        </div>
+      <div className={showCostPrice ? "grid grid-cols-2 gap-4" : undefined}>
+        {showCostPrice && (
+          <div>
+            <Label>{t.adminCatalog.parts.buyingPrice}</Label>
+            <Input id="costPrice" type="number" step="0.01" {...register("costPrice")} />
+            {errors.costPrice && (
+              <p className="mt-1 text-sm text-danger">{errors.costPrice.message}</p>
+            )}
+          </div>
+        )}
 
         <div>
           <Label>{t.adminCatalog.parts.sellingPrice}</Label>

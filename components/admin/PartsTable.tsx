@@ -26,6 +26,7 @@ const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
  * as visually "big" even at modest pixel sizes, so this stays deliberately small/modern rather
  * than growing to show more detail. */
 const COL_WIDTHS = ["23%", "21%", "13%", "13%", "16%", "8%", "56px", "160px"];
+const COL_WIDTHS_NO_COST = ["26%", "24%", "16%", "18%", "9%", "56px", "160px"];
 
 function rowKey(row: AdminPartRow, i: number) {
   return `${row.partId}-${row.branchId ?? "none"}-${i}`;
@@ -38,9 +39,13 @@ function toStickerItem(row: AdminPartRow): StickerItem {
 export function PartsTable({
   rows,
   branches,
+  isAdmin = true,
 }: {
   rows: AdminPartRow[];
   branches: { id: string; name: string }[];
+  /** Sales staff get this table too, minus the buying price column and the stock-correction
+   * actions (adjust/delete) — same split as the rest of Parts for non-admin viewers. */
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
 
@@ -56,7 +61,7 @@ export function PartsTable({
   return (
     <Table className="table-fixed min-w-[760px]">
       <colgroup>
-        {COL_WIDTHS.map((w, i) => (
+        {(isAdmin ? COL_WIDTHS : COL_WIDTHS_NO_COST).map((w, i) => (
           <col key={i} style={{ width: w }} />
         ))}
       </colgroup>
@@ -64,7 +69,7 @@ export function PartsTable({
         <THeadRow className="divide-x divide-border">
           <Th>Name</Th>
           <Th>Part Number</Th>
-          <Th className="text-right">Buying</Th>
+          {isAdmin && <Th className="text-right">Buying</Th>}
           <Th className="text-right">Selling</Th>
           <Th>Branch</Th>
           <Th className="text-right">Qty</Th>
@@ -85,9 +90,11 @@ export function PartsTable({
             <Td className="max-w-0 truncate text-secondary" title={row.partNumber}>
               {row.partNumber}
             </Td>
-            <Td className="text-right tabular-nums whitespace-nowrap">
-              {currency.format(row.costPrice)}
-            </Td>
+            {isAdmin && (
+              <Td className="text-right tabular-nums whitespace-nowrap">
+                {currency.format(row.costPrice)}
+              </Td>
+            )}
             <Td className="text-right tabular-nums whitespace-nowrap">
               {currency.format(row.unitPrice)}
             </Td>
@@ -146,14 +153,16 @@ export function PartsTable({
                 >
                   <Pencil size={15} />
                 </Link>
-                <StockAdjustmentModal
-                  partId={row.partId}
-                  partName={row.name}
-                  branchId={row.branchId}
-                  branchName={row.branchName}
-                  branches={branches}
-                  compact
-                />
+                {isAdmin && (
+                  <StockAdjustmentModal
+                    partId={row.partId}
+                    partName={row.name}
+                    branchId={row.branchId}
+                    branchName={row.branchName}
+                    branches={branches}
+                    compact
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => printSticker(row)}
@@ -163,7 +172,7 @@ export function PartsTable({
                 >
                   <Tag size={15} />
                 </button>
-                <DeletePartButton partId={row.partId} compact />
+                {isAdmin && <DeletePartButton partId={row.partId} compact />}
               </div>
             </Td>
           </Tr>

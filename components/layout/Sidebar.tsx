@@ -123,19 +123,46 @@ export function Sidebar({ isAdmin = true }: { isAdmin?: boolean }) {
       items: [
         { href: "/dashboard/sales/pos", label: t.nav.newSale, icon: ShoppingCart },
         { href: "/dashboard/sales/history", label: t.nav.salesHistory, icon: History },
-        { href: "/dashboard/sales/inventory", label: t.nav.inventory, icon: Package },
-        { href: "/dashboard/sales/customer-debts", label: t.nav.customerDebts, icon: CreditCard },
-        { href: "/dashboard/sales/suppliers", label: t.nav.suppliers, icon: Truck },
-        { href: "/dashboard/sales/expenses", label: t.nav.expenses, icon: Wallet },
+        { href: "/dashboard/admin/sales", label: t.adminOps.salesList.title, icon: Receipt },
+        { href: "/dashboard/sales/my-performance", label: t.nav.myPerformance, icon: LineChart },
+      ],
+    },
+    {
+      label: t.adminOps.sidebar.management,
+      items: [
+        { href: "/dashboard/admin/parts", label: t.nav.parts, icon: Package },
+        { href: "/dashboard/admin/stickers", label: t.nav.stickers, icon: Tags },
+        { href: "/dashboard/admin/stores", label: t.nav.stores, icon: Store },
+        { href: "/dashboard/admin/customers", label: t.nav.customers, icon: Users },
+        { href: "/dashboard/admin/debt-management", label: t.nav.debtManagement, icon: CreditCard },
+        { href: "/dashboard/admin/suppliers", label: t.nav.suppliers, icon: Truck },
+      ],
+    },
+    {
+      label: t.adminOps.sidebar.operations,
+      items: [
         {
-          href: "/dashboard/sales/stock-movements",
+          href: "/dashboard/admin/parts/sales-history",
+          label: t.nav.partSalesHistory,
+          icon: History,
+        },
+        { href: "/dashboard/admin/sales/manual-items", label: t.nav.manualItems, icon: Boxes },
+        {
+          href: "/dashboard/admin/stock-movements",
           label: t.nav.stockMovements,
           icon: ArrowLeftRight,
         },
-        { href: "/dashboard/sales/my-performance", label: t.nav.myPerformance, icon: LineChart },
-        { href: "/dashboard/admin/manual-invoices", label: t.nav.manualInvoices, icon: FileText },
-        { href: "/dashboard/admin/stickers", label: t.nav.stickers, icon: Tags },
       ],
+    },
+    {
+      label: t.nav.manualInvoices,
+      items: [
+        { href: "/dashboard/admin/manual-invoices", label: t.nav.manualInvoices, icon: FileText },
+      ],
+    },
+    {
+      label: t.adminOps.sidebar.finance,
+      items: [{ href: "/dashboard/sales/expenses", label: t.nav.expenses, icon: Wallet }],
     },
   ];
 

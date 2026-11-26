@@ -23,10 +23,25 @@ async function requireAdmin() {
   return session;
 }
 
+/** Sales staff can add and edit parts too (catalogue upkeep is routine counter work) — they
+ * just never see or submit costPrice (PartForm hides that field for them), so createPart/
+ * updatePart below fill in or preserve it instead of trusting the input. Deleting a part stays
+ * admin-only, same split as Expenses/StockMovements (lib/actions/expenses.ts). */
+async function requireStaffOrAdmin() {
+  const session = await auth();
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
+    throw new Error("Huna ruhusa ya kufanya hili");
+  }
+  return session;
+}
+
 export async function createPart(input: CreatePartInput): Promise<ActionResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -35,7 +50,10 @@ export async function createPart(input: CreatePartInput): Promise<ActionResult> 
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
-  const { openingQuantity, openingBranchId, ...data } = parsed.data;
+  const { openingQuantity, openingBranchId, costPrice, ...rest } = parsed.data;
+  // Sales staff never submit this field (PartForm hides it for them) — the admin can fill in the
+  // real buying price later from the edit page.
+  const data = { ...rest, costPrice: costPrice ?? 0 };
   const userId = session.user.id;
 
   if (openingQuantity && openingQuantity > 0 && !openingBranchId) {
@@ -133,7 +151,7 @@ class PartEditError extends Error {}
 export async function updatePart(partId: string, input: EditPartInput): Promise<ActionResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }

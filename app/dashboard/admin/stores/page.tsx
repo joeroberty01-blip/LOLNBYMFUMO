@@ -6,7 +6,10 @@ import { ListToolbar } from "@/components/ui/ListToolbar";
 
 export default async function StoresPage() {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -35,7 +38,7 @@ export default async function StoresPage() {
         ])}
       />
 
-      <StoresTable stores={stores} />
+      <StoresTable stores={stores} isAdmin={isAdmin} />
     </div>
   );
 }

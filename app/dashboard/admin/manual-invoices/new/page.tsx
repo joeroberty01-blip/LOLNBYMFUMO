@@ -6,7 +6,9 @@ import { ManualInvoiceForm } from "@/components/invoices/ManualInvoiceForm";
 
 export default async function NewManualInvoicePage() {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  if (!session || (session.user.role !== "ADMIN" && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 

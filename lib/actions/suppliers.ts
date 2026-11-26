@@ -23,9 +23,22 @@ async function requireAdmin() {
   return session;
 }
 
+/** Sales staff can keep a supplier's own record (name/contact) up to date too — recording or
+ * paying a debt against it stays admin-only below, since that creates an Expense. */
+async function requireStaffOrAdmin() {
+  const session = await auth();
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
+    throw new Error("Huna ruhusa ya kufanya hili");
+  }
+  return session;
+}
+
 export async function createSupplier(input: SupplierInput): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -42,7 +55,7 @@ export async function createSupplier(input: SupplierInput): Promise<ActionResult
 
 export async function updateSupplier(id: string, input: SupplierInput): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }

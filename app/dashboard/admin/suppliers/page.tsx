@@ -18,7 +18,10 @@ export default async function SuppliersPage({
   searchParams: Promise<{ page?: string; pageSize?: string; q?: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -73,6 +76,7 @@ export default async function SuppliersPage({
         suppliers={suppliers.rows}
         branches={branches}
         openBySupplier={openBySupplier}
+        isAdmin={isAdmin}
       />
 
       <Pagination

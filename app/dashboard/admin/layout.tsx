@@ -8,22 +8,26 @@ import { FloatingChatbot } from "@/components/admin/FloatingChatbot";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
   const { t } = await getServerDictionary();
+  const roleLabel = isAdmin ? t.adminOps.topbar.adminRole : t.nav.salesStaff;
 
   return (
     <MobileNavProvider>
       <div className="flex h-screen overflow-hidden bg-page text-primary">
-        <Sidebar isAdmin />
+        <Sidebar isAdmin={isAdmin} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar userName={session.user.name ?? ""} userRole={t.adminOps.topbar.adminRole} />
+          <Topbar userName={session.user.name ?? ""} userRole={roleLabel} />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>
-      <FloatingChatbot />
+      {isAdmin && <FloatingChatbot />}
     </MobileNavProvider>
   );
 }

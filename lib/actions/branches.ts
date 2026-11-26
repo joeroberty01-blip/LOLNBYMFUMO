@@ -16,10 +16,23 @@ async function requireAdmin() {
   return session;
 }
 
+/** Sales staff can add/rename a store too — flipping its POS selling-point or archived status
+ * is structural and stays admin-only below. */
+async function requireStaffOrAdmin() {
+  const session = await auth();
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
+    throw new Error("Huna ruhusa ya kufanya hili");
+  }
+  return session;
+}
+
 export async function createStore(input: StoreInput): Promise<ActionResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -60,7 +73,7 @@ export async function updateStore(
 ): Promise<ActionResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }

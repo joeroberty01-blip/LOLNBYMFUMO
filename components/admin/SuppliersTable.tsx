@@ -24,11 +24,14 @@ export function SuppliersTable({
   suppliers,
   branches,
   openBySupplier,
+  isAdmin = true,
 }: {
   suppliers: Supplier[];
   branches: { id: string; name: string }[];
   /** Unpaid purchases per supplier — collection is per purchase, never a lump sum. */
   openBySupplier: Record<string, OpenInvoice[]>;
+  /** Sales staff get this table too, minus paying/archiving a supplier — those stay admin-only. */
+  isAdmin?: boolean;
 }) {
   const t = useTranslations();
 
@@ -69,15 +72,17 @@ export function SuppliersTable({
                       {t.common.edit}
                     </Button>
                   </Link>
-                  <PayInvoicesButton
-                    kind="supplier"
-                    partyId={s.id}
-                    partyName={s.name}
-                    branches={branches}
-                    label={t.adminCatalog.suppliers.recordPayment}
-                    invoices={openBySupplier[s.id] ?? []}
-                  />
-                  <ArchiveSupplierButton supplierId={s.id} />
+                  {isAdmin && (
+                    <PayInvoicesButton
+                      kind="supplier"
+                      partyId={s.id}
+                      partyName={s.name}
+                      branches={branches}
+                      label={t.adminCatalog.suppliers.recordPayment}
+                      invoices={openBySupplier[s.id] ?? []}
+                    />
+                  )}
+                  {isAdmin && <ArchiveSupplierButton supplierId={s.id} />}
                 </div>
               </Td>
             </Tr>

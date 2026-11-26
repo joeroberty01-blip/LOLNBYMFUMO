@@ -17,7 +17,10 @@ export default async function EditPartPage({
   searchParams: Promise<{ branchId?: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -63,13 +66,14 @@ export default async function EditPartPage({
         partId={part.id}
         branches={branches}
         currentBranchId={currentBranchId}
+        showCostPrice={isAdmin}
         defaultValues={{
           partNumber: part.partNumber,
           oemNumber: part.oemNumber ?? undefined,
           name: part.name,
           category: part.category,
           unitPrice: part.unitPrice.toNumber(),
-          costPrice: part.costPrice.toNumber(),
+          ...(isAdmin ? { costPrice: part.costPrice.toNumber() } : {}),
           description: part.description ?? undefined,
           lowStockThreshold: part.lowStockThreshold,
           quantity: currentQuantity,

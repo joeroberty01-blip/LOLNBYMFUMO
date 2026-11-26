@@ -14,7 +14,15 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-export function StoresTable({ stores }: { stores: StoreRow[] }) {
+export function StoresTable({
+  stores,
+  isAdmin = true,
+}: {
+  stores: StoreRow[];
+  /** Sales staff get this table too, minus the selling-point toggle and archive/restore —
+   * those change what's available company-wide in POS, so they stay admin-only. */
+  isAdmin?: boolean;
+}) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -146,18 +154,20 @@ export function StoresTable({ stores }: { stores: StoreRow[] }) {
                   <Button type="button" variant="secondary" onClick={() => openEdit(s)}>
                     Edit
                   </Button>
-                  {s.isActive && (
+                  {isAdmin && s.isActive && (
                     <Button type="button" variant="secondary" onClick={() => setPendingToggle(s)}>
                       {s.isSellingPoint ? "Make Warehouse-Only" : "Make Selling Point"}
                     </Button>
                   )}
-                  <Button
-                    type="button"
-                    variant={s.isActive ? "danger" : "secondary"}
-                    onClick={() => setPendingArchive(s)}
-                  >
-                    {s.isActive ? "Archive" : "Restore"}
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant={s.isActive ? "danger" : "secondary"}
+                      onClick={() => setPendingArchive(s)}
+                    >
+                      {s.isActive ? "Archive" : "Restore"}
+                    </Button>
+                  )}
                 </div>
               </Td>
             </Tr>

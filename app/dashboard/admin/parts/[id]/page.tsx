@@ -26,7 +26,10 @@ export default async function PartDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
@@ -77,19 +80,23 @@ export default async function PartDetailPage({
         </Link>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div
+        className={`mb-6 grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+      >
         <StatCard
           icon={<Package size={18} />}
           label={t.reports.inventory.quantity}
           value={String(totalQuantity)}
           accent="tertiary"
         />
-        <StatCard
-          icon={<DollarSign size={18} />}
-          label={t.adminCatalog.parts.buyingPrice}
-          value={currency.format(part.costPrice)}
-          accent="primary"
-        />
+        {isAdmin && (
+          <StatCard
+            icon={<DollarSign size={18} />}
+            label={t.adminCatalog.parts.buyingPrice}
+            value={currency.format(part.costPrice)}
+            accent="primary"
+          />
+        )}
         <StatCard
           icon={<DollarSign size={18} />}
           label={t.adminCatalog.parts.sellingPrice}
@@ -100,13 +107,15 @@ export default async function PartDetailPage({
 
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-primary">{t.common.branch}</h2>
-        <StockAdjustmentModal
-          partId={part.id}
-          partName={part.name}
-          branchId={null}
-          branchName=""
-          branches={branches}
-        />
+        {isAdmin && (
+          <StockAdjustmentModal
+            partId={part.id}
+            partName={part.name}
+            branchId={null}
+            branchName=""
+            branches={branches}
+          />
+        )}
       </div>
       <div className="mb-8">
         {inventoryByBranch.length === 0 ? (

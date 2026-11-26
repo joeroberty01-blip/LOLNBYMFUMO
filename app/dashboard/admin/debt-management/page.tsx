@@ -27,7 +27,9 @@ export default async function DebtManagementPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  if (!session || (session.user.role !== "ADMIN" && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
