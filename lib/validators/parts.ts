@@ -58,12 +58,14 @@ function bareCodeCheck(data: { name: string; partNumber: string }, ctx: z.Refine
 export const partSchema = basePartObject.superRefine(bareCodeCheck);
 export type PartInput = z.infer<typeof partSchema>;
 
-/** Overrides basePartObject's required costPrice for createPartSchema/editPartSchema/
- * partFormSchema below — their shared PartForm hides the buying-price field entirely for sales
- * staff (see PartForm's showCostPrice), so their submission simply omits it. createPart defaults
- * the missing value to 0; updatePart passing `undefined` to Prisma leaves the existing value
- * untouched. The admin form always registers and submits a value, so the positive-number check
- * still applies there. partSchema/quickPartSchema (admin-only call sites) are unaffected. */
+/** Overrides basePartObject's required costPrice for quickPartSchema/createPartSchema/
+ * editPartSchema/partFormSchema below — their shared forms (QuickPartModal, PartForm) hide the
+ * buying-price field entirely for sales staff (see PartForm's showCostPrice and
+ * QuickPartModal's showCostPrice), so their submission simply omits it. createPart/
+ * createPartQuick default the missing value to 0; updatePart passing `undefined` to Prisma
+ * leaves the existing value untouched. The admin form always registers and submits a value, so
+ * the positive-number check still applies there. partSchema (the one remaining admin-only call
+ * site) is unaffected. */
 const optionalCostPrice = {
   costPrice: z.coerce.number().positive("Buying price iwe zaidi ya 0").optional(),
 };
@@ -74,6 +76,7 @@ const optionalCostPrice = {
  * the whole Credit Purchase client chunk down with it. */
 export const quickPartSchema = basePartObject
   .pick({ partNumber: true, name: true, category: true, costPrice: true, unitPrice: true })
+  .extend(optionalCostPrice)
   .superRefine(bareCodeCheck);
 export type QuickPartInput = z.infer<typeof quickPartSchema>;
 

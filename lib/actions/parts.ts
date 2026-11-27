@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
-  partSchema,
+  quickPartSchema,
   createPartSchema,
   editPartSchema,
-  type PartInput,
+  type QuickPartInput,
   type CreatePartInput,
   type EditPartInput,
 } from "@/lib/validators/parts";
@@ -106,20 +106,23 @@ export async function createPart(input: CreatePartInput): Promise<ActionResult> 
 type CreatePartResult = { success: true; partId: string } | { success: false; error: string };
 
 /** Same as createPart, but returns the new id — used where the caller needs to immediately
- * reference the part it just created, e.g. selecting it in a Credit Purchase item row. */
-export async function createPartQuick(input: PartInput): Promise<CreatePartResult> {
+ * reference the part it just created, e.g. selecting it in a Credit Purchase item row
+ * (QuickPartModal). Sales staff can use this too — like createPart, they never submit a
+ * costPrice (the field is hidden from them in QuickPartModal), so it defaults to 0 here. */
+export async function createPartQuick(input: QuickPartInput): Promise<CreatePartResult> {
   try {
-    await requireAdmin();
+    await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 
-  const parsed = partSchema.safeParse(input);
+  const parsed = quickPartSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Data si sahihi" };
   }
+  const { costPrice, ...rest } = parsed.data;
 
-  const part = await prisma.part.create({ data: parsed.data });
+  const part = await prisma.part.create({ data: { ...rest, costPrice: costPrice ?? 0 } });
   revalidatePath("/dashboard/admin/parts");
   revalidatePath("/dashboard/sales/inventory");
   return { success: true, partId: part.id };

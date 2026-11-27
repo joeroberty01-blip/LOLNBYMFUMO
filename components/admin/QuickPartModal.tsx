@@ -13,9 +13,14 @@ import { Button } from "@/components/ui/Button";
 export function QuickPartModal({
   onClose,
   onCreated,
+  showCostPrice = true,
 }: {
   onClose: () => void;
   onCreated: (part: { id: string; partNumber: string; name: string; costPrice: number }) => void;
+  /** Sales staff get this modal too, minus the buying-price field — same split as PartForm. The
+   * new part's costPrice defaults to 0 server-side (lib/actions/parts.ts createPartQuick), and
+   * the credit purchase row it's added to starts at 0 too, so they type what was actually paid. */
+  showCostPrice?: boolean;
 }) {
   const t = useTranslations();
   const [formError, setFormError] = useState<string | null>(null);
@@ -29,12 +34,7 @@ export function QuickPartModal({
 
   const onSubmit = handleSubmit(async (data) => {
     setFormError(null);
-    const result = await createPartQuick({
-      ...data,
-      oemNumber: undefined,
-      description: undefined,
-      lowStockThreshold: 5,
-    });
+    const result = await createPartQuick(data);
     if (!result.success) {
       setFormError(result.error);
       return;
@@ -43,7 +43,7 @@ export function QuickPartModal({
       id: result.partId,
       partNumber: data.partNumber,
       name: data.name,
-      costPrice: data.costPrice,
+      costPrice: data.costPrice ?? 0,
     });
   });
 
@@ -71,13 +71,15 @@ export function QuickPartModal({
               <p className="mt-1 text-sm text-danger">{errors.category.message}</p>
             )}
           </div>
-          <div>
-            <Label>{t.adminCatalog.parts.buyingPrice}</Label>
-            <Input type="number" step="0.01" {...register("costPrice")} />
-            {errors.costPrice && (
-              <p className="mt-1 text-sm text-danger">{errors.costPrice.message}</p>
-            )}
-          </div>
+          {showCostPrice && (
+            <div>
+              <Label>{t.adminCatalog.parts.buyingPrice}</Label>
+              <Input type="number" step="0.01" {...register("costPrice")} />
+              {errors.costPrice && (
+                <p className="mt-1 text-sm text-danger">{errors.costPrice.message}</p>
+              )}
+            </div>
+          )}
           <div>
             <Label>{t.adminCatalog.parts.sellingPrice}</Label>
             <Input type="number" step="0.01" {...register("unitPrice")} />

@@ -39,9 +39,8 @@ export function CreditPurchaseModal({
   branches: { id: string; name: string }[];
   suppliers: { id: string; name: string }[];
   initialParts: PartLite[];
-  /** Hides "+ New Product" for sales staff — creating a catalogue part sets its buying price,
-   * which stays admin-only (see PartForm's showCostPrice). They can still record a purchase for
-   * any existing part. */
+  /** Passed through to QuickPartModal to hide the buying-price field for sales staff — see
+   * QuickPartModal's showCostPrice. */
   isAdmin?: boolean;
   onClose: () => void;
 }) {
@@ -230,11 +229,9 @@ export function CreditPurchaseModal({
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-medium text-primary">{t.adminCatalog.purchases.itemsReceived}</p>
           <div className="flex gap-2">
-            {isAdmin && (
-              <Button type="button" variant="secondary" onClick={() => setNewProductOpen(true)}>
-                <Plus size={14} /> {t.adminCatalog.purchases.newProduct}
-              </Button>
-            )}
+            <Button type="button" variant="secondary" onClick={() => setNewProductOpen(true)}>
+              <Plus size={14} /> {t.adminCatalog.purchases.newProduct}
+            </Button>
             <Button type="button" variant="secondary" onClick={addItemRow}>
               <Plus size={14} /> {t.adminCatalog.purchases.addItem}
             </Button>
@@ -329,7 +326,11 @@ export function CreditPurchaseModal({
       </div>
 
       {newProductOpen && (
-        <QuickPartModal onClose={() => setNewProductOpen(false)} onCreated={handleNewProduct} />
+        <QuickPartModal
+          onClose={() => setNewProductOpen(false)}
+          onCreated={handleNewProduct}
+          showCostPrice={isAdmin}
+        />
       )}
 
       {confirmOpen && (
