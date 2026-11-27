@@ -2,6 +2,41 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
+/** Sub-areas of /dashboard/admin that an approved SALES_STAFF account may also reach — the
+ * day-to-day catalogue/operational sections, each already gated the same way at the page level
+ * (isApprovedSalesStaff checks in those pages' own route guards). Everything else under
+ * /dashboard/admin (the Dashboard overview, Accounting, Expenses, Reports, Logs, Sales-Staff
+ * management, Parts Bulk Upload, China Master File) stays ADMIN-only. */
+const STAFF_ALLOWED_ADMIN_PREFIXES = [
+  "/dashboard/admin/customers",
+  "/dashboard/admin/debt-management",
+  "/dashboard/admin/parts",
+  "/dashboard/admin/stores",
+  "/dashboard/admin/sales",
+  "/dashboard/admin/stock-movements",
+  "/dashboard/admin/suppliers",
+  "/dashboard/admin/manual-invoices",
+  "/dashboard/admin/stickers",
+  "/dashboard/admin/purchases",
+];
+
+/** Carve-outs within the otherwise-open prefixes above that stay ADMIN-only: bulk-importing
+ * parts (a mass-edit power tool) and editing/voiding an already-completed sale (a correction
+ * action, same split as everywhere else — staff can create/view, admin corrects). */
+function isStaffBlockedAdminPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/dashboard/admin/parts/bulk-upload") ||
+    /^\/dashboard\/admin\/sales\/[^/]+\/edit(\/|$)/.test(pathname)
+  );
+}
+
+function isStaffAllowedAdminPath(pathname: string): boolean {
+  if (isStaffBlockedAdminPath(pathname)) return false;
+  return STAFF_ALLOWED_ADMIN_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+  );
+}
+
 export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
@@ -42,7 +77,10 @@ export default auth(async (req) => {
   }
 
   if (isAdminArea && current.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard/sales", req.nextUrl));
+    const isApprovedSalesStaff = current.role === "SALES_STAFF" && current.status === "APPROVED";
+    if (!isApprovedSalesStaff || !isStaffAllowedAdminPath(pathname)) {
+      return NextResponse.redirect(new URL("/dashboard/sales", req.nextUrl));
+    }
   }
 
   // POS, Sales History and Receipts are shared: admins can also sell directly (e.g. when
