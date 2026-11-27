@@ -28,16 +28,19 @@ export default async function CreditPurchasesPage({
   searchParams: Promise<{ page?: string; pageSize?: string; tab?: string; q?: string }>;
 }) {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
     redirect("/login/admin");
   }
 
   const { page: pageParam, pageSize, tab: tabParam, q } = await searchParams;
   const activeTab: TabValue =
-    tabParam === "customers" || tabParam === "history" ? tabParam : "suppliers";
+    isAdmin && (tabParam === "customers" || tabParam === "history") ? tabParam : "suppliers";
   const pageArgs = parsePageParams({ page: pageParam, pageSize });
 
-  const [purchases, customerDebtors, supplierDebtors, paymentHistory, suppliers, branches, parts] =
+  const [purchases, customerDebtors, supplierDebtors, paymentHistory, suppliers, branches, partsLite] =
     await Promise.all([
       getPurchases(pageArgs, q),
       getCustomerDebtItems(),
@@ -48,6 +51,10 @@ export default async function CreditPurchasesPage({
       getAllActivePartsLite(),
     ]);
   const { t } = await getServerDictionary();
+  // Sales staff never see the catalogue buying price — zeroed out before this ever reaches the
+  // client, so the item picker's auto-fill (CreditPurchaseModal/EditPurchaseModal) can't leak it;
+  // they type what was actually paid on this purchase instead.
+  const parts = isAdmin ? partsLite : partsLite.map((p) => ({ ...p, costPrice: 0 }));
 
   return (
     <div>
@@ -61,6 +68,7 @@ export default async function CreditPurchasesPage({
             branches={branches}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
             parts={parts}
+            isAdmin={isAdmin}
           />
         )}
       </div>
@@ -68,21 +76,29 @@ export default async function CreditPurchasesPage({
       <Tabs
         defaultValue="suppliers"
         tabs={[
-          {
-            value: "customers",
-            label: `${t.adminCatalog.purchases.customerDebtsTab} (${customerDebtors.length})`,
-            icon: <Users size={15} />,
-          },
+          ...(isAdmin
+            ? [
+                {
+                  value: "customers",
+                  label: `${t.adminCatalog.purchases.customerDebtsTab} (${customerDebtors.length})`,
+                  icon: <Users size={15} />,
+                },
+              ]
+            : []),
           {
             value: "suppliers",
             label: `${t.adminCatalog.purchases.supplierDebtsTab} (${supplierDebtors.length + purchases.total})`,
             icon: <Truck size={15} />,
           },
-          {
-            value: "history",
-            label: `${t.adminCatalog.purchases.paymentHistoryTab} (${paymentHistory.length})`,
-            icon: <History size={15} />,
-          },
+          ...(isAdmin
+            ? [
+                {
+                  value: "history",
+                  label: `${t.adminCatalog.purchases.paymentHistoryTab} (${paymentHistory.length})`,
+                  icon: <History size={15} />,
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -128,7 +144,12 @@ export default async function CreditPurchasesPage({
               ])
             )}
           />
-          <SupplierDebtItemsTable groups={supplierDebtors} branches={branches} t={t} />
+          <SupplierDebtItemsTable
+            groups={supplierDebtors}
+            branches={branches}
+            t={t}
+            isAdmin={isAdmin}
+          />
 
           <div>
             <h2 className="mb-3 text-sm font-semibold text-primary">
@@ -150,7 +171,7 @@ export default async function CreditPurchasesPage({
                 p.notes ?? "",
               ])}
             />
-            <PurchasesTable rows={purchases.rows} parts={parts} />
+            <PurchasesTable rows={purchases.rows} parts={parts} isAdmin={isAdmin} />
             <Pagination
               baseHref="/dashboard/admin/purchases"
               params={{ pageSize, tab: "suppliers", q }}

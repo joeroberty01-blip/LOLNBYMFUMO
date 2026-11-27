@@ -10,10 +10,14 @@ export function CreditPurchaseButton({
   branches,
   suppliers,
   parts,
+  isAdmin = true,
 }: {
   branches: { id: string; name: string }[];
   suppliers: { id: string; name: string }[];
   parts: PartLite[];
+  /** Sales staff get this form too, minus inline "new product" creation (that sets a catalogue
+   * buying price, which stays admin-only — see PartForm's showCostPrice). */
+  isAdmin?: boolean;
 }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
@@ -28,6 +32,7 @@ export function CreditPurchaseButton({
           branches={branches}
           suppliers={suppliers}
           initialParts={parts}
+          isAdmin={isAdmin}
           onClose={() => setOpen(false)}
         />
       )}

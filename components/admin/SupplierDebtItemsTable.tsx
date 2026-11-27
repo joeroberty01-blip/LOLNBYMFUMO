@@ -21,10 +21,14 @@ export function SupplierDebtItemsTable({
   groups,
   branches,
   t,
+  isAdmin = true,
 }: {
   groups: SupplierDebtGroup[];
   branches: { id: string; name: string }[];
   t: Dictionary;
+  /** Sales staff get this table too, minus paying a supplier or archiving one — those stay
+   * admin-only, same split as the Suppliers list/detail pages. */
+  isAdmin?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -107,7 +111,7 @@ export function SupplierDebtItemsTable({
                             {t.common.edit}
                           </Button>
                         </Link>
-                        <ArchiveSupplierButton supplierId={g.id} />
+                        {isAdmin && <ArchiveSupplierButton supplierId={g.id} />}
                       </div>
                     </Td>
                   </Tr>
@@ -127,24 +131,26 @@ export function SupplierDebtItemsTable({
                           Deni: {currency.format(it.remaining)}
                         </Td>
                         <Td onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end">
-                            <PayInvoicesButton
-                              kind="supplier"
-                              partyId={g.id}
-                              partyName={g.name}
-                              branches={branches}
-                              label="Lipa hii"
-                              invoices={[
-                                {
-                                  id: it.purchaseId,
-                                  label: `Manunuzi ${it.createdAt.toLocaleDateString("sw-TZ")}`,
-                                  date: it.createdAt,
-                                  total: it.total,
-                                  remaining: it.remaining,
-                                },
-                              ]}
-                            />
-                          </div>
+                          {isAdmin && (
+                            <div className="flex justify-end">
+                              <PayInvoicesButton
+                                kind="supplier"
+                                partyId={g.id}
+                                partyName={g.name}
+                                branches={branches}
+                                label="Lipa hii"
+                                invoices={[
+                                  {
+                                    id: it.purchaseId,
+                                    label: `Manunuzi ${it.createdAt.toLocaleDateString("sw-TZ")}`,
+                                    date: it.createdAt,
+                                    total: it.total,
+                                    remaining: it.remaining,
+                                  },
+                                ]}
+                              />
+                            </div>
+                          )}
                         </Td>
                       </Tr>
                     ))}

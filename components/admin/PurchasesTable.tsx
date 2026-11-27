@@ -14,7 +14,17 @@ import { EditPurchaseModal } from "@/components/admin/EditPurchaseModal";
 
 const currency = new Intl.NumberFormat("sw-TZ", { maximumFractionDigits: 0 });
 
-export function PurchasesTable({ rows, parts }: { rows: PurchaseRow[]; parts: PartLite[] }) {
+export function PurchasesTable({
+  rows,
+  parts,
+  isAdmin = true,
+}: {
+  rows: PurchaseRow[];
+  parts: PartLite[];
+  /** Sales staff get this table too, minus reversing (deleting) a purchase — that stays
+   * admin-only, same split as elsewhere. */
+  isAdmin?: boolean;
+}) {
   const t = useTranslations();
   const router = useRouter();
   const [viewing, setViewing] = useState<string | null>(null);
@@ -80,14 +90,16 @@ export function PurchasesTable({ rows, parts }: { rows: PurchaseRow[]; parts: Pa
                   <Button type="button" variant="secondary" onClick={() => setEditingId(r.id)}>
                     {t.common.edit}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={isPending && pendingId === r.id}
-                    onClick={() => handleDelete(r.id)}
-                  >
-                    {t.common.delete}
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={isPending && pendingId === r.id}
+                      onClick={() => handleDelete(r.id)}
+                    >
+                      {t.common.delete}
+                    </Button>
+                  )}
                 </div>
               </Td>
             </Tr>

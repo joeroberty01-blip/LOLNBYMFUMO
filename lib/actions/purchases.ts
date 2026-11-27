@@ -22,6 +22,22 @@ async function requireAdmin() {
   return session;
 }
 
+/** Sales staff can record and edit a credit purchase too (receiving stock on the floor is
+ * routine counter work) — reversing one (deletePurchase) stays admin-only below. The item
+ * picker's parts list has its costPrice zeroed out for them before it ever reaches the client
+ * (see app/dashboard/admin/purchases/page.tsx), so this form never auto-fills or exposes the
+ * catalogue buying price — they type what was actually paid on this purchase. */
+async function requireStaffOrAdmin() {
+  const session = await auth();
+  const isApprovedSalesStaff =
+    session?.user.role === "SALES_STAFF" && session.user.status === "APPROVED";
+  const isAdmin = session?.user.role === "ADMIN";
+  if (!session || (!isAdmin && !isApprovedSalesStaff)) {
+    throw new Error("Huna ruhusa ya kufanya hili");
+  }
+  return session;
+}
+
 /**
  * Records stock bought from a supplier on credit: adds each item's quantity to that store's
  * Inventory (creating the row if it doesn't exist yet) and adds the purchase total to the
@@ -33,7 +49,7 @@ async function requireAdmin() {
 export async function createCreditPurchase(input: CreditPurchaseInput): Promise<ActionResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -129,7 +145,7 @@ type SimpleResult = { success: true } | { success: false; error: string };
 
 export async function getPurchaseDetailForView(purchaseId: string): Promise<PurchaseDetail | null> {
   try {
-    await requireAdmin();
+    await requireStaffOrAdmin();
   } catch {
     return null;
   }
@@ -148,7 +164,7 @@ export async function updatePurchase(
 ): Promise<SimpleResult> {
   let session;
   try {
-    session = await requireAdmin();
+    session = await requireStaffOrAdmin();
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
